@@ -307,7 +307,7 @@ The closed-test app is in the repo. M0 through M9 are merged or in this branch: 
 
 ## 2026-10-18 (Sun), ~7:45 AM ET: Hosted Supabase follow-ups
 
-Branch `chore/hosted-supabase-followups`. The free project **XHere** (`jpeuldzegtbqfezijhuy`, us-east-1) was created earlier this morning from `main` at `0d2796a` (PLAN §1.4, §8). This entry is the repo side of that. No key values are in git. `Apixa25/XHere-Web` was not touched. No paid service was used.
+Branch `chore/hosted-supabase-followups` → [PR #17](https://github.com/Apixa25/XHere-App/pull/17). The free project **XHere** (`jpeuldzegtbqfezijhuy`, us-east-1) was created earlier this morning from `main` at `0d2796a` (PLAN §1.4, §8). This entry is the repo side of that. No key values are in git. `Apixa25/XHere-Web` was not touched. No paid service was used.
 
 - **`suggest-category` 401.** A signed-out caller (no user JWT, or PostgREST 401/403) used to throw `rpc_suggest_categories_401` and the function returned 500. It now returns **401** `{"error":"not_authenticated"}`, the same JSON as `strip-exif`. Deno tests cover the hash path, the gte-small path, and a non-auth RPC failure that still throws.
 - **Migrations to apply on the hosted project** (not applied from here; the dashboard/MCP apply is a separate step):
