@@ -95,6 +95,7 @@ begin
   end loop;
   perform set_config('t.hits', v_hits::text, true);
   perform set_config('t.total', v_total::text, true);
+  raise notice 'fixture top-3 %/%', v_hits, v_total;
 end;
 $$;
 
@@ -148,6 +149,9 @@ select is(
   'someone else cannot read that log'
 );
 
+-- storage.buckets is not readable by `authenticated` (no select policy). The
+-- migration inserts the row; check it as the table owner.
+reset role;
 select ok(
   exists (select 1 from storage.buckets where id = 'drop-media' and public = false),
   'drop-media is a private storage bucket'
