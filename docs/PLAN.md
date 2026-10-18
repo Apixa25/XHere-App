@@ -2,6 +2,7 @@
 
 *Prepared 2026-10-17 (America/New_York) for Steven Sills II. Companion to `OLD-REPO-ANALYSIS.md`.*
 *Status: **proposal**. Nothing has been bought or signed up for. Every 💲 item needs Steven's OK.*
+*Open data: the global standard is [`OPEN-DATA-PLAYBOOK.md`](OPEN-DATA-PLAYBOOK.md). The Jamestown / Chautauqua pilot is [`CRIME-OPEN-DATA.md`](CRIME-OPEN-DATA.md).*
 
 ---
 
@@ -119,7 +120,7 @@ For each old feature: keep, rethink, defer, or drop. The best current practice i
 | **Classification** | Flat enum | Data-driven taxonomy with per-category fields and rules (§4) | **MVP** |
 | **Quick drop flow** | Large modal form | Waze-style FAB, then photo/text, then suggested category chips, then post (radius/expiry pre-filled) | **MVP** |
 | **Verification** | Up/down votes, 5 = verified | **"Still true?"** confirm/deny from people *within X m* of the drop (Waze/Google Maps pattern). Confirmations refresh freshness; denials hide or expire it. A per-category confirmation bar sets the Confirmed badge | **MVP** |
-| **Open-data layers** ("data already out there") | — | Toggleable layers fetched live through an Edge Function cache: **Wikipedia/Wikidata geosearch** first; then OSM points of interest and historical markers, and city open-data portals (e.g. official incident data for Safety). Stored as references with attribution, not copied wholesale (respects CC BY-SA / ODbL) | v1.1 (1 layer), later more |
+| **Open-data layers** ("data already out there") | — | Toggleable layers fetched live through an Edge Function cache: **Wikipedia/Wikidata geosearch** first; then OSM points of interest and historical markers, and city open-data portals (e.g. official incident data for Safety). Stored as references with attribution, not copied wholesale (respects CC BY-SA / ODbL). Global rules: [`OPEN-DATA-PLAYBOOK.md`](OPEN-DATA-PLAYBOOK.md). Pilot: [`CRIME-OPEN-DATA.md`](CRIME-OPEN-DATA.md) | v1.1 (1 layer), later more |
 | Comments | Comments with media | Short text replies on a drop, rate-limited | v1.1 |
 | Reputation / trust levels | 5-part formula, 4 tiers, penalties | **Simple and visible**: points come from confirmed-accurate drops and from accurate confirmations (agreeing with the eventual consensus). Tiers (New / Regular / Trusted / Guide) gate rate limits and sensitive categories. Abuse is handled by moderation actions, not a downvote formula | basic tiers **MVP**, points v1.1 |
 | Badges / achievements | Many, formula-based | ~10 delightful badges (First Drop, Explorer of 5 neighborhoods, Truth Keeper, Historian…), awarded by DB triggers/cron | v1.1 |
@@ -188,7 +189,7 @@ Rules live as columns on `categories` and are enforced **in the database** (RLS 
 * No naming or describing individuals. Text gets a PII/descriptor filter, and posts show a reminder ("Describe what happened, not who").
 * Location fuzzed to about 100 m; short TTL (72 h); `occurred_at` required.
 * Disclaimer: "In an emergency call 911. XHere is not a reporting channel to police."
-* Where available, **official open-data incident feeds** (city portals) power the Safety layer as `source=open_data`, so user crime reports are not the main signal.
+* Where available, **official open-data incident feeds** (city portals) power the Safety layer as `source=open_data`, so user crime reports are not the main signal. The region-agnostic standard is [`OPEN-DATA-PLAYBOOK.md`](OPEN-DATA-PLAYBOOK.md); the Jamestown / Chautauqua worked example is [`CRIME-OPEN-DATA.md`](CRIME-OPEN-DATA.md).
 
 ### 4.4 Classification in the UX
 * **Map filter**: a horizontal row of group chips (with an "All" chip), long-press to open sub-categories, saved filter presets ("Weekend": Events + Food + Sales). Server-side filtering by category slugs; per-category marker icon and color; clusters show a mini category breakdown.
@@ -287,7 +288,7 @@ XHere-App/
 ├─ ios/                # SwiftUI app (phase 2, placeholder README for now)
 ├─ supabase/           # migrations/, seed.sql, functions/ (Edge), tests/ (pgTAP)
 ├─ web/                # Astro site for xhere.world (landing, share pages, legal, .well-known)
-├─ docs/               # PLAN.md, OLD-REPO-ANALYSIS.md, PROGRESS.md, ADRs, guidelines
+├─ docs/               # PLAN.md, OLD-REPO-ANALYSIS.md, PROGRESS.md, OPEN-DATA-PLAYBOOK.md, CRIME-OPEN-DATA.md, ADRs, guidelines
 └─ .github/workflows/  # android.yml, supabase.yml, web.yml (path-filtered)
 ```
 One monorepo keeps the shared contract (DB schema ↔ Kotlin models ↔ web) in one place for agents. KMP and Gradle sit at the root (`settings.gradle.kts` includes `:shared` and `:android:app`).
@@ -316,14 +317,21 @@ One monorepo keeps the shared contract (DB schema ↔ Kotlin models ↔ web) in 
 | **M8** | Web: xhere.world | M1 (read RPC) | Astro site: landing, `/d/{short_id}` share page (OG tags + static map image, teaser only for locked/sensitive), `/privacy`, `/terms`, `/guidelines`, `/delete-account`, `/support`, `/.well-known/assetlinks.json`; Android App Links in the app; Cloudflare Pages config (deploy only once Steven approves account/DNS) | `npm run build` green in CI; Lighthouse ≥90; share page renders from fixture data |
 | **M9** | Release prep: Play closed test | M3–M8 | Release signing setup (keys stored as CI secrets, never in repo), Play listing assets, data-safety form answers, privacy policy URL, location-permission declarations, crash reporting, closed-testing track build (AAB) via GitHub Actions | Signed AAB builds in CI; checklist ready for Steven to upload (needs 💲 Play account + 12 testers × 14 days) |
 | — | **MVP done** | | | |
-| M10 | Open-data layer #1: Wikipedia/Wikidata | M6 | Edge Function proxy + cache to `external_items_cache`, "History" layer toggle, attribution, dedupe vs user drops | Layer shows within 1 s for cached areas; attribution visible |
+| M10 | Open-data layer #1: Wikipedia/Wikidata | M6, [`OPEN-DATA-PLAYBOOK.md`](OPEN-DATA-PLAYBOOK.md) | Edge Function proxy + cache to `external_items_cache`, "History" layer toggle, attribution, dedupe vs user drops. This chunk also stands up the generic pipeline the playbook describes (sources, regions, `SourceAdapter`, provenance) | Layer shows within 1 s for cached areas; attribution visible |
 | M11 | Reputation points + badges + comments | M6 | Points rules, nightly tier recompute, ~10 badges, profile showcase, comments (rate-limited, reportable) | Tests for point awarding and tier transitions |
 | M12 | Anti-spoofing & photo proof | M6 | Play Integrity check on reveal/confirm, mock-location detection, velocity sanity, "taken here" EXIF consistency mark | Spoofed-location test fixtures rejected |
 | M13 | Proximity notifications | M6 | Geofencing for nearest relevant drops, category opt-in, quiet hours, background-location permission flow + Play declaration video script | Battery-safe (WorkManager), opt-in only |
 | M14 | Quests + local leaderboards | M11 | Seasonal quests, auto-validation, area leaderboards (opt-out) | — |
 | M15 | iOS app (SwiftUI) | M2–M8, **Mac + Apple program 💲** | SwiftUI app on `shared` XCFramework, MapLibre iOS, Sign in with Apple, Universal Links | TestFlight build |
-| M16 | More open data (OSM history/markers, city incident feeds), web map viewer, admin console, appeals/transparency, offline regions | — | — | — |
+| M16a | `socrata` + `arcgis_feature` + `csv_bulk` / `manual_upload` adapters, plus the geocoder chain and dedup | M10, [`OPEN-DATA-PLAYBOOK.md`](OPEN-DATA-PLAYBOOK.md) §7 | Those adapters, the geocoder chain, and dedup | pgTAP: precision rule enforced; expired items hidden; config validator rejects missing license/terms |
+| M16b | Safety official layer (pilot region config `us-ny-chautauqua`): stat cards, display rules, disclaimers, tip lines | M16a, [`CRIME-OPEN-DATA.md`](CRIME-OPEN-DATA.md) | Pilot region config and the Safety official layer | Official records display at the precision the publisher released, with source and disclaimer |
+| M16c | User-report area activity (H3 rollup, thresholds, escalation queue, decay), building on M7 moderation | M7, M16a | Area-only Safety reports | pgTAP: public threshold enforced; sensitive user reports are never address pins |
+| M16d | `police_uk` adapter + a UK region config, the first non-US proof (global design and the UK GDPR Art. 10 profile) | M16a | Adapter and UK region config | Published snap points stay offset; the UK legal profile is applied |
+| M16e | Legal profiles, localized disclaimers, and the takedown flow | M7, [`OPEN-DATA-PLAYBOOK.md`](OPEN-DATA-PLAYBOOK.md) §4 | US/UK/CA/EU profiles, localized disclaimers, correction/takedown | Takedown path documented; disclaimers are localizable strings |
+| M16 | Web map viewer, admin console, appeals/transparency, offline regions | — | — | — |
 | M17 | Claimed places / business tier, AR view | — | — | 💲 decisions |
+
+M16a–e are the open-data split of the original M16 row ([`OPEN-DATA-PLAYBOOK.md`](OPEN-DATA-PLAYBOOK.md) §7). OSM history/markers and city incident feeds live in that split. The row still labeled M16 keeps the rest of the original scope: web map viewer, admin console, appeals/transparency, and offline regions.
 
 Rough pace with agents: M0–M2 in ~1 week, M3–M7 in ~2–3 weeks, M8–M9 in ~1 week. Then 14+ days of Play closed testing.
 
