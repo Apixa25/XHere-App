@@ -100,6 +100,9 @@ internal object TestTags {
     const val DETAIL_NOTICE = "detail_notice"
     const val DETAIL_LOCATION = "detail_location"
 
+    const val AUTH_AGREEMENT = "auth_agreement"
+    const val DROP_AGREEMENT = "drop_agreement"
+
     const val DETAIL_REPORT = "detail_report"
     const val DETAIL_HIDE = "detail_hide"
     const val DETAIL_REPORT_AUTHOR = "detail_report_author"

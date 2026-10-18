@@ -56,6 +56,14 @@ class SafetyFlowsTest {
     private val guide get() = JamestownDemo.guide.id
 
     @Test
+    fun signInStatesTheTermsAndZeroToleranceBeforeAnyonePosts() {
+        rule.waitForTag(TestTags.AUTH_EMAIL)
+        rule.onNodeWithTag(TestTags.AUTH_AGREEMENT).performScrollTo()
+            .assertTextContains("agree to the XHere Terms and Community guidelines", substring = true)
+            .assertTextContains("no tolerance for objectionable content or abusive users", substring = true)
+    }
+
+    @Test
     fun reportingADropWithAlsoHideFilesTheReportAndHidesItForMeOnly() {
         rule.openDetail("lunch")
         rule.onNodeWithTag(TestTags.DETAIL_REPORT).performScrollTo().performClick()

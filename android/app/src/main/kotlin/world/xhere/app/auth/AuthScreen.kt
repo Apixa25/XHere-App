@@ -1,7 +1,9 @@
 package world.xhere.app.auth
 
+import android.content.Intent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -24,12 +26,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.koin.androidx.compose.koinViewModel
 import world.xhere.app.R
@@ -214,6 +218,32 @@ internal fun AuthContent(
             ) {
                 Text(stringResource(R.string.auth_google))
             }
+            AgreementNotice()
         }
     }
 }
+
+/** Play UGC policy and App Review 1.2: people agree to the terms before they can post. */
+@Composable
+private fun AgreementNotice() {
+    val context = LocalContext.current
+    fun open(url: String) {
+        runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, url.toUri())) }
+    }
+    Text(
+        text = stringResource(R.string.auth_agreement),
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        textAlign = TextAlign.Center,
+        modifier = Modifier
+            .padding(top = 8.dp)
+            .testTag(TestTags.AUTH_AGREEMENT),
+    )
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        TextButton(onClick = { open(TERMS_URL) }) { Text(stringResource(R.string.auth_terms)) }
+        TextButton(onClick = { open(GUIDELINES_URL) }) { Text(stringResource(R.string.settings_guidelines)) }
+    }
+}
+
+private const val TERMS_URL = "https://xhere.world/terms"
+private const val GUIDELINES_URL = "https://xhere.world/guidelines"

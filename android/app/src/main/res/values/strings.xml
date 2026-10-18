@@ -117,6 +117,11 @@
     <string name="settings_delete_failed">Couldn\'t delete the account. Try again.</string>
     <string name="settings_sign_out_failed">Couldn\'t sign out. Try again.</string>
 
+    <!-- M7: agreement before posting (Play UGC policy, App Review 1.2) -->
+    <string name="auth_agreement">By continuing you agree to the XHere Terms and Community guidelines. There is no tolerance for objectionable content or abusive users: you can report or block anyone, and moderators remove what breaks the rules.</string>
+    <string name="auth_terms">Terms</string>
+    <string name="drop_agreement">Posting means you follow the Community guidelines. Anyone can report a drop.</string>
+
     <!-- M7: report, block, hide -->
     <string name="safety_report_drop">Report drop</string>
     <string name="safety_hide_drop">Hide for me</string>

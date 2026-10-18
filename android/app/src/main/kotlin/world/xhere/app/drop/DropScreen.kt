@@ -167,6 +167,12 @@ fun DropScreen(
                 enabled = !state.busy && state.safety?.canPost != false,
                 modifier = Modifier.testTag(TestTags.DROP_POST),
             ) { Text(stringResource(R.string.drop_post)) }
+            Text(
+                text = stringResource(R.string.drop_agreement),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.testTag(TestTags.DROP_AGREEMENT),
+            )
         }
         state.error?.let { message ->
             Text(
