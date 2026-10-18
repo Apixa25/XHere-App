@@ -11,6 +11,10 @@ import world.xhere.app.auth.AuthViewModel
 import world.xhere.app.auth.GoogleIdTokenSource
 import world.xhere.app.auth.GoogleSignInAttempt
 import world.xhere.app.config.ClientConfig
+import world.xhere.app.drop.CapturedPhoto
+import world.xhere.app.drop.DropCapture
+import world.xhere.app.drop.DropViewModel
+import world.xhere.app.drop.ImageLabeler
 import world.xhere.app.location.DeviceLocation
 import world.xhere.app.map.FilterPresetStore
 import world.xhere.app.map.MapCanvas
@@ -86,7 +90,10 @@ fun testModule() = module {
     single<DeviceLocation> { NoDeviceLocation() }
     single { FilterPresetStore(androidContext()) }
     single<MapCanvas> { PreviewMapCanvas() }
+    single<DropCapture> { FakeDropCapture() }
+    single<ImageLabeler> { FakeImageLabeler() }
     viewModel { MapViewModel(get(), get(), get(), debounceMs = 0) }
+    viewModel { DropViewModel(get(), get(), get(), get()) }
     viewModel { ProfileViewModel(get()) }
     viewModel {
         val context = androidContext()
@@ -98,6 +105,24 @@ fun testModule() = module {
             signOutFailed = context.getString(R.string.settings_sign_out_failed),
         )
     }
+}
+
+class FakeDropCapture : DropCapture {
+    override val needsPermission: Boolean = false
+    override suspend fun takePhoto(context: android.content.Context): CapturedPhoto = CapturedPhoto(jpegWithExif(), "image/jpeg")
+}
+
+class FakeImageLabeler : ImageLabeler {
+    override suspend fun labels(bytes: ByteArray, mimeType: String): List<String> = listOf("Food truck", "Vehicle")
+}
+
+/** APP1 Exif segment plus a short image body. The upload path must strip the Exif. */
+private fun jpegWithExif(): ByteArray {
+    val payload = "Exif\u0000\u0000GPS".encodeToByteArray()
+    val length = payload.size + 2
+    return byteArrayOf(0xFF.toByte(), 0xD8.toByte(), 0xFF.toByte(), 0xE1.toByte(), (length shr 8).toByte(), length.toByte()) +
+        payload +
+        byteArrayOf(0xFF.toByte(), 0xDA.toByte(), 0x00, 0x02, 0x00, 0xFF.toByte(), 0xD9.toByte())
 }
 
 class NoDeviceLocation : DeviceLocation {

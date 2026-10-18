@@ -6,7 +6,7 @@ Postgres / PostGIS schema, Row-Level Security, RPCs, Edge Functions, and pgTAP t
 - `migrations/`: SQL migrations (**M1**), applied in filename order.
 - `seed.sql`: **local demo data only** (4 demo users and 15 drops in Jamestown, New York). `supabase db reset` loads it. It is never pushed to a hosted project.
 - `tests/database/`: pgTAP tests (**M1**), run by `supabase test db`.
-- `functions/`: Supabase Edge Functions (**M5** suggestion, later open-data proxies).
+- `functions/`: Supabase Edge Functions. **M5** adds `suggest-category` and `strip-exif`. Later milestones add open-data proxies.
 
 No Supabase project has been created. The Supabase CLI's local Docker stack is the stand-in until Steven approves a free Supabase account ([`docs/PLAN.md`](../docs/PLAN.md) §8).
 
@@ -22,6 +22,11 @@ supabase db reset                                                  # all migrati
 supabase test db                                                   # pgTAP suite
 supabase db lint --schema public,private --level warning --fail-on warning
 supabase stop --no-backup
+
+# Edge Functions (no Docker). CI pins Deno 2.1.4. Tests do not download gte-small.
+deno test --allow-net supabase/functions
+deno check supabase/functions/suggest-category/index.ts
+deno check supabase/functions/strip-exif/index.ts
 ```
 
 Postgres listens on `127.0.0.1:54322` (user `postgres`, password `postgres`, local only). If `supabase start` fails with a `DbSetupError` because containers can't reach each other (common in nested Docker/VMs), Docker's bridge traffic is probably being dropped by iptables. Running `sudo sysctl -w net.bridge.bridge-nf-call-iptables=0 net.bridge.bridge-nf-call-ip6tables=0` fixes it.
@@ -37,6 +42,7 @@ Postgres listens on `127.0.0.1:54322` (user `postgres`, password `postgres`, loc
 | `20261018000400_rpcs.sql` | Client RPCs (below) |
 | `20261018000500_cron.sql` | pg_cron jobs: expire drops (every 5 min), purge deleted accounts after 30 days, recompute tiers nightly |
 | `20261018000600_taxonomy.sql` | The PLAN §4 taxonomy as data: 11 groups, 30 categories with field schemas and rules, tier limits, content filters |
+| `20261018000700_suggestions.sql` | Suggestion hints and hash-v1 embeddings, `category_suggestion_log`, `suggest_categories` / `match_categories` / `nearby_category_counts` / `log_category_suggestion`, and the private `drop-media` bucket |
 
 The taxonomy lives in a migration rather than `seed.sql` so a hosted project gets it too. Categories are rows, so adding one doesn't need a new migration type. Every change bumps `categories.version`, and each drop records the version it was validated against (`category_versions`).
 
@@ -63,9 +69,21 @@ The taxonomy lives in a migration rather than `seed.sql` so a hosted project get
 | `moderate_drop(drop_id, action, reason)` | moderator | `approve` / `remove` / `restore`, written to the audit log |
 | `resolve_report(report_id, status, note)` | moderator | Action or dismiss a report |
 | `suspend_user(user_id, until, reason)` | moderator | Suspended users can't post or confirm, but can still report and block |
+| `embedding_model()` | user | `hash-v1` until categories are re-embedded with gte-small |
+| `suggest_categories(text, lat, lng, hour, recent, limit)` | user | Top categories from the hash embedding, nearby counts, recent picks, and a small time-of-day prior |
+| `match_categories(embedding, limit)` | user | Nearest categories for a vector the Edge Function already built (the gte-small path) |
+| `nearby_category_counts(lat, lng, radius_m)` | user | Visible drops within 500 m, counted per category |
+| `log_category_suggestion(inputs, suggested, chosen)` | user | Writes `category_suggestion_log`. Direct inserts are not granted |
+
+## Edge Functions
+
+| Function | What |
+|---|---|
+| `suggest-category` | POST `{text, labels, lat, lng, hour, recent_slugs}`. Calls `suggest_categories` for hash-v1. Calls `match_categories` only when `XHERE_EMBEDDING_MODEL=gte-small` and the on-platform gte-small session is actually available. |
+| `strip-exif` | POST raw JPEG, PNG, or WebP (10 MB max). Strips Exif/XMP, then stores `drop-media/<user id>/<uuid>.<ext>` with the caller's JWT. No service-role key. |
 
 Moderator/admin is `profiles.role`. There's no UI to grant it yet. On a hosted project, the first admin is set once with SQL from the dashboard: `update public.profiles set role = 'admin' where handle = '...';`.
 
 ## Tests
 
-`tests/database/*.test.sql` (pgTAP, 255 assertions): schema/privileges, RLS, nearby/reveal/blur/expiry/blocks, `create_drop` validation, crime (`incident_report`) rules, confirmations, and moderation/cron. Each file runs in a transaction and rolls back.
+`tests/database/*.test.sql` (pgTAP): schema/privileges, RLS, nearby/reveal/blur/expiry/blocks, `create_drop` validation, crime (`incident_report`) rules, confirmations, moderation/cron, and the M5 suggestion log, hash embeddings, and fixture score (`07_suggestions.test.sql`, 19 assertions). Each file runs in a transaction and rolls back. `supabase/functions/**/*_test.ts` is the Deno suite for the two Edge Functions, including the same 32-phrase fixture set.

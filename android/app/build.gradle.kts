@@ -23,7 +23,7 @@ android {
         // a release milestone reviews the newer platform behavior.
         targetSdk = 36
         versionCode = 1
-        versionName = "0.4.0"
+        versionName = "0.5.0"
 
         // Placeholders match .env.example and SupabaseConfig.PLACEHOLDER.
         // A real anon key is public by design, but it is still account-specific
@@ -99,6 +99,10 @@ dependencies {
     implementation(libs.koin.androidx.compose)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.maplibre.android)
+    implementation(libs.androidx.camera.camera2)
+    implementation(libs.androidx.camera.lifecycle)
+    implementation(libs.androidx.camera.view)
+    implementation(libs.mlkit.image.labeling)
 
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)

@@ -118,12 +118,12 @@ enabled = true
 # The maximum file size allowed (e.g. "5MB", "500KB").
 file_size_limit = "50MiB"
 
-# Uncomment to configure local storage buckets
-# [storage.buckets.images]
-# public = false
-# file_size_limit = "50MiB"
-# allowed_mime_types = ["image/png", "image/jpeg"]
-# objects_path = "./images"
+# Drop photos. The strip-exif function uploads here with the user's JWT.
+# Public is false: only the author can read the object, and only from their folder.
+[storage.buckets.drop-media]
+public = false
+file_size_limit = "10MiB"
+allowed_mime_types = ["image/jpeg", "image/png", "image/webp"]
 
 # Allow connections via S3 compatible clients
 [storage.s3_protocol]
@@ -371,6 +371,13 @@ enabled = false
 authorization_url_path = "/oauth/consent"
 # Allow dynamic client registration
 allow_dynamic_registration = false
+
+# Quick drop (M5). verify_jwt rejects a missing user token before the function runs.
+[functions.suggest-category]
+verify_jwt = true
+
+[functions.strip-exif]
+verify_jwt = true
 
 [edge_runtime]
 enabled = true
