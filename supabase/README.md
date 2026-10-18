@@ -4,11 +4,46 @@ Postgres / PostGIS schema, Row-Level Security, RPCs, Edge Functions, and pgTAP t
 
 - `config.toml`: local Supabase CLI config (`supabase init`, `project_id = "xhere"`). It holds no secrets; provider credentials are `env(...)` references.
 - `migrations/`: SQL migrations (**M1**), applied in filename order.
-- `seed.sql`: **local demo data only** (4 demo users and 15 drops in Jamestown, New York). `supabase db reset` loads it. It is never pushed to a hosted project.
+- `seed.sql`: **local demo data** (4 demo users and 15 drops in Jamestown, New York). `supabase db reset` loads it. `supabase db push` does not. It was applied by hand to the pilot project; see [Demo seed on the pilot](#demo-seed-on-the-pilot).
 - `tests/database/`: pgTAP tests (**M1**), run by `supabase test db`.
 - `functions/`: Supabase Edge Functions. **M5** adds `suggest-category` and `strip-exif`. Later milestones add open-data proxies.
 
-No Supabase project has been created. The Supabase CLI's local Docker stack is the stand-in until Steven approves a free Supabase account ([`docs/PLAN.md`](../docs/PLAN.md) §8).
+## Hosted project
+
+The pilot project exists (PLAN §1.4 and §8, free tier). Local Docker is still what CI and `supabase test db` use. They do not talk to this project.
+
+| | |
+|---|---|
+| Name | XHere |
+| Project ref | `jpeuldzegtbqfezijhuy` |
+| Region | us-east-1 |
+| API URL (`SUPABASE_URL`, `PUBLIC_SUPABASE_URL`) | `https://jpeuldzegtbqfezijhuy.supabase.co` |
+| Dashboard | https://supabase.com/dashboard/project/jpeuldzegtbqfezijhuy |
+
+The **publishable** key (it starts with `sb_publishable_`) is what the clients send. Put it in `SUPABASE_ANON_KEY` (Android `local.properties`) and `PUBLIC_SUPABASE_ANON_KEY` (Cloudflare Pages, when that account exists). The variable names stay the same. Do not commit the key, and do not commit the legacy anon JWT. The service-role / secret key never goes in the repo, the app, or the site.
+
+The twelve migrations through `20261018001100_tip_lines.sql`, `seed.sql`, and both Edge Functions (`strip-exif`, `suggest-category`, `verify_jwt = true`) were applied from `main` at `0d2796a`. `XHERE_EMBEDDING_MODEL` is unset, so suggestions stay on `hash-v1`.
+
+### Before `supabase db push`
+
+Those twelve files were applied under hosted version numbers (the apply timestamps), not the repo prefixes. Link the CLI, then repair history, or `db push` will try to run them again:
+
+```bash
+supabase migration repair --status reverted 20261018113225 20261018113233 20261018113243 20261018113248 20261018113255 20261018113300 20261018113306 20261018113310 20261018113315 20261018113322 20261018113327 20261018113332
+supabase migration repair --status applied 20261018000000 20261018000100 20261018000200 20261018000300 20261018000400 20261018000500 20261018000600 20261018000700 20261018000800 20261018000900 20261018001000 20261018001100
+```
+
+After that, `supabase db push` applies only migrations newer than `20261018001100`.
+
+### Demo seed on the pilot
+
+`seed.sql` is still not part of `db push`. It was run once, unchanged, so the Jamestown pilot has the demo drops. The four accounts use reserved `@example.com` addresses (`guide.demo`, `trusted.demo`, `regular.demo`, `new.demo`), have no password, cannot sign in, and are marked `raw_user_meta_data = {"demo": true}`. `demo_trusted` is a moderator, which does nothing until someone can sign in as that account. Incident reports hit the 72-hour cap and events age out, so after about three days the expiry job leaves the evergreen drops.
+
+To remove every demo row (profiles and drops cascade from the user delete):
+
+```sql
+delete from auth.users where raw_user_meta_data->>'demo' = 'true';
+```
 
 ## Run it locally
 
@@ -47,6 +82,10 @@ Postgres listens on `127.0.0.1:54322` (user `postgres`, password `postgres`, loc
 | `20261018000900_audit_actions.sql` | Adds `set_role` to `moderation_action_type` (enum values need their own migration) |
 | `20261018001000_safety_compliance.sql` | M7: `hidden_drops` + hide/unhide, `my_blocks` / `my_hidden_drops` / `public_profile`, `moderation_queue`, append-only audit log, tier/role change auditing, `export_my_data`, and the `street_address` filter on `incident_report` |
 | `20261018001100_tip_lines.sql` | M7: `private.tip_lines` (seeded with the Jamestown Police anonymous tip line over Chautauqua County) and a trigger that refuses `incident_report` drops outside every tip-line area (App Review 1.7) |
+| `20261018001200_rls_auth_uid_initplan.sql` | Lint 0003: the 18 policies that call `auth.uid()` now call `(select auth.uid())`. Same allow/deny result |
+| `20261018001300_reference_admin_policies.sql` | Lint 0006: `tier_limits` and `content_filters` admin policies are insert/update/delete only, so SELECT has one policy |
+| `20261018001400_foreign_key_indexes.sql` | Lint 0001: indexes for `category_suggestion_log.chosen_category_id`, `drop_media.owner_id`, `drops (category_id, category_version)`, `moderation_actions.actor_id`, `reports.resolved_by`, `user_moderation.updated_by` |
+| `20261018001500_tip_lines_rls.sql` | RLS enabled on `private.tip_lines`. No client policies. `create_drop` still reads it because that function is security definer |
 
 The taxonomy lives in a migration rather than `seed.sql` so a hosted project gets it too. Categories are rows, so adding one doesn't need a new migration type. Every change bumps `categories.version`, and each drop records the version it was validated against (`category_versions`).
 
@@ -54,6 +93,7 @@ The taxonomy lives in a migration rather than `seed.sql` so a hosted project get
 
 - Clients never `insert` drops, confirmations, or reports directly. Writes go through `security definer` RPCs that validate against the category's rules. Table grants only allow narrow column updates on your own rows (profile fields; a drop's title, body, tags, and anonymity).
 - The true location (`drops.geog`) is never returned to other users. Reads, reveal checks, and distances all use `display_geog`, which is snapped to a grid of `location_precision_m` (100 m for `incident_report`). That keeps the real spot from being triangulated.
+- RLS is enabled on every table, including `private.tip_lines` (no client policy; the security-definer `create_drop` path still reads it).
 - Functions use `set search_path = ''`. `private` functions are not executable by `PUBLIC`/`anon` (the pgTAP suite checks this).
 - Errors raise a stable slug as the message with an SQLSTATE: `42501` auth/permission, `22023` validation, `P0002` not found, `PT429` rate limited (PostgREST returns HTTP 429).
 
@@ -88,11 +128,11 @@ The taxonomy lives in a migration rather than `seed.sql` so a hosted project get
 
 | Function | What |
 |---|---|
-| `suggest-category` | POST `{text, labels, lat, lng, hour, recent_slugs}`. Calls `suggest_categories` for hash-v1. Calls `match_categories` only when `XHERE_EMBEDDING_MODEL=gte-small` and the on-platform gte-small session is actually available. |
+| `suggest-category` | POST `{text, labels, lat, lng, hour, recent_slugs}`. Calls `suggest_categories` for hash-v1. Calls `match_categories` only when `XHERE_EMBEDDING_MODEL=gte-small` and the on-platform gte-small session is actually available. A caller who is not signed in (no user JWT, or the RPC returns 401/403) gets **401** `{"error":"not_authenticated"}`, the same JSON as `strip-exif`. |
 | `strip-exif` | POST raw JPEG, PNG, or WebP (10 MB max). Strips Exif/XMP, then stores `drop-media/<user id>/<uuid>.<ext>` with the caller's JWT. No service-role key. |
 
 Moderator/admin is `profiles.role`. There's no UI to grant it yet. On a hosted project, the first admin is set once with SQL from the dashboard: `update public.profiles set role = 'admin' where handle = '...';`. Since M7 that edit is itself logged (`set_role` in `moderation_actions`), and the audit log rejects updates and deletes.
 
 ## Tests
 
-`tests/database/*.test.sql` (pgTAP): schema/privileges, RLS, nearby/reveal/blur/expiry/blocks, `create_drop` validation, crime (`incident_report`) rules, confirmations, moderation/cron, and the M5 suggestion log, hash embeddings, and fixture score (`07_suggestions.test.sql`, 19 assertions), the M6 reveal fixes, and M7 safety/compliance (`09_safety_compliance.test.sql`: Safety pre-moderation, auto-hide threshold, blocks both ways, hide-for-me, moderator-only access, append-only audit log, export) plus `10_tip_lines.test.sql` (incident reports only inside a tip-line area). Each file runs in a transaction and rolls back. `supabase/functions/**/*_test.ts` is the Deno suite for the two Edge Functions, including the same 32-phrase fixture set.
+`tests/database/*.test.sql` (pgTAP): schema/privileges, RLS, nearby/reveal/blur/expiry/blocks, `create_drop` validation, crime (`incident_report`) rules, confirmations, moderation/cron, and the M5 suggestion log, hash embeddings, and fixture score (`07_suggestions.test.sql`, 19 assertions), the M6 reveal fixes, and M7 safety/compliance (`09_safety_compliance.test.sql`: Safety pre-moderation, auto-hide threshold, blocks both ways, hide-for-me, moderator-only access, append-only audit log, export) plus `10_tip_lines.test.sql` (incident reports only inside a tip-line area) and `11_advisor_followups.test.sql` (the `(select auth.uid())` policies, one SELECT policy on the reference tables, the foreign-key indexes, tip-line RLS, and the same read/write access as before). Each file runs in a transaction and rolls back. `supabase/functions/**/*_test.ts` is the Deno suite for the two Edge Functions, including the same 32-phrase fixture set and a 401 for a signed-out suggestion.

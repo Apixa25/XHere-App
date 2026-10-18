@@ -13,12 +13,14 @@ This module is the shell, the map, the drop composer, the detail screen, and the
 * Email one-time code and Google ID token both go through `supabase-kt` in `shared/` (`signInWithEmailOtp`, `verifyEmailOtp`, `signInWithIdToken`).
 * Google uses Credential Manager (`GetSignInWithGoogleOption`). The nonce sent to Google is the SHA-256 of the raw nonce; Supabase gets the raw nonce.
 * No Supabase project is required to build or to run the tests. `SupabaseConfig.PLACEHOLDER` matches `.env.example`. With those placeholders the sign-in screen explains that, and it does not call the network.
+* A hosted project exists for real sign-in: ref `jpeuldzegtbqfezijhuy` (see `supabase/README.md`, PLAN §8). `SUPABASE_ANON_KEY` is the publishable key, which starts with `sb_publishable_`. The variable name does not change. Do not commit the key. Do not put the service-role key in `local.properties` for the app to read.
 * `XHereApplication` calls `prepareSupabaseSessionStore` before Koin builds the client. That is the same context the auth manifest initializers set on a device. Robolectric skips those providers.
 
 To point a debug build at a real project, put these in gitignored `local.properties` (or in a gitignored `.env` at the repo root). Never put `SUPABASE_SERVICE_ROLE_KEY` in either file for the app to read — the Gradle script does not copy it into `BuildConfig`.
 
 ```properties
 SUPABASE_URL=https://your-project-ref.supabase.co
+# Publishable key (sb_publishable_…). Not the service-role key. Not committed.
 SUPABASE_ANON_KEY=your-anon-key
 GOOGLE_WEB_CLIENT_ID=your-google-web-client-id
 ```

@@ -1,7 +1,7 @@
-import { assertAlmostEquals, assertEquals, assertGreater } from "jsr:@std/assert@1";
+import { assertAlmostEquals, assertEquals, assertGreater, assertRejects } from "jsr:@std/assert@1";
 import { cosine, hashEmbed } from "../_shared/embed.ts";
 import { fixtureScore, rankCategories } from "../_shared/rank.ts";
-import { handleSuggest } from "./handler.ts";
+import { errorForRpcStatus, handleSuggest, NotAuthenticatedError } from "./handler.ts";
 
 Deno.test("fixture top-3 is at least 70 percent", () => {
   const score = fixtureScore();
@@ -84,6 +84,66 @@ Deno.test("gte-small blends the pgvector cosine with a nearby prior", async () =
   assertEquals(sawText.includes("Flood"), true);
   assertEquals(body.model, "gte-small");
   assertEquals(body.suggestions[0].slug, "hazard");
+});
+
+Deno.test("rpc 401 and 403 are not_authenticated; other statuses still throw", () => {
+  const denied = errorForRpcStatus("suggest_categories", 401);
+  const forbidden = errorForRpcStatus("match_categories", 403);
+  if (!(denied instanceof NotAuthenticatedError)) throw new Error("401 should be NotAuthenticatedError");
+  if (!(forbidden instanceof NotAuthenticatedError)) throw new Error("403 should be NotAuthenticatedError");
+  const failed = errorForRpcStatus("suggest_categories", 500);
+  assertEquals(failed instanceof NotAuthenticatedError, false);
+  assertEquals(failed.message, "rpc_suggest_categories_500");
+});
+
+Deno.test("a signed-out caller gets 401 not_authenticated", async () => {
+  const response = await handleSuggest(jsonRequest({ text: "statue in the park" }), {
+    model: async () => "hash-v1",
+    suggestHash: async () => {
+      throw new NotAuthenticatedError();
+    },
+    match: async () => {
+      throw new Error("hash path must not match vectors");
+    },
+    nearby: async () => ({}),
+  });
+  assertEquals(response.status, 401);
+  assertEquals(response.headers.get("content-type"), "application/json");
+  assertEquals(await response.json(), { error: "not_authenticated" });
+});
+
+Deno.test("a signed-out gte-small caller gets 401 before nearby counts", async () => {
+  const response = await handleSuggest(jsonRequest({ text: "water on the road", lat: 42.1, lng: -79.2 }), {
+    model: async () => "gte-small",
+    embed: async () => ({ vector: [0.1], model: "gte-small" }),
+    suggestHash: async () => {
+      throw new Error("gte path must not hash");
+    },
+    match: async () => {
+      throw errorForRpcStatus("match_categories", 401);
+    },
+    nearby: async () => {
+      throw new Error("should not count nearby after auth failure");
+    },
+  });
+  assertEquals(response.status, 401);
+  assertEquals(await response.json(), { error: "not_authenticated" });
+});
+
+Deno.test("a non-auth rpc failure still surfaces", async () => {
+  await assertRejects(
+    () =>
+      handleSuggest(jsonRequest({ text: "statue" }), {
+        model: async () => "hash-v1",
+        suggestHash: async () => {
+          throw errorForRpcStatus("suggest_categories", 500);
+        },
+        match: async () => [],
+        nearby: async () => ({}),
+      }),
+    Error,
+    "rpc_suggest_categories_500",
+  );
 });
 
 function jsonRequest(payload: unknown): Request {
