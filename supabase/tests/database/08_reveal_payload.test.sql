@@ -32,6 +32,12 @@ begin
     'hazard', 40.004, -100.0, 'Ice on the walk', 'Slippery after dark.',
     jsonb_build_object('occurred_at', to_jsonb(now()))
   ) ->> 'id', true);
+  -- RLS only lets the author read drops directly. Capture the share id here.
+  perform set_config(
+    't.hist_short',
+    (select short_id from public.drops where id = current_setting('t.hist')::uuid),
+    true
+  );
 end;
 $$;
 
@@ -69,13 +75,13 @@ select ok(
 -- Share teasers never reveal, including for the author.
 select ok(
   (select not revealed and body is null and tags is null and (x::text) !~ 'SECRET_BODY_SENTINEL'
-   from public.drop_teaser((select short_id from public.drops where id = current_setting('t.hist')::uuid)) x),
+   from public.drop_teaser(current_setting('t.hist_short')) x),
   'a signed-in reader gets a teaser with no body'
 );
 set local request.jwt.claims to '{"sub": "11111111-1111-4111-8111-111111111111", "role": "authenticated"}';
 select ok(
   (select not revealed and body is null and tags is null
-   from public.drop_teaser((select short_id from public.drops where id = current_setting('t.hist')::uuid))),
+   from public.drop_teaser(current_setting('t.hist_short'))),
   'the author''s share teaser does not include the body either'
 );
 
