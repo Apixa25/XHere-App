@@ -133,7 +133,11 @@ class AppBootsWithoutSupabaseTest {
         val services = koin.get<world.xhere.shared.data.XHereServices>()
         val config = koin.get<world.xhere.app.config.ClientConfig>()
         rule.waitForTag(TestTags.AUTH_EMAIL)
-        rule.onNodeWithTag(TestTags.AUTH_GOOGLE).performScrollTo().assertIsDisplayed()
+        if (config.googleReady) {
+            rule.onNodeWithTag(TestTags.AUTH_GOOGLE).performScrollTo().assertIsDisplayed()
+        } else {
+            rule.onNodeWithTag(TestTags.AUTH_GOOGLE).assertDoesNotExist()
+        }
         if (!config.serverReady) {
             rule.onNodeWithTag(TestTags.AUTH_OFFLINE_NOTICE).performScrollTo().assertIsDisplayed()
             rule.onNodeWithTag(TestTags.PREVIEW_JAMESTOWN).assertIsDisplayed()

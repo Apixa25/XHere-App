@@ -200,23 +200,25 @@ internal fun AuthContent(
                     style = MaterialTheme.typography.bodyMedium,
                 )
             }
-            Spacer(Modifier.height(4.dp))
-            HorizontalDivider()
-            Text(
-                text = stringResource(R.string.auth_or),
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            OutlinedButton(
-                onClick = onGoogle,
-                enabled = !state.busy,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(52.dp)
-                    .testTag(TestTags.AUTH_GOOGLE),
-                shape = MaterialTheme.shapes.large,
-            ) {
-                Text(stringResource(R.string.auth_google))
+            if (state.showGoogle) {
+                Spacer(Modifier.height(4.dp))
+                HorizontalDivider()
+                Text(
+                    text = stringResource(R.string.auth_or),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                OutlinedButton(
+                    onClick = onGoogle,
+                    enabled = !state.busy,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(52.dp)
+                        .testTag(TestTags.AUTH_GOOGLE),
+                    shape = MaterialTheme.shapes.large,
+                ) {
+                    Text(stringResource(R.string.auth_google))
+                }
             }
             AgreementNotice()
         }
