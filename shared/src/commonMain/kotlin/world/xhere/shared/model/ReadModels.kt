@@ -44,6 +44,12 @@ data class DropCard(
     @SerialName("created_at") val createdAt: Instant,
     @SerialName("author_handle") val authorHandle: String? = null,
     @SerialName("is_mine") val isMine: Boolean,
+    /** `user` when an older payload omits it. Public records are `open_data`. */
+    val source: DropSource = DropSource.USER,
+    @SerialName("source_name") val sourceName: String? = null,
+    @SerialName("source_url") val sourceUrl: String? = null,
+    val license: String? = null,
+    val attribution: String? = null,
 ) {
     val displayLocation: LatLng get() = LatLng(latitude, longitude)
 
@@ -55,7 +61,7 @@ data class DropCard(
         categorySlug = categorySlug,
         groupSlug = groupSlug,
         categoryVersion = categoryVersion,
-        source = DropSource.USER,
+        source = source,
         title = title,
         body = body,
         attributes = attributes ?: JsonObject(emptyMap()),
@@ -94,6 +100,8 @@ data class MapFeature(
     @SerialName("lng") val longitude: Double,
     @SerialName("point_count") val pointCount: Int,
     @SerialName("category_counts") val categoryCounts: Map<String, Int>? = null,
+    /** Set on a single pin. Clusters mix sources, so this stays null. */
+    val source: DropSource? = null,
 ) {
     val isCluster: Boolean get() = kind == "cluster"
     val location: LatLng get() = LatLng(latitude, longitude)

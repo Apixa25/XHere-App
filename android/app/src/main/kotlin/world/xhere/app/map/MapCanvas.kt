@@ -60,10 +60,11 @@ internal fun ProgrammaticMap(
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         state.features.forEach { feature ->
+            val records = if (feature.source == world.xhere.shared.model.DropSource.OPEN_DATA) "  · public record" else ""
             val caption = if (feature.isCluster || feature.title.isNullOrBlank()) {
                 markerLabel(feature, state.taxonomy)
             } else {
-                markerLabel(feature, state.taxonomy) + "  " + feature.title
+                markerLabel(feature, state.taxonomy) + "  " + feature.title + records
             }
             Text(
                 text = caption,

@@ -143,6 +143,25 @@ class DropDetailTest {
     }
 
     @Test
+    fun publicRecordShowsTheBadgeAndAttributionWithoutAConfirmation() {
+        rule.openMap()
+        rule.onNodeWithTag(TestTags.marker("records")).performClick()
+        rule.waitForTag(TestTags.TEASER_PUBLIC)
+        rule.onNodeWithTag(TestTags.TEASER_PUBLIC).assertTextContains("From public records")
+        rule.onNodeWithTag(TestTags.TEASER_OPEN).performClick()
+        rule.waitForTag(TestTags.DETAIL_PUBLIC)
+        rule.onNodeWithTag(TestTags.DETAIL_TITLE).assertTextContains("Prendergast Library")
+        rule.onNodeWithTag(TestTags.DETAIL_PUBLIC).assertTextContains("From public records")
+        rule.onNodeWithTag(TestTags.DETAIL_BODY).assertTextContains("Public library", substring = true)
+        rule.onNodeWithTag(TestTags.DETAIL_ATTRIBUTION).performScrollTo().assertTextContains("National Park Service", substring = true)
+        rule.onNodeWithTag(TestTags.DETAIL_SOURCE).performScrollTo().assertIsDisplayed()
+        rule.onNodeWithTag(TestTags.DETAIL_LOCKED).assertDoesNotExist()
+        rule.onNodeWithTag(TestTags.DETAIL_STILL_TRUE).assertDoesNotExist()
+        rule.onNodeWithTag(TestTags.DETAIL_PROGRESS).assertDoesNotExist()
+        rule.onNodeWithTag(TestTags.DETAIL_FRESHNESS).assertDoesNotExist()
+    }
+
+    @Test
     fun aPendingLinkOpensThatDrop() {
         rule.openMap()
         TestGraph.links.offer(ShareLinks.url("fenton"))

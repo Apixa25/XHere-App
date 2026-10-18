@@ -198,11 +198,19 @@ private fun NativeMap(
 }
 
 private fun render(style: Style, features: List<MapFeature>, location: LatLng?, taxonomy: Taxonomy?) {
-    features.map { markerLabel(it, taxonomy) }.distinct().forEach { label ->
-        val id = MarkerIcons.idFor(label)
+    features.map { iconKey(it, taxonomy) }.distinct().forEach { key ->
+        val id = MarkerIcons.idFor(key)
         if (style.getImage(id) == null) {
-            val sample = features.first { markerLabel(it, taxonomy) == label }
-            style.addImage(id, MarkerIcons.bitmap(label, MarkerIcons.strokeColor(sample, taxonomy)))
+            val sample = features.first { iconKey(it, taxonomy) == key }
+            val label = markerLabel(sample, taxonomy)
+            style.addImage(
+                id,
+                MarkerIcons.bitmap(
+                    label,
+                    MarkerIcons.strokeColor(sample, taxonomy),
+                    publicRecord = sample.source == world.xhere.shared.model.DropSource.OPEN_DATA,
+                ),
+            )
         }
     }
     val drops = collectionJson(features, taxonomy)
@@ -249,12 +257,17 @@ private fun render(style: Style, features: List<MapFeature>, location: LatLng?, 
     }
 }
 
+private fun iconKey(feature: MapFeature, taxonomy: Taxonomy?): String {
+    val label = markerLabel(feature, taxonomy)
+    return if (feature.source == world.xhere.shared.model.DropSource.OPEN_DATA) "records:$label" else label
+}
+
 internal fun featureKey(feature: MapFeature): String =
     feature.shortId ?: "c-${feature.latitude}-${feature.longitude}-${feature.pointCount}"
 
 private fun collectionJson(features: List<MapFeature>, taxonomy: Taxonomy?): String {
     val body = features.joinToString(",") { feature ->
-        val icon = MarkerIcons.idFor(markerLabel(feature, taxonomy))
+        val icon = MarkerIcons.idFor(iconKey(feature, taxonomy))
         val key = featureKey(feature)
         """{"type":"Feature","properties":{"icon":"$icon","key":"$key"},"geometry":{"type":"Point","coordinates":[${feature.longitude},${feature.latitude}]}}"""
     }

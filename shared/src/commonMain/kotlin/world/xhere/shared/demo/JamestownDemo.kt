@@ -15,6 +15,7 @@ import world.xhere.shared.geo.LatLng
 import world.xhere.shared.model.Category
 import world.xhere.shared.model.CategoryGroup
 import world.xhere.shared.model.ContentFilter
+import world.xhere.shared.model.DropSource
 import world.xhere.shared.model.DropStatus
 import world.xhere.shared.model.ModerationMode
 import world.xhere.shared.model.Profile
@@ -74,7 +75,13 @@ object JamestownDemo {
         createdAt = createdAt,
     )
 
-    /** Author of every demo drop. */
+    /**
+     * Not a profile. Open-data pins use this id so they never match a person's
+     * account, including the demo guide who posts the other Jamestown drops.
+     */
+    val PUBLIC_RECORDS: Uuid = id(90)
+
+    /** Author of the demo user drops. Public records are not theirs. */
     val guide: Profile = Profile(
         id = id(1),
         handle = "demo_guide",
@@ -96,15 +103,21 @@ object JamestownDemo {
             body: String,
             latitude: Double,
             longitude: Double,
+            source: DropSource = DropSource.USER,
+            sourceName: String? = null,
+            sourceUrl: String? = null,
+            license: String? = null,
+            attribution: String? = null,
         ) {
             val category = checkNotNull(taxonomy.category(categorySlug))
             val groupSlug = groups.first { it.id == category.groupId }.slug
             val dropId = id(200 + store.drops.size)
+            val publicRecord = source == DropSource.OPEN_DATA
             store.drops[dropId] = StoredDrop(
                 id = dropId,
                 shortId = shortId,
-                authorId = guide.id,
-                authorHandle = guide.handle,
+                authorId = if (publicRecord) PUBLIC_RECORDS else guide.id,
+                authorHandle = if (publicRecord) "" else guide.handle,
                 groupSlug = groupSlug,
                 category = category,
                 title = title,
@@ -119,6 +132,11 @@ object JamestownDemo {
                 expiresAt = null,
                 createdAt = createdAt,
                 media = emptyList(),
+                source = source,
+                sourceName = sourceName,
+                sourceUrl = sourceUrl,
+                license = license,
+                attribution = attribution,
             )
         }
         put(
@@ -184,6 +202,21 @@ object JamestownDemo {
             "A fixture outside Jamestown, used to prove the viewport does not return the whole world.",
             42.88640,
             -78.87840,
+        )
+        // A public record inside downtown, so the map is not only user drops.
+        // It is not authored by demo_guide and does not count as their contribution.
+        put(
+            "records",
+            "historical_fact",
+            "Prendergast Library",
+            "Public library building. Open the source for the register entry.",
+            42.09824,
+            -79.24382,
+            source = DropSource.OPEN_DATA,
+            sourceName = "National Register of Historic Places",
+            sourceUrl = "https://npgallery.nps.gov/AssetDetail/NRIS/85000628",
+            license = "Public domain",
+            attribution = "National Park Service, National Register of Historic Places. Public domain.",
         )
         return store
     }

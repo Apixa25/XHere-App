@@ -38,7 +38,12 @@ class JamestownDemoTest {
             categories = listOf("historical_fact"),
             zoom = JamestownDemo.STREET_ZOOM,
         )
-        assertEquals(listOf("Fenton Mansion"), facts.map { it.title })
+        assertEquals(setOf("Fenton Mansion", "Prendergast Library"), facts.map { it.title }.toSet())
+        val records = client().drops.dropTeaser("records")
+        assertEquals(true, records.revealed)
+        assertEquals(world.xhere.shared.model.DropSource.OPEN_DATA, records.source)
+        assertEquals("National Park Service, National Register of Historic Places. Public domain.", records.attribution)
+        assertEquals(false, records.isMine)
         val teaser = client().drops.dropTeaser("fenton")
         assertEquals(false, teaser.revealed)
         assertNull(teaser.body)
@@ -52,7 +57,7 @@ class JamestownDemoTest {
         val clusters = client().drops.dropsInView(JamestownDemo.downtown, zoom = JamestownDemo.CLUSTER_ZOOM)
         assertEquals(1, clusters.size)
         assertEquals("cluster", clusters.first().kind)
-        assertEquals(6, clusters.first().pointCount)
+        assertEquals(7, clusters.first().pointCount)
     }
 
     @Test

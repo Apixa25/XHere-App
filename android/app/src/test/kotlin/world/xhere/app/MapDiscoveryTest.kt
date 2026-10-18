@@ -162,8 +162,8 @@ class MapDiscoveryTest {
         rule.waitForTag(TestTags.MARKER_CLUSTER)
         rule.onNodeWithText("Fenton Mansion", substring = true).assertDoesNotExist()
         rule.awaitQuery(JamestownDemo.downtown, JamestownDemo.CLUSTER_ZOOM, null)
-        assertEquals("cluster:6", rule.features())
-        rule.onNodeWithTag(TestTags.MARKER_CLUSTER).assertTextContains("6", substring = true)
+        assertEquals("cluster:7", rule.features())
+        rule.onNodeWithTag(TestTags.MARKER_CLUSTER).assertTextContains("7", substring = true)
     }
 
     @Test

@@ -256,3 +256,95 @@ Fill this out once per jurisdiction profile (e.g. `us-ny`, `uk`, `ca-on`, `eu-de
   - Config validator rejects missing license/terms fields.
 - **Prereq from M7:** moderation queue + PII filter.
 - **Cost items:** counsel review per new country, any paid aggregator, a geocoder beyond free tiers.
+
+---
+
+## 8. Shipped base layer (so the map is never empty)
+
+This is the first slice of **M10** (PLAN §3 "Open-data layers", §4.1 source axis `open_data`, §5). It is the layer that keeps a new city from opening onto a blank map. Jamestown, New York is the **pilot region only**. The importer does not mention Jamestown except by reading `supabase/regions/us/jamestown-ny.yaml`.
+
+### 8.1 What is stored
+
+Imported places are ordinary `drops` with `source = open_data` and `author_id` null. They use the existing category rows (`historical_fact`, `memorial`, `viewpoint`, `public_art`). They show up through `drops_in_view`, `drops_nearby`, `drop_detail`, and `drop_teaser`. They do not count as anyone's drops, points, or tier, and `export_my_data` does not include them. `confirm_drop` rejects them (`not_a_user_drop`): a public record is not a contribution you can vote on.
+
+Provenance is not stuffed into the drop body. It lives on:
+
+| Table | What |
+|---|---|
+| `public.open_data_sources` | Publisher slug, display name, license, attribution, home URL |
+| `public.open_data_items` | One row per place: `drop_id`, `source_slug`, stable `external_id`, https `source_url`, license, attribution, `region_id`, `retrieved_at` |
+
+Unique key is `(source_slug, external_id)`. A re-run updates that drop. A later snapshot for the same source and region marks missing rows `removed` (it does not delete them, so the external id can come back). Clients may `select` both tables. They cannot insert. The write path is `private.upsert_open_data_items(jsonb)`, granted to `service_role` only.
+
+The card the app already reads (`drop_card`) gained `source`, `source_name`, `source_url`, `license`, and `attribution`. A public record stays revealed from any distance, including the share teaser. A user drop is unchanged: the body stays hidden until you are close enough.
+
+The map draws these pins apart from user drops (a small mark on the pin, and "public record" on the plain-text map). The teaser and the detail screen show a **From public records** badge, the attribution line, and a **View source** button. Still-true / not-true is hidden, because confirming one would look like a user contribution.
+
+### 8.2 Sources in this slice (free, licensed)
+
+| Config id | Adapter | License | What is stored |
+|---|---|---|---|
+| `wikipedia-geo` | `wikipedia_geo` | CC BY-SA 4.0 | English Wikipedia geotagged page **title**, page id, coordinates, and a one-line summary we wrote. Article text is not copied. External id `enwiki:{pageid}` |
+| `wikidata-geo` | `wikidata_geo` | CC0 1.0 | Wikidata item with coordinates and an English label that is not just the Q-id. External id `wikidata:{Qid}` |
+| `nrhp` | `arcgis_feature` | Public domain | US National Register points (layer 0) and polygon centroids (layer 1) inside the bbox. External id `nrhp:{NRIS_Refnum}`. Link is the NARA URL when it is https, otherwise `https://npgallery.nps.gov/AssetDetail/NRIS/{ref}` |
+| `osm-heritage` | `osm_overpass` | ODbL 1.0 | Named `historic=*`, `heritage=*`, and tourism in `artwork`, `attraction`, `museum`, `viewpoint`, `gallery`. Hotels and other tourism values are not imported. External id `osm:{node\|way}/{id}` |
+
+HMdb and Atlas Obscura stay **link-only**. Both the importer and `upsert_open_data_items` refuse a slug or URL that looks like either one (`license_not_allowed`). Their reasons are in the region file's `candidates:` block so the next region does not re-decide it.
+
+Within one run, the same place is kept once. Order is NRHP, then Wikipedia, then Wikidata, then OSM. A shared Wikidata Q-id, or a name within 60 m that is the same or nearly the same, drops the later copy.
+
+### 8.3 Files
+
+| Path | Role |
+|---|---|
+| `supabase/scripts/import_open_data.py` | Stdlib Python. No pip, no paid API |
+| `supabase/regions/<country>/<region>.yaml` | The only per-region config. Bbox is west, south, east, north |
+| `supabase/seed/open-data/<file>.json` | The snapshot the script writes |
+| `supabase/seed/open-data/<file>.sql` | `select private.upsert_open_data_items(...)`. Safe to re-run |
+| `supabase/migrations/20261018001600_open_data.sql` | Tables, card fields, map RPC, upsert, confirmation guard |
+| `supabase/tests/database/12_open_data.test.sql` | pgTAP |
+
+`supabase/config.toml` loads `seed.sql` and then `seed/open-data/jamestown-ny.sql` on `supabase db reset`. `supabase db push` does **not** load either file.
+
+Overpass mirrors fail on their own. The script tries `overpass.openstreetmap.fr`, then `overpass.kumi.systems`, then `overpass-api.de`. If all three fail, it reads the same tags from the OSM map API in small tiles (the map call rejects a whole city as too many nodes). Same ODbL data, same external ids.
+
+### 8.4 Add another region
+
+1. Copy `supabase/regions/us/jamestown-ny.yaml` to `supabase/regions/<country>/<name>.yaml`.
+2. Set `region.id` (lowercase, hyphenated, for example `fr-paris`), `name`, `country`, `bbox`, and `timezone`.
+3. Keep, drop, or add `sources`. A national source that does not cover the country (NRHP is US-only) should be omitted there. Record rejected sources under `candidates` with `decision: link-only` or `reject` and a reason.
+4. Fetch and check, from the repo root:
+
+```bash
+python3 supabase/scripts/import_open_data.py --self-test
+python3 supabase/scripts/import_open_data.py \
+  --region supabase/regions/us/jamestown-ny.yaml \
+  --out supabase/seed/open-data/jamestown-ny.json
+python3 supabase/scripts/import_open_data.py \
+  --check supabase/seed/open-data/jamestown-ny.json \
+  --region supabase/regions/us/jamestown-ny.yaml
+```
+
+`--check` is offline. It requires every configured source to have at least one item, https links, the license and attribution strings from the YAML, a known category, a unique external id, and no HMdb or Atlas Obscura row.
+
+5. Apply on a database that already has migration `20261018001600` (local: `supabase db reset`; hosted: the steps in `supabase/README.md`):
+
+```bash
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/seed/open-data/jamestown-ny.sql
+```
+
+`DATABASE_URL` is the Postgres connection string. The SQL calls a function granted to `service_role` and the database owner. The anon key cannot run it. Re-running the same file updates rows; it does not insert a second pin for the same external id.
+
+### 8.5 Jamestown pilot counts
+
+The committed snapshot is `supabase/seed/open-data/jamestown-ny.json` for region `us-ny-jamestown`, bbox `[-79.32, 42.05, -79.18, 42.14]`. After dedupe (2026-10-18):
+
+| Source | Places |
+|---|---|
+| `wikipedia-geo` | 28 |
+| `wikidata-geo` | 64 |
+| `nrhp` | 11 |
+| `osm-heritage` | 14 |
+| **Total** | **117** |
+
+Before dedupe the fetch was 31 Wikipedia, 65 Wikidata, 11 NRHP, and 18 OSM. Refresh the file with the command in §8.4, then apply the `.sql` again. Do not hand-edit the JSON or the SQL.

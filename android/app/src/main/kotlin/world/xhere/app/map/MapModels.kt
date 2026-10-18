@@ -5,6 +5,7 @@ import world.xhere.shared.geo.BoundingBox
 import world.xhere.shared.geo.LatLng
 import world.xhere.shared.model.CategoryGroup
 import world.xhere.shared.model.DropCard
+import world.xhere.shared.model.DropSource
 import world.xhere.shared.model.MapFeature
 import world.xhere.shared.model.Taxonomy
 
@@ -79,6 +80,8 @@ data class TeaserUi(
     val revealed: Boolean,
     val body: String?,
     val approximate: Boolean,
+    val publicRecord: Boolean = false,
+    val attribution: String? = null,
 )
 
 enum class MapNotice {
@@ -141,9 +144,11 @@ internal fun DropCard.toTeaser(taxonomy: Taxonomy?, distanceM: Double?): TeaserU
         groupLabel = group?.label ?: groupSlug,
         icon = category?.icon ?: group?.icon ?: "📍",
         distanceLabel = distanceM?.let(::formatMeters),
-        revealed = revealed,
-        body = if (revealed) body else null,
+        revealed = revealed || source == DropSource.OPEN_DATA,
+        body = if (revealed || source == DropSource.OPEN_DATA) body else null,
         approximate = locationPrecisionM > 0,
+        publicRecord = source == DropSource.OPEN_DATA,
+        attribution = attribution,
     )
 }
 

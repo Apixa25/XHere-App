@@ -163,7 +163,10 @@ class FreshSessionRule : TestRule {
                     TestGraph.services.auth.signOut()
                     TestGraph.services.store.deleted.clear()
                     TestGraph.services.store.pendingEmail = null
-                    val demoShortIds = setOf("fenton", "lunch", "truck", "concert", "hazard", "benches", "lake", "buffalo")
+                    val demoShortIds = setOf(
+                        "fenton", "lunch", "truck", "concert", "hazard", "benches", "lake", "buffalo",
+                        "records",
+                    )
                     TestGraph.services.store.drops.entries.removeAll { it.value.shortId !in demoShortIds }
                     TestGraph.services.store.suggestionLogs.clear()
                     TestGraph.services.store.mediaBytes.clear()

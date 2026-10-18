@@ -1,0 +1,2213 @@
+[
+  {
+    "source_slug": "nrhp",
+    "source_name": "U.S. National Park Service",
+    "source_home": "https://mapservices.nps.gov/arcgis/rest/services/cultural_resources/nrhp_locations/MapServer",
+    "external_id": "nrhp:100004916",
+    "category_slug": "historical_fact",
+    "title": "Empire Worsted Mills",
+    "summary": "Building on the National Register of Historic Places (Jamestown, New York). Shown where the National Park Service published it.",
+    "lat": 42.09373,
+    "lng": -79.231736,
+    "source_url": "https://npgallery.nps.gov/AssetDetail/NRIS/100004916",
+    "license": "Public domain",
+    "attribution": "National Park Service, National Register of Historic Places. Public domain.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "National Register of Historic Places",
+      "source_url": "https://npgallery.nps.gov/AssetDetail/NRIS/100004916"
+    }
+  },
+  {
+    "source_slug": "nrhp",
+    "source_name": "U.S. National Park Service",
+    "source_home": "https://mapservices.nps.gov/arcgis/rest/services/cultural_resources/nrhp_locations/MapServer",
+    "external_id": "nrhp:03000045",
+    "category_slug": "historical_fact",
+    "title": "Erie Railroad Station",
+    "summary": "Building on the National Register of Historic Places (Jamestown, New York). Shown where the National Park Service published it.",
+    "lat": 42.094509,
+    "lng": -79.244603,
+    "source_url": "https://catalog.archives.gov/id/75316764",
+    "license": "Public domain",
+    "attribution": "National Park Service, National Register of Historic Places. Public domain.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "National Register of Historic Places",
+      "source_url": "https://catalog.archives.gov/id/75316764"
+    }
+  },
+  {
+    "source_slug": "nrhp",
+    "source_name": "U.S. National Park Service",
+    "source_home": "https://mapservices.nps.gov/arcgis/rest/services/cultural_resources/nrhp_locations/MapServer",
+    "external_id": "nrhp:85000628",
+    "category_slug": "historical_fact",
+    "title": "Euclid Avenue School",
+    "summary": "Building on the National Register of Historic Places (Jamestown, New York). Shown where the National Park Service published it.",
+    "lat": 42.108484,
+    "lng": -79.239742,
+    "source_url": "https://catalog.archives.gov/id/75316766",
+    "license": "Public domain",
+    "attribution": "National Park Service, National Register of Historic Places. Public domain.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "National Register of Historic Places",
+      "source_url": "https://catalog.archives.gov/id/75316766"
+    }
+  },
+  {
+    "source_slug": "nrhp",
+    "source_name": "U.S. National Park Service",
+    "source_home": "https://mapservices.nps.gov/arcgis/rest/services/cultural_resources/nrhp_locations/MapServer",
+    "external_id": "nrhp:72000824",
+    "category_slug": "historical_fact",
+    "title": "Fenton, Gov. Reuben, Mansion",
+    "summary": "Building on the National Register of Historic Places (Jamestown, New York). Shown where the National Park Service published it.",
+    "lat": 42.091355,
+    "lng": -79.238644,
+    "source_url": "https://catalog.archives.gov/id/75316768",
+    "license": "Public domain",
+    "attribution": "National Park Service, National Register of Historic Places. Public domain.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "National Register of Historic Places",
+      "source_url": "https://catalog.archives.gov/id/75316768"
+    }
+  },
+  {
+    "source_slug": "nrhp",
+    "source_name": "U.S. National Park Service",
+    "source_home": "https://mapservices.nps.gov/arcgis/rest/services/cultural_resources/nrhp_locations/MapServer",
+    "external_id": "nrhp:100011762",
+    "category_slug": "historical_fact",
+    "title": "First Presbyterian Church, Jamestown, New York",
+    "summary": "Building on the National Register of Historic Places (Jamestown, New York). Shown where the National Park Service published it.",
+    "lat": 42.098818,
+    "lng": -79.238704,
+    "source_url": "https://npgallery.nps.gov/AssetDetail/NRIS/100011762",
+    "license": "Public domain",
+    "attribution": "National Park Service, National Register of Historic Places. Public domain.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "National Register of Historic Places",
+      "source_url": "https://npgallery.nps.gov/AssetDetail/NRIS/100011762"
+    }
+  },
+  {
+    "source_slug": "nrhp",
+    "source_name": "U.S. National Park Service",
+    "source_home": "https://mapservices.nps.gov/arcgis/rest/services/cultural_resources/nrhp_locations/MapServer",
+    "external_id": "nrhp:100005570",
+    "category_slug": "historical_fact",
+    "title": "Forest Heights Historic District",
+    "summary": "District on the National Register of Historic Places (Jamestown, New York). Shown where the National Park Service published it.",
+    "lat": 42.091524,
+    "lng": -79.23846,
+    "source_url": "https://npgallery.nps.gov/AssetDetail/NRIS/100005570",
+    "license": "Public domain",
+    "attribution": "National Park Service, National Register of Historic Places. Public domain.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "National Register of Historic Places",
+      "source_url": "https://npgallery.nps.gov/AssetDetail/NRIS/100005570"
+    }
+  },
+  {
+    "source_slug": "nrhp",
+    "source_name": "U.S. National Park Service",
+    "source_home": "https://mapservices.nps.gov/arcgis/rest/services/cultural_resources/nrhp_locations/MapServer",
+    "external_id": "nrhp:94001542",
+    "category_slug": "historical_fact",
+    "title": "Jamestown Armory",
+    "summary": "Building on the National Register of Historic Places (Albany, New York). Shown where the National Park Service published it.",
+    "lat": 42.093041,
+    "lng": -79.25468,
+    "source_url": "https://catalog.archives.gov/id/75312265",
+    "license": "Public domain",
+    "attribution": "National Park Service, National Register of Historic Places. Public domain.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "National Register of Historic Places",
+      "source_url": "https://catalog.archives.gov/id/75312265"
+    }
+  },
+  {
+    "source_slug": "nrhp",
+    "source_name": "U.S. National Park Service",
+    "source_home": "https://mapservices.nps.gov/arcgis/rest/services/cultural_resources/nrhp_locations/MapServer",
+    "external_id": "nrhp:14000935",
+    "category_slug": "historical_fact",
+    "title": "Jamestown Downtown Historic District",
+    "summary": "District on the National Register of Historic Places (Jamestown, New York). Shown where the National Park Service published it.",
+    "lat": 42.096357,
+    "lng": -79.237379,
+    "source_url": "https://npgallery.nps.gov/AssetDetail/NRIS/14000935",
+    "license": "Public domain",
+    "attribution": "National Park Service, National Register of Historic Places. Public domain.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "National Register of Historic Places",
+      "source_url": "https://npgallery.nps.gov/AssetDetail/NRIS/14000935"
+    }
+  },
+  {
+    "source_slug": "nrhp",
+    "source_name": "U.S. National Park Service",
+    "source_home": "https://mapservices.nps.gov/arcgis/rest/services/cultural_resources/nrhp_locations/MapServer",
+    "external_id": "nrhp:100000753",
+    "category_slug": "historical_fact",
+    "title": "Lakeview Avenue Historic District",
+    "summary": "District on the National Register of Historic Places (Jamestown, New York). Shown where the National Park Service published it.",
+    "lat": 42.107963,
+    "lng": -79.23635,
+    "source_url": "https://npgallery.nps.gov/AssetDetail/NRIS/100000753",
+    "license": "Public domain",
+    "attribution": "National Park Service, National Register of Historic Places. Public domain.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "National Register of Historic Places",
+      "source_url": "https://npgallery.nps.gov/AssetDetail/NRIS/100000753"
+    }
+  },
+  {
+    "source_slug": "nrhp",
+    "source_name": "U.S. National Park Service",
+    "source_home": "https://mapservices.nps.gov/arcgis/rest/services/cultural_resources/nrhp_locations/MapServer",
+    "external_id": "nrhp:00000572",
+    "category_slug": "historical_fact",
+    "title": "Partridge--Sheldon House",
+    "summary": "Building on the National Register of Historic Places (Jamestown, New York). Shown where the National Park Service published it.",
+    "lat": 42.089174,
+    "lng": -79.237375,
+    "source_url": "https://catalog.archives.gov/id/75316776",
+    "license": "Public domain",
+    "attribution": "National Park Service, National Register of Historic Places. Public domain.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "National Register of Historic Places",
+      "source_url": "https://catalog.archives.gov/id/75316776"
+    }
+  },
+  {
+    "source_slug": "nrhp",
+    "source_name": "U.S. National Park Service",
+    "source_home": "https://mapservices.nps.gov/arcgis/rest/services/cultural_resources/nrhp_locations/MapServer",
+    "external_id": "nrhp:09000629",
+    "category_slug": "historical_fact",
+    "title": "Wellman Building, The",
+    "summary": "Building on the National Register of Historic Places (Jamestown, New York). Shown where the National Park Service published it.",
+    "lat": 42.097757,
+    "lng": -79.242581,
+    "source_url": "https://catalog.archives.gov/id/75316786",
+    "license": "Public domain",
+    "attribution": "National Park Service, National Register of Historic Places. Public domain.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "National Register of Historic Places",
+      "source_url": "https://catalog.archives.gov/id/75316786"
+    }
+  },
+  {
+    "source_slug": "wikipedia-geo",
+    "source_name": "Wikimedia Foundation",
+    "source_home": "https://en.wikipedia.org/",
+    "external_id": "enwiki:126218",
+    "category_slug": "historical_fact",
+    "title": "Busti, New York",
+    "summary": "Wikipedia article about this place. Open the source for what is written there.",
+    "lat": 42.066667,
+    "lng": -79.3,
+    "source_url": "https://en.wikipedia.org/wiki/Busti%2C_New_York",
+    "license": "CC BY-SA 4.0",
+    "attribution": "Wikipedia contributors, CC BY-SA 4.0. Titles and coordinates only; article text is not copied.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "Wikipedia",
+      "source_url": "https://en.wikipedia.org/wiki/Busti%2C_New_York"
+    }
+  },
+  {
+    "source_slug": "wikipedia-geo",
+    "source_name": "Wikimedia Foundation",
+    "source_home": "https://en.wikipedia.org/",
+    "external_id": "enwiki:126230",
+    "category_slug": "historical_fact",
+    "title": "Celoron, New York",
+    "summary": "Wikipedia article about this place. Open the source for what is written there.",
+    "lat": 42.106667,
+    "lng": -79.281389,
+    "source_url": "https://en.wikipedia.org/wiki/Celoron%2C_New_York",
+    "license": "CC BY-SA 4.0",
+    "attribution": "Wikipedia contributors, CC BY-SA 4.0. Titles and coordinates only; article text is not copied.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "Wikipedia",
+      "source_url": "https://en.wikipedia.org/wiki/Celoron%2C_New_York"
+    }
+  },
+  {
+    "source_slug": "wikipedia-geo",
+    "source_name": "Wikimedia Foundation",
+    "source_home": "https://en.wikipedia.org/",
+    "external_id": "enwiki:38951996",
+    "category_slug": "historical_fact",
+    "title": "Chautauqua Mall",
+    "summary": "Wikipedia article about this place. Open the source for what is written there.",
+    "lat": 42.095691,
+    "lng": -79.303603,
+    "source_url": "https://en.wikipedia.org/wiki/Chautauqua_Mall",
+    "license": "CC BY-SA 4.0",
+    "attribution": "Wikipedia contributors, CC BY-SA 4.0. Titles and coordinates only; article text is not copied.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "Wikipedia",
+      "source_url": "https://en.wikipedia.org/wiki/Chautauqua_Mall"
+    }
+  },
+  {
+    "source_slug": "wikipedia-geo",
+    "source_name": "Wikimedia Foundation",
+    "source_home": "https://en.wikipedia.org/",
+    "external_id": "enwiki:126236",
+    "category_slug": "historical_fact",
+    "title": "Ellicott, New York",
+    "summary": "Wikipedia article about this place. Open the source for what is written there.",
+    "lat": 42.119444,
+    "lng": -79.242778,
+    "source_url": "https://en.wikipedia.org/wiki/Ellicott%2C_New_York",
+    "license": "CC BY-SA 4.0",
+    "attribution": "Wikipedia contributors, CC BY-SA 4.0. Titles and coordinates only; article text is not copied.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "Wikipedia",
+      "source_url": "https://en.wikipedia.org/wiki/Ellicott%2C_New_York"
+    }
+  },
+  {
+    "source_slug": "wikipedia-geo",
+    "source_name": "Wikimedia Foundation",
+    "source_home": "https://en.wikipedia.org/",
+    "external_id": "enwiki:326277",
+    "category_slug": "historical_fact",
+    "title": "Elmhurst, Chautauqua County, New York",
+    "summary": "Wikipedia article about this place. Open the source for what is written there.",
+    "lat": 42.118056,
+    "lng": -79.293611,
+    "source_url": "https://en.wikipedia.org/wiki/Elmhurst%2C_Chautauqua_County%2C_New_York",
+    "license": "CC BY-SA 4.0",
+    "attribution": "Wikipedia contributors, CC BY-SA 4.0. Titles and coordinates only; article text is not copied.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "Wikipedia",
+      "source_url": "https://en.wikipedia.org/wiki/Elmhurst%2C_Chautauqua_County%2C_New_York"
+    }
+  },
+  {
+    "source_slug": "wikipedia-geo",
+    "source_name": "Wikimedia Foundation",
+    "source_home": "https://en.wikipedia.org/",
+    "external_id": "enwiki:24041262",
+    "category_slug": "historical_fact",
+    "title": "Euclid Avenue School",
+    "summary": "Wikipedia article about this place. Open the source for what is written there.",
+    "lat": 42.1086,
+    "lng": -79.238,
+    "source_url": "https://en.wikipedia.org/wiki/Euclid_Avenue_School",
+    "license": "CC BY-SA 4.0",
+    "attribution": "Wikipedia contributors, CC BY-SA 4.0. Titles and coordinates only; article text is not copied.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "Wikipedia",
+      "source_url": "https://en.wikipedia.org/wiki/Euclid_Avenue_School"
+    }
+  },
+  {
+    "source_slug": "wikipedia-geo",
+    "source_name": "Wikimedia Foundation",
+    "source_home": "https://en.wikipedia.org/",
+    "external_id": "enwiki:126238",
+    "category_slug": "historical_fact",
+    "title": "Falconer, New York",
+    "summary": "Wikipedia article about this place. Open the source for what is written there.",
+    "lat": 42.118889,
+    "lng": -79.200278,
+    "source_url": "https://en.wikipedia.org/wiki/Falconer%2C_New_York",
+    "license": "CC BY-SA 4.0",
+    "attribution": "Wikipedia contributors, CC BY-SA 4.0. Titles and coordinates only; article text is not copied.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "Wikipedia",
+      "source_url": "https://en.wikipedia.org/wiki/Falconer%2C_New_York"
+    }
+  },
+  {
+    "source_slug": "wikipedia-geo",
+    "source_name": "Wikimedia Foundation",
+    "source_home": "https://en.wikipedia.org/",
+    "external_id": "enwiki:42535417",
+    "category_slug": "historical_fact",
+    "title": "Jamestown Academy (New York)",
+    "summary": "Wikipedia article about this place. Open the source for what is written there.",
+    "lat": 42.0975,
+    "lng": -79.238944,
+    "source_url": "https://en.wikipedia.org/wiki/Jamestown_Academy_%28New_York%29",
+    "license": "CC BY-SA 4.0",
+    "attribution": "Wikipedia contributors, CC BY-SA 4.0. Titles and coordinates only; article text is not copied.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "Wikipedia",
+      "source_url": "https://en.wikipedia.org/wiki/Jamestown_Academy_%28New_York%29"
+    }
+  },
+  {
+    "source_slug": "wikipedia-geo",
+    "source_name": "Wikimedia Foundation",
+    "source_home": "https://en.wikipedia.org/",
+    "external_id": "enwiki:855912",
+    "category_slug": "historical_fact",
+    "title": "Jamestown Business College",
+    "summary": "Wikipedia article about this place. Open the source for what is written there.",
+    "lat": 42.095558,
+    "lng": -79.249716,
+    "source_url": "https://en.wikipedia.org/wiki/Jamestown_Business_College",
+    "license": "CC BY-SA 4.0",
+    "attribution": "Wikipedia contributors, CC BY-SA 4.0. Titles and coordinates only; article text is not copied.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "Wikipedia",
+      "source_url": "https://en.wikipedia.org/wiki/Jamestown_Business_College"
+    }
+  },
+  {
+    "source_slug": "wikipedia-geo",
+    "source_name": "Wikimedia Foundation",
+    "source_home": "https://en.wikipedia.org/",
+    "external_id": "enwiki:48497323",
+    "category_slug": "historical_fact",
+    "title": "Jamestown Downtown Historic District",
+    "summary": "Wikipedia article about this place. Open the source for what is written there.",
+    "lat": 42.096389,
+    "lng": -79.241389,
+    "source_url": "https://en.wikipedia.org/wiki/Jamestown_Downtown_Historic_District",
+    "license": "CC BY-SA 4.0",
+    "attribution": "Wikipedia contributors, CC BY-SA 4.0. Titles and coordinates only; article text is not copied.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "Wikipedia",
+      "source_url": "https://en.wikipedia.org/wiki/Jamestown_Downtown_Historic_District"
+    }
+  },
+  {
+    "source_slug": "wikipedia-geo",
+    "source_name": "Wikimedia Foundation",
+    "source_home": "https://en.wikipedia.org/",
+    "external_id": "enwiki:3643742",
+    "category_slug": "historical_fact",
+    "title": "Jamestown High School (New York)",
+    "summary": "Wikipedia article about this place. Open the source for what is written there.",
+    "lat": 42.09623,
+    "lng": -79.23548,
+    "source_url": "https://en.wikipedia.org/wiki/Jamestown_High_School_%28New_York%29",
+    "license": "CC BY-SA 4.0",
+    "attribution": "Wikipedia contributors, CC BY-SA 4.0. Titles and coordinates only; article text is not copied.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "Wikipedia",
+      "source_url": "https://en.wikipedia.org/wiki/Jamestown_High_School_%28New_York%29"
+    }
+  },
+  {
+    "source_slug": "wikipedia-geo",
+    "source_name": "Wikimedia Foundation",
+    "source_home": "https://en.wikipedia.org/",
+    "external_id": "enwiki:24036830",
+    "category_slug": "historical_fact",
+    "title": "Jamestown station",
+    "summary": "Wikipedia article about this place. Open the source for what is written there.",
+    "lat": 42.094444,
+    "lng": -79.244722,
+    "source_url": "https://en.wikipedia.org/wiki/Jamestown_station",
+    "license": "CC BY-SA 4.0",
+    "attribution": "Wikipedia contributors, CC BY-SA 4.0. Titles and coordinates only; article text is not copied.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "Wikipedia",
+      "source_url": "https://en.wikipedia.org/wiki/Jamestown_station"
+    }
+  },
+  {
+    "source_slug": "wikipedia-geo",
+    "source_name": "Wikimedia Foundation",
+    "source_home": "https://en.wikipedia.org/",
+    "external_id": "enwiki:126248",
+    "category_slug": "historical_fact",
+    "title": "Jamestown West, New York",
+    "summary": "Wikipedia article about this place. Open the source for what is written there.",
+    "lat": 42.093333,
+    "lng": -79.2775,
+    "source_url": "https://en.wikipedia.org/wiki/Jamestown_West%2C_New_York",
+    "license": "CC BY-SA 4.0",
+    "attribution": "Wikipedia contributors, CC BY-SA 4.0. Titles and coordinates only; article text is not copied.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "Wikipedia",
+      "source_url": "https://en.wikipedia.org/wiki/Jamestown_West%2C_New_York"
+    }
+  },
+  {
+    "source_slug": "wikipedia-geo",
+    "source_name": "Wikimedia Foundation",
+    "source_home": "https://en.wikipedia.org/",
+    "external_id": "enwiki:126247",
+    "category_slug": "historical_fact",
+    "title": "Jamestown, New York",
+    "summary": "Wikipedia article about this place. Open the source for what is written there.",
+    "lat": 42.095556,
+    "lng": -79.238611,
+    "source_url": "https://en.wikipedia.org/wiki/Jamestown%2C_New_York",
+    "license": "CC BY-SA 4.0",
+    "attribution": "Wikipedia contributors, CC BY-SA 4.0. Titles and coordinates only; article text is not copied.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "Wikipedia",
+      "source_url": "https://en.wikipedia.org/wiki/Jamestown%2C_New_York"
+    }
+  },
+  {
+    "source_slug": "wikipedia-geo",
+    "source_name": "Wikimedia Foundation",
+    "source_home": "https://en.wikipedia.org/",
+    "external_id": "enwiki:72242164",
+    "category_slug": "historical_fact",
+    "title": "Lake View Cemetery (Jamestown, New York)",
+    "summary": "Wikipedia article about this place. Open the source for what is written there.",
+    "lat": 42.109645,
+    "lng": -79.238138,
+    "source_url": "https://en.wikipedia.org/wiki/Lake_View_Cemetery_%28Jamestown%2C_New_York%29",
+    "license": "CC BY-SA 4.0",
+    "attribution": "Wikipedia contributors, CC BY-SA 4.0. Titles and coordinates only; article text is not copied.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "Wikipedia",
+      "source_url": "https://en.wikipedia.org/wiki/Lake_View_Cemetery_%28Jamestown%2C_New_York%29"
+    }
+  },
+  {
+    "source_slug": "wikipedia-geo",
+    "source_name": "Wikimedia Foundation",
+    "source_home": "https://en.wikipedia.org/",
+    "external_id": "enwiki:10959769",
+    "category_slug": "historical_fact",
+    "title": "Lucille Ball Desi Arnaz Museum & Center for Comedy",
+    "summary": "Wikipedia article about this place. Open the source for what is written there.",
+    "lat": 42.09651,
+    "lng": -79.24161,
+    "source_url": "https://en.wikipedia.org/wiki/Lucille_Ball_Desi_Arnaz_Museum_%26_Center_for_Comedy",
+    "license": "CC BY-SA 4.0",
+    "attribution": "Wikipedia contributors, CC BY-SA 4.0. Titles and coordinates only; article text is not copied.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "Wikipedia",
+      "source_url": "https://en.wikipedia.org/wiki/Lucille_Ball_Desi_Arnaz_Museum_%26_Center_for_Comedy"
+    }
+  },
+  {
+    "source_slug": "wikipedia-geo",
+    "source_name": "Wikimedia Foundation",
+    "source_home": "https://en.wikipedia.org/",
+    "external_id": "enwiki:18832371",
+    "category_slug": "historical_fact",
+    "title": "Lucille Ball Little Theatre",
+    "summary": "Wikipedia article about this place. Open the source for what is written there.",
+    "lat": 42.095561,
+    "lng": -79.240111,
+    "source_url": "https://en.wikipedia.org/wiki/Lucille_Ball_Little_Theatre",
+    "license": "CC BY-SA 4.0",
+    "attribution": "Wikipedia contributors, CC BY-SA 4.0. Titles and coordinates only; article text is not copied.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "Wikipedia",
+      "source_url": "https://en.wikipedia.org/wiki/Lucille_Ball_Little_Theatre"
+    }
+  },
+  {
+    "source_slug": "wikipedia-geo",
+    "source_name": "Wikimedia Foundation",
+    "source_home": "https://en.wikipedia.org/",
+    "external_id": "enwiki:58462917",
+    "category_slug": "historical_fact",
+    "title": "National Comedy Center",
+    "summary": "Wikipedia article about this place. Open the source for what is written there.",
+    "lat": 42.094722,
+    "lng": -79.243889,
+    "source_url": "https://en.wikipedia.org/wiki/National_Comedy_Center",
+    "license": "CC BY-SA 4.0",
+    "attribution": "Wikipedia contributors, CC BY-SA 4.0. Titles and coordinates only; article text is not copied.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "Wikipedia",
+      "source_url": "https://en.wikipedia.org/wiki/National_Comedy_Center"
+    }
+  },
+  {
+    "source_slug": "wikipedia-geo",
+    "source_name": "Wikimedia Foundation",
+    "source_home": "https://en.wikipedia.org/",
+    "external_id": "enwiki:12352452",
+    "category_slug": "historical_fact",
+    "title": "Northwest Arena",
+    "summary": "Wikipedia article about this place. Open the source for what is written there.",
+    "lat": 42.095253,
+    "lng": -79.24531,
+    "source_url": "https://en.wikipedia.org/wiki/Northwest_Arena",
+    "license": "CC BY-SA 4.0",
+    "attribution": "Wikipedia contributors, CC BY-SA 4.0. Titles and coordinates only; article text is not copied.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "Wikipedia",
+      "source_url": "https://en.wikipedia.org/wiki/Northwest_Arena"
+    }
+  },
+  {
+    "source_slug": "wikipedia-geo",
+    "source_name": "Wikimedia Foundation",
+    "source_home": "https://en.wikipedia.org/",
+    "external_id": "enwiki:64045862",
+    "category_slug": "historical_fact",
+    "title": "Reg Lenna Center for the Arts",
+    "summary": "Wikipedia article about this place. Open the source for what is written there.",
+    "lat": 42.096689,
+    "lng": -79.239267,
+    "source_url": "https://en.wikipedia.org/wiki/Reg_Lenna_Center_for_the_Arts",
+    "license": "CC BY-SA 4.0",
+    "attribution": "Wikipedia contributors, CC BY-SA 4.0. Titles and coordinates only; article text is not copied.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "Wikipedia",
+      "source_url": "https://en.wikipedia.org/wiki/Reg_Lenna_Center_for_the_Arts"
+    }
+  },
+  {
+    "source_slug": "wikipedia-geo",
+    "source_name": "Wikimedia Foundation",
+    "source_home": "https://en.wikipedia.org/",
+    "external_id": "enwiki:47375466",
+    "category_slug": "historical_fact",
+    "title": "Robert H. Jackson Center",
+    "summary": "Wikipedia article about this place. Open the source for what is written there.",
+    "lat": 42.0983,
+    "lng": -79.23764,
+    "source_url": "https://en.wikipedia.org/wiki/Robert_H._Jackson_Center",
+    "license": "CC BY-SA 4.0",
+    "attribution": "Wikipedia contributors, CC BY-SA 4.0. Titles and coordinates only; article text is not copied.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "Wikipedia",
+      "source_url": "https://en.wikipedia.org/wiki/Robert_H._Jackson_Center"
+    }
+  },
+  {
+    "source_slug": "wikipedia-geo",
+    "source_name": "Wikimedia Foundation",
+    "source_home": "https://en.wikipedia.org/",
+    "external_id": "enwiki:81226077",
+    "category_slug": "historical_fact",
+    "title": "Roger Tory Peterson Institute",
+    "summary": "Wikipedia article about this place. Open the source for what is written there.",
+    "lat": 42.118333,
+    "lng": -79.224722,
+    "source_url": "https://en.wikipedia.org/wiki/Roger_Tory_Peterson_Institute",
+    "license": "CC BY-SA 4.0",
+    "attribution": "Wikipedia contributors, CC BY-SA 4.0. Titles and coordinates only; article text is not copied.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "Wikipedia",
+      "source_url": "https://en.wikipedia.org/wiki/Roger_Tory_Peterson_Institute"
+    }
+  },
+  {
+    "source_slug": "wikipedia-geo",
+    "source_name": "Wikimedia Foundation",
+    "source_home": "https://en.wikipedia.org/",
+    "external_id": "enwiki:2276722",
+    "category_slug": "historical_fact",
+    "title": "Russell Diethrick Park",
+    "summary": "Wikipedia article about this place. Open the source for what is written there.",
+    "lat": 42.112737,
+    "lng": -79.219274,
+    "source_url": "https://en.wikipedia.org/wiki/Russell_Diethrick_Park",
+    "license": "CC BY-SA 4.0",
+    "attribution": "Wikipedia contributors, CC BY-SA 4.0. Titles and coordinates only; article text is not copied.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "Wikipedia",
+      "source_url": "https://en.wikipedia.org/wiki/Russell_Diethrick_Park"
+    }
+  },
+  {
+    "source_slug": "wikipedia-geo",
+    "source_name": "Wikimedia Foundation",
+    "source_home": "https://en.wikipedia.org/",
+    "external_id": "enwiki:15891863",
+    "category_slug": "historical_fact",
+    "title": "Southwestern Central High School",
+    "summary": "Wikipedia article about this place. Open the source for what is written there.",
+    "lat": 42.091444,
+    "lng": -79.291889,
+    "source_url": "https://en.wikipedia.org/wiki/Southwestern_Central_High_School",
+    "license": "CC BY-SA 4.0",
+    "attribution": "Wikipedia contributors, CC BY-SA 4.0. Titles and coordinates only; article text is not copied.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "Wikipedia",
+      "source_url": "https://en.wikipedia.org/wiki/Southwestern_Central_High_School"
+    }
+  },
+  {
+    "source_slug": "wikipedia-geo",
+    "source_name": "Wikimedia Foundation",
+    "source_home": "https://en.wikipedia.org/",
+    "external_id": "enwiki:27747830",
+    "category_slug": "historical_fact",
+    "title": "The Wellman Building",
+    "summary": "Wikipedia article about this place. Open the source for what is written there.",
+    "lat": 42.095922,
+    "lng": -79.242619,
+    "source_url": "https://en.wikipedia.org/wiki/The_Wellman_Building",
+    "license": "CC BY-SA 4.0",
+    "attribution": "Wikipedia contributors, CC BY-SA 4.0. Titles and coordinates only; article text is not copied.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "Wikipedia",
+      "source_url": "https://en.wikipedia.org/wiki/The_Wellman_Building"
+    }
+  },
+  {
+    "source_slug": "wikipedia-geo",
+    "source_name": "Wikimedia Foundation",
+    "source_home": "https://en.wikipedia.org/",
+    "external_id": "enwiki:33612092",
+    "category_slug": "historical_fact",
+    "title": "WLKW (FM)",
+    "summary": "Wikipedia article about this place. Open the source for what is written there.",
+    "lat": 42.096,
+    "lng": -79.243,
+    "source_url": "https://en.wikipedia.org/wiki/WLKW_%28FM%29",
+    "license": "CC BY-SA 4.0",
+    "attribution": "Wikipedia contributors, CC BY-SA 4.0. Titles and coordinates only; article text is not copied.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "Wikipedia",
+      "source_url": "https://en.wikipedia.org/wiki/WLKW_%28FM%29"
+    }
+  },
+  {
+    "source_slug": "wikipedia-geo",
+    "source_name": "Wikimedia Foundation",
+    "source_home": "https://en.wikipedia.org/",
+    "external_id": "enwiki:27549621",
+    "category_slug": "historical_fact",
+    "title": "WOGM-LP",
+    "summary": "Wikipedia article about this place. Open the source for what is written there.",
+    "lat": 42.086667,
+    "lng": -79.214722,
+    "source_url": "https://en.wikipedia.org/wiki/WOGM-LP",
+    "license": "CC BY-SA 4.0",
+    "attribution": "Wikipedia contributors, CC BY-SA 4.0. Titles and coordinates only; article text is not copied.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "Wikipedia",
+      "source_url": "https://en.wikipedia.org/wiki/WOGM-LP"
+    }
+  },
+  {
+    "source_slug": "wikipedia-geo",
+    "source_name": "Wikimedia Foundation",
+    "source_home": "https://en.wikipedia.org/",
+    "external_id": "enwiki:15492179",
+    "category_slug": "historical_fact",
+    "title": "WRFA-LP",
+    "summary": "Wikipedia article about this place. Open the source for what is written there.",
+    "lat": 42.096667,
+    "lng": -79.239444,
+    "source_url": "https://en.wikipedia.org/wiki/WRFA-LP",
+    "license": "CC BY-SA 4.0",
+    "attribution": "Wikipedia contributors, CC BY-SA 4.0. Titles and coordinates only; article text is not copied.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "Wikipedia",
+      "source_url": "https://en.wikipedia.org/wiki/WRFA-LP"
+    }
+  },
+  {
+    "source_slug": "wikidata-geo",
+    "source_name": "Wikidata",
+    "source_home": "https://www.wikidata.org/",
+    "external_id": "wikidata:Q34802419",
+    "category_slug": "historical_fact",
+    "title": "Allen Park",
+    "summary": "Wikidata place record. Open the source for the structured data.",
+    "lat": 42.082778,
+    "lng": -79.221389,
+    "source_url": "https://www.wikidata.org/wiki/Q34802419",
+    "license": "CC0 1.0",
+    "attribution": "Wikidata contributors, CC0 1.0.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "Wikidata",
+      "source_url": "https://www.wikidata.org/wiki/Q34802419"
+    }
+  },
+  {
+    "source_slug": "wikidata-geo",
+    "source_name": "Wikidata",
+    "source_home": "https://www.wikidata.org/",
+    "external_id": "wikidata:Q122549572",
+    "category_slug": "historical_fact",
+    "title": "Arowley Manor",
+    "summary": "Wikidata place record. Open the source for the structured data.",
+    "lat": 42.098611,
+    "lng": -79.265278,
+    "source_url": "https://www.wikidata.org/wiki/Q122549572",
+    "license": "CC0 1.0",
+    "attribution": "Wikidata contributors, CC0 1.0.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "Wikidata",
+      "source_url": "https://www.wikidata.org/wiki/Q122549572"
+    }
+  },
+  {
+    "source_slug": "wikidata-geo",
+    "source_name": "Wikidata",
+    "source_home": "https://www.wikidata.org/",
+    "external_id": "wikidata:Q34804367",
+    "category_slug": "historical_fact",
+    "title": "Baker Park",
+    "summary": "Wikidata place record. Open the source for the structured data.",
+    "lat": 42.096667,
+    "lng": -79.247222,
+    "source_url": "https://www.wikidata.org/wiki/Q34804367",
+    "license": "CC0 1.0",
+    "attribution": "Wikidata contributors, CC0 1.0.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "Wikidata",
+      "source_url": "https://www.wikidata.org/wiki/Q34804367"
+    }
+  },
+  {
+    "source_slug": "wikidata-geo",
+    "source_name": "Wikidata",
+    "source_home": "https://www.wikidata.org/",
+    "external_id": "wikidata:Q117696899",
+    "category_slug": "historical_fact",
+    "title": "Bentley Cemetery",
+    "summary": "Wikidata place record. Open the source for the structured data.",
+    "lat": 42.0972,
+    "lng": -79.3167,
+    "source_url": "https://www.wikidata.org/wiki/Q117696899",
+    "license": "CC0 1.0",
+    "attribution": "Wikidata contributors, CC0 1.0.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "Wikidata",
+      "source_url": "https://www.wikidata.org/wiki/Q117696899"
+    }
+  },
+  {
+    "source_slug": "wikidata-geo",
+    "source_name": "Wikidata",
+    "source_home": "https://www.wikidata.org/",
+    "external_id": "wikidata:Q138931660",
+    "category_slug": "historical_fact",
+    "title": "Bergman Park",
+    "summary": "Wikidata place record. Open the source for the structured data.",
+    "lat": 42.079596,
+    "lng": -79.257226,
+    "source_url": "https://www.wikidata.org/wiki/Q138931660",
+    "license": "CC0 1.0",
+    "attribution": "Wikidata contributors, CC0 1.0.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "Wikidata",
+      "source_url": "https://www.wikidata.org/wiki/Q138931660"
+    }
+  },
+  {
+    "source_slug": "wikidata-geo",
+    "source_name": "Wikidata",
+    "source_home": "https://www.wikidata.org/",
+    "external_id": "wikidata:Q117511385",
+    "category_slug": "historical_fact",
+    "title": "Beth-El Cemetery",
+    "summary": "Wikidata place record. Open the source for the structured data.",
+    "lat": 42.11912,
+    "lng": -79.24583,
+    "source_url": "https://www.wikidata.org/wiki/Q117511385",
+    "license": "CC0 1.0",
+    "attribution": "Wikidata contributors, CC0 1.0.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "Wikidata",
+      "source_url": "https://www.wikidata.org/wiki/Q117511385"
+    }
+  },
+  {
+    "source_slug": "wikidata-geo",
+    "source_name": "Wikidata",
+    "source_home": "https://www.wikidata.org/",
+    "external_id": "wikidata:Q43040095",
+    "category_slug": "historical_fact",
+    "title": "Bijou Dream Theatre",
+    "summary": "Wikidata place record. Open the source for the structured data.",
+    "lat": 42.096156,
+    "lng": -79.242671,
+    "source_url": "https://www.wikidata.org/wiki/Q43040095",
+    "license": "CC0 1.0",
+    "attribution": "Wikidata contributors, CC0 1.0.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "Wikidata",
+      "source_url": "https://www.wikidata.org/wiki/Q43040095"
+    }
+  },
+  {
+    "source_slug": "wikidata-geo",
+    "source_name": "Wikidata",
+    "source_home": "https://www.wikidata.org/",
+    "external_id": "wikidata:Q115773993",
+    "category_slug": "historical_fact",
+    "title": "Boatlanding Bridge",
+    "summary": "Wikidata place record. Open the source for the structured data.",
+    "lat": 42.098481,
+    "lng": -79.253012,
+    "source_url": "https://www.wikidata.org/wiki/Q115773993",
+    "license": "CC0 1.0",
+    "attribution": "Wikidata contributors, CC0 1.0.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "Wikidata",
+      "source_url": "https://www.wikidata.org/wiki/Q115773993"
+    }
+  },
+  {
+    "source_slug": "wikidata-geo",
+    "source_name": "Wikidata",
+    "source_home": "https://www.wikidata.org/",
+    "external_id": "wikidata:Q122567690",
+    "category_slug": "historical_fact",
+    "title": "Bonila",
+    "summary": "Wikidata place record. Open the source for the structured data.",
+    "lat": 42.115336,
+    "lng": -79.281715,
+    "source_url": "https://www.wikidata.org/wiki/Q122567690",
+    "license": "CC0 1.0",
+    "attribution": "Wikidata contributors, CC0 1.0.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "Wikidata",
+      "source_url": "https://www.wikidata.org/wiki/Q122567690"
+    }
+  },
+  {
+    "source_slug": "wikidata-geo",
+    "source_name": "Wikidata",
+    "source_home": "https://www.wikidata.org/",
+    "external_id": "wikidata:Q34647322",
+    "category_slug": "historical_fact",
+    "title": "Burtis Bay",
+    "summary": "Wikidata place record. Open the source for the structured data.",
+    "lat": 42.103333,
+    "lng": -79.295278,
+    "source_url": "https://www.wikidata.org/wiki/Q34647322",
+    "license": "CC0 1.0",
+    "attribution": "Wikidata contributors, CC0 1.0.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "Wikidata",
+      "source_url": "https://www.wikidata.org/wiki/Q34647322"
+    }
+  },
+  {
+    "source_slug": "wikidata-geo",
+    "source_name": "Wikidata",
+    "source_home": "https://www.wikidata.org/",
+    "external_id": "wikidata:Q34815583",
+    "category_slug": "historical_fact",
+    "title": "Celoron Park",
+    "summary": "Wikidata place record. Open the source for the structured data.",
+    "lat": 42.109722,
+    "lng": -79.286111,
+    "source_url": "https://www.wikidata.org/wiki/Q34815583",
+    "license": "CC0 1.0",
+    "attribution": "Wikidata contributors, CC0 1.0.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "Wikidata",
+      "source_url": "https://www.wikidata.org/wiki/Q34815583"
+    }
+  },
+  {
+    "source_slug": "wikidata-geo",
+    "source_name": "Wikidata",
+    "source_home": "https://www.wikidata.org/",
+    "external_id": "wikidata:Q14706216",
+    "category_slug": "historical_fact",
+    "title": "Chadakoin River",
+    "summary": "Wikidata place record. Open the source for the structured data.",
+    "lat": 42.111725,
+    "lng": -79.270604,
+    "source_url": "https://www.wikidata.org/wiki/Q14706216",
+    "license": "CC0 1.0",
+    "attribution": "Wikidata contributors, CC0 1.0.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "Wikidata",
+      "source_url": "https://www.wikidata.org/wiki/Q14706216"
+    }
+  },
+  {
+    "source_slug": "wikidata-geo",
+    "source_name": "Wikidata",
+    "source_home": "https://www.wikidata.org/",
+    "external_id": "wikidata:Q43040524",
+    "category_slug": "historical_fact",
+    "title": "Chautauqua Mall Cinema I & II",
+    "summary": "Wikidata place record. Open the source for the structured data.",
+    "lat": 42.098561,
+    "lng": -79.298553,
+    "source_url": "https://www.wikidata.org/wiki/Q43040524",
+    "license": "CC0 1.0",
+    "attribution": "Wikidata contributors, CC0 1.0.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "Wikidata",
+      "source_url": "https://www.wikidata.org/wiki/Q43040524"
+    }
+  },
+  {
+    "source_slug": "wikidata-geo",
+    "source_name": "Wikidata",
+    "source_home": "https://www.wikidata.org/",
+    "external_id": "wikidata:Q117557372",
+    "category_slug": "historical_fact",
+    "title": "Cowing Cemetery",
+    "summary": "Wikidata place record. Open the source for the structured data.",
+    "lat": 42.06014,
+    "lng": -79.31153,
+    "source_url": "https://www.wikidata.org/wiki/Q117557372",
+    "license": "CC0 1.0",
+    "attribution": "Wikidata contributors, CC0 1.0.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "Wikidata",
+      "source_url": "https://www.wikidata.org/wiki/Q117557372"
+    }
+  },
+  {
+    "source_slug": "wikidata-geo",
+    "source_name": "Wikidata",
+    "source_home": "https://www.wikidata.org/",
+    "external_id": "wikidata:Q34825961",
+    "category_slug": "historical_fact",
+    "title": "Dow Park",
+    "summary": "Wikidata place record. Open the source for the structured data.",
+    "lat": 42.099167,
+    "lng": -79.244167,
+    "source_url": "https://www.wikidata.org/wiki/Q34825961",
+    "license": "CC0 1.0",
+    "attribution": "Wikidata contributors, CC0 1.0.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "Wikidata",
+      "source_url": "https://www.wikidata.org/wiki/Q34825961"
+    }
+  },
+  {
+    "source_slug": "wikidata-geo",
+    "source_name": "Wikidata",
+    "source_home": "https://www.wikidata.org/",
+    "external_id": "wikidata:Q49897499",
+    "category_slug": "historical_fact",
+    "title": "Dutch Hollow Creek",
+    "summary": "Wikidata place record. Open the source for the structured data.",
+    "lat": 42.116111,
+    "lng": -79.3125,
+    "source_url": "https://www.wikidata.org/wiki/Q49897499",
+    "license": "CC0 1.0",
+    "attribution": "Wikidata contributors, CC0 1.0.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "Wikidata",
+      "source_url": "https://www.wikidata.org/wiki/Q49897499"
+    }
+  },
+  {
+    "source_slug": "wikidata-geo",
+    "source_name": "Wikidata",
+    "source_home": "https://www.wikidata.org/",
+    "external_id": "wikidata:Q34828894",
+    "category_slug": "historical_fact",
+    "title": "Emory Park",
+    "summary": "Wikidata place record. Open the source for the structured data.",
+    "lat": 42.118056,
+    "lng": -79.233611,
+    "source_url": "https://www.wikidata.org/wiki/Q34828894",
+    "license": "CC0 1.0",
+    "attribution": "Wikidata contributors, CC0 1.0.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "Wikidata",
+      "source_url": "https://www.wikidata.org/wiki/Q34828894"
+    }
+  },
+  {
+    "source_slug": "wikidata-geo",
+    "source_name": "Wikidata",
+    "source_home": "https://www.wikidata.org/",
+    "external_id": "wikidata:Q34829524",
+    "category_slug": "historical_fact",
+    "title": "Falconer Park",
+    "summary": "Wikidata place record. Open the source for the structured data.",
+    "lat": 42.1175,
+    "lng": -79.205556,
+    "source_url": "https://www.wikidata.org/wiki/Q34829524",
+    "license": "CC0 1.0",
+    "attribution": "Wikidata contributors, CC0 1.0.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "Wikidata",
+      "source_url": "https://www.wikidata.org/wiki/Q34829524"
+    }
+  },
+  {
+    "source_slug": "wikidata-geo",
+    "source_name": "Wikidata",
+    "source_home": "https://www.wikidata.org/",
+    "external_id": "wikidata:Q69966498",
+    "category_slug": "historical_fact",
+    "title": "Falconer Public Library",
+    "summary": "Wikidata place record. Open the source for the structured data.",
+    "lat": 42.117499,
+    "lng": -79.199606,
+    "source_url": "https://www.wikidata.org/wiki/Q69966498",
+    "license": "CC0 1.0",
+    "attribution": "Wikidata contributors, CC0 1.0.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "Wikidata",
+      "source_url": "https://www.wikidata.org/wiki/Q69966498"
+    }
+  },
+  {
+    "source_slug": "wikidata-geo",
+    "source_name": "Wikidata",
+    "source_home": "https://www.wikidata.org/",
+    "external_id": "wikidata:Q49488798",
+    "category_slug": "historical_fact",
+    "title": "Fenton Park",
+    "summary": "Wikidata place record. Open the source for the structured data.",
+    "lat": 42.091389,
+    "lng": -79.238611,
+    "source_url": "https://www.wikidata.org/wiki/Q49488798",
+    "license": "CC0 1.0",
+    "attribution": "Wikidata contributors, CC0 1.0.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "Wikidata",
+      "source_url": "https://www.wikidata.org/wiki/Q49488798"
+    }
+  },
+  {
+    "source_slug": "wikidata-geo",
+    "source_name": "Wikidata",
+    "source_home": "https://www.wikidata.org/",
+    "external_id": "wikidata:Q117604427",
+    "category_slug": "historical_fact",
+    "title": "Fluvanna Cemetery",
+    "summary": "Wikidata place record. Open the source for the structured data.",
+    "lat": 42.1198,
+    "lng": -79.292,
+    "source_url": "https://www.wikidata.org/wiki/Q117604427",
+    "license": "CC0 1.0",
+    "attribution": "Wikidata contributors, CC0 1.0.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "Wikidata",
+      "source_url": "https://www.wikidata.org/wiki/Q117604427"
+    }
+  },
+  {
+    "source_slug": "wikidata-geo",
+    "source_name": "Wikidata",
+    "source_home": "https://www.wikidata.org/",
+    "external_id": "wikidata:Q69966501",
+    "category_slug": "historical_fact",
+    "title": "Fluvanna Free Library",
+    "summary": "Wikidata place record. Open the source for the structured data.",
+    "lat": 42.119309,
+    "lng": -79.291505,
+    "source_url": "https://www.wikidata.org/wiki/Q69966501",
+    "license": "CC0 1.0",
+    "attribution": "Wikidata contributors, CC0 1.0.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "Wikidata",
+      "source_url": "https://www.wikidata.org/wiki/Q69966501"
+    }
+  },
+  {
+    "source_slug": "wikidata-geo",
+    "source_name": "Wikidata",
+    "source_home": "https://www.wikidata.org/",
+    "external_id": "wikidata:Q135928401",
+    "category_slug": "historical_fact",
+    "title": "Greenhurst",
+    "summary": "Wikidata place record. Open the source for the structured data.",
+    "lat": 42.119502,
+    "lng": -79.310326,
+    "source_url": "https://www.wikidata.org/wiki/Q135928401",
+    "license": "CC0 1.0",
+    "attribution": "Wikidata contributors, CC0 1.0.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "Wikidata",
+      "source_url": "https://www.wikidata.org/wiki/Q135928401"
+    }
+  },
+  {
+    "source_slug": "wikidata-geo",
+    "source_name": "Wikidata",
+    "source_home": "https://www.wikidata.org/",
+    "external_id": "wikidata:Q117559379",
+    "category_slug": "historical_fact",
+    "title": "Hatch Cemetery",
+    "summary": "Wikidata place record. Open the source for the structured data.",
+    "lat": 42.0517,
+    "lng": -79.2922,
+    "source_url": "https://www.wikidata.org/wiki/Q117559379",
+    "license": "CC0 1.0",
+    "attribution": "Wikidata contributors, CC0 1.0.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "Wikidata",
+      "source_url": "https://www.wikidata.org/wiki/Q117559379"
+    }
+  },
+  {
+    "source_slug": "wikidata-geo",
+    "source_name": "Wikidata",
+    "source_home": "https://www.wikidata.org/",
+    "external_id": "wikidata:Q128214469",
+    "category_slug": "historical_fact",
+    "title": "Holy Cross Cemetery",
+    "summary": "Wikidata place record. Open the source for the structured data.",
+    "lat": 42.11787,
+    "lng": -79.24271,
+    "source_url": "https://www.wikidata.org/wiki/Q128214469",
+    "license": "CC0 1.0",
+    "attribution": "Wikidata contributors, CC0 1.0.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "Wikidata",
+      "source_url": "https://www.wikidata.org/wiki/Q128214469"
+    }
+  },
+  {
+    "source_slug": "wikidata-geo",
+    "source_name": "Wikidata",
+    "source_home": "https://www.wikidata.org/",
+    "external_id": "wikidata:Q117683928",
+    "category_slug": "historical_fact",
+    "title": "Holy Sepulchre Cemetery",
+    "summary": "Wikidata place record. Open the source for the structured data.",
+    "lat": 42.12006,
+    "lng": -79.24599,
+    "source_url": "https://www.wikidata.org/wiki/Q117683928",
+    "license": "CC0 1.0",
+    "attribution": "Wikidata contributors, CC0 1.0.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "Wikidata",
+      "source_url": "https://www.wikidata.org/wiki/Q117683928"
+    }
+  },
+  {
+    "source_slug": "wikidata-geo",
+    "source_name": "Wikidata",
+    "source_home": "https://www.wikidata.org/",
+    "external_id": "wikidata:Q138932002",
+    "category_slug": "historical_fact",
+    "title": "Jackson-Taylor Park",
+    "summary": "Wikidata place record. Open the source for the structured data.",
+    "lat": 42.105793,
+    "lng": -79.249143,
+    "source_url": "https://www.wikidata.org/wiki/Q138932002",
+    "license": "CC0 1.0",
+    "attribution": "Wikidata contributors, CC0 1.0.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "Wikidata",
+      "source_url": "https://www.wikidata.org/wiki/Q138932002"
+    }
+  },
+  {
+    "source_slug": "wikidata-geo",
+    "source_name": "Wikidata",
+    "source_home": "https://www.wikidata.org/",
+    "external_id": "wikidata:Q22023002",
+    "category_slug": "historical_fact",
+    "title": "James Prendergast Library",
+    "summary": "Wikidata place record. Open the source for the structured data.",
+    "lat": 42.098253,
+    "lng": -79.24314,
+    "source_url": "https://www.wikidata.org/wiki/Q22023002",
+    "license": "CC0 1.0",
+    "attribution": "Wikidata contributors, CC0 1.0.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "Wikidata",
+      "source_url": "https://www.wikidata.org/wiki/Q22023002"
+    }
+  },
+  {
+    "source_slug": "wikidata-geo",
+    "source_name": "Wikidata",
+    "source_home": "https://www.wikidata.org/",
+    "external_id": "wikidata:Q6146214",
+    "category_slug": "historical_fact",
+    "title": "Jamestown Community College",
+    "summary": "Wikidata place record. Open the source for the structured data.",
+    "lat": 42.1132,
+    "lng": -79.218,
+    "source_url": "https://www.wikidata.org/wiki/Q6146214",
+    "license": "CC0 1.0",
+    "attribution": "Wikidata contributors, CC0 1.0.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "Wikidata",
+      "source_url": "https://www.wikidata.org/wiki/Q6146214"
+    }
+  },
+  {
+    "source_slug": "wikidata-geo",
+    "source_name": "Wikidata",
+    "source_home": "https://www.wikidata.org/",
+    "external_id": "wikidata:Q125804942",
+    "category_slug": "historical_fact",
+    "title": "Jamestown urban area",
+    "summary": "Wikidata place record. Open the source for the structured data.",
+    "lat": 42.111393,
+    "lng": -79.214085,
+    "source_url": "https://www.wikidata.org/wiki/Q125804942",
+    "license": "CC0 1.0",
+    "attribution": "Wikidata contributors, CC0 1.0.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "Wikidata",
+      "source_url": "https://www.wikidata.org/wiki/Q125804942"
+    }
+  },
+  {
+    "source_slug": "wikidata-geo",
+    "source_name": "Wikidata",
+    "source_home": "https://www.wikidata.org/",
+    "external_id": "wikidata:Q138932126",
+    "category_slug": "historical_fact",
+    "title": "Johnson Street Playground",
+    "summary": "Wikidata place record. Open the source for the structured data.",
+    "lat": 42.099163,
+    "lng": -79.220166,
+    "source_url": "https://www.wikidata.org/wiki/Q138932126",
+    "license": "CC0 1.0",
+    "attribution": "Wikidata contributors, CC0 1.0.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "Wikidata",
+      "source_url": "https://www.wikidata.org/wiki/Q138932126"
+    }
+  },
+  {
+    "source_slug": "wikidata-geo",
+    "source_name": "Wikidata",
+    "source_home": "https://www.wikidata.org/",
+    "external_id": "wikidata:Q34876977",
+    "category_slug": "historical_fact",
+    "title": "Jones Hill",
+    "summary": "Wikidata place record. Open the source for the structured data.",
+    "lat": 42.0787,
+    "lng": -79.2509,
+    "source_url": "https://www.wikidata.org/wiki/Q34876977",
+    "license": "CC0 1.0",
+    "attribution": "Wikidata contributors, CC0 1.0.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "Wikidata",
+      "source_url": "https://www.wikidata.org/wiki/Q34876977"
+    }
+  },
+  {
+    "source_slug": "wikidata-geo",
+    "source_name": "Wikidata",
+    "source_home": "https://www.wikidata.org/",
+    "external_id": "wikidata:Q138932270",
+    "category_slug": "historical_fact",
+    "title": "Jones Memorial Park",
+    "summary": "Wikidata place record. Open the source for the structured data.",
+    "lat": 42.106098,
+    "lng": -79.267721,
+    "source_url": "https://www.wikidata.org/wiki/Q138932270",
+    "license": "CC0 1.0",
+    "attribution": "Wikidata contributors, CC0 1.0.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "Wikidata",
+      "source_url": "https://www.wikidata.org/wiki/Q138932270"
+    }
+  },
+  {
+    "source_slug": "wikidata-geo",
+    "source_name": "Wikidata",
+    "source_home": "https://www.wikidata.org/",
+    "external_id": "wikidata:Q138932563",
+    "category_slug": "historical_fact",
+    "title": "Lillian Dickson Playground",
+    "summary": "Wikidata place record. Open the source for the structured data.",
+    "lat": 42.104109,
+    "lng": -79.230889,
+    "source_url": "https://www.wikidata.org/wiki/Q138932563",
+    "license": "CC0 1.0",
+    "attribution": "Wikidata contributors, CC0 1.0.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "Wikidata",
+      "source_url": "https://www.wikidata.org/wiki/Q138932563"
+    }
+  },
+  {
+    "source_slug": "wikidata-geo",
+    "source_name": "Wikidata",
+    "source_home": "https://www.wikidata.org/",
+    "external_id": "wikidata:Q34843349",
+    "category_slug": "historical_fact",
+    "title": "Lincoln Park",
+    "summary": "Wikidata place record. Open the source for the structured data.",
+    "lat": 42.080278,
+    "lng": -79.236944,
+    "source_url": "https://www.wikidata.org/wiki/Q34843349",
+    "license": "CC0 1.0",
+    "attribution": "Wikidata contributors, CC0 1.0.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "Wikidata",
+      "source_url": "https://www.wikidata.org/wiki/Q34843349"
+    }
+  },
+  {
+    "source_slug": "wikidata-geo",
+    "source_name": "Wikidata",
+    "source_home": "https://www.wikidata.org/",
+    "external_id": "wikidata:Q43040108",
+    "category_slug": "historical_fact",
+    "title": "Lyric Vaudeville Theater",
+    "summary": "Wikidata place record. Open the source for the structured data.",
+    "lat": 42.096906,
+    "lng": -79.238739,
+    "source_url": "https://www.wikidata.org/wiki/Q43040108",
+    "license": "CC0 1.0",
+    "attribution": "Wikidata contributors, CC0 1.0.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "Wikidata",
+      "source_url": "https://www.wikidata.org/wiki/Q43040108"
+    }
+  },
+  {
+    "source_slug": "wikidata-geo",
+    "source_name": "Wikidata",
+    "source_home": "https://www.wikidata.org/",
+    "external_id": "wikidata:Q43040119",
+    "category_slug": "historical_fact",
+    "title": "Majestic Theatre",
+    "summary": "Wikidata place record. Open the source for the structured data.",
+    "lat": 42.093172,
+    "lng": -79.239105,
+    "source_url": "https://www.wikidata.org/wiki/Q43040119",
+    "license": "CC0 1.0",
+    "attribution": "Wikidata contributors, CC0 1.0.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "Wikidata",
+      "source_url": "https://www.wikidata.org/wiki/Q43040119"
+    }
+  },
+  {
+    "source_slug": "wikidata-geo",
+    "source_name": "Wikidata",
+    "source_home": "https://www.wikidata.org/",
+    "external_id": "wikidata:Q43040129",
+    "category_slug": "historical_fact",
+    "title": "May's Theatre",
+    "summary": "Wikidata place record. Open the source for the structured data.",
+    "lat": 42.09672,
+    "lng": -79.241534,
+    "source_url": "https://www.wikidata.org/wiki/Q43040129",
+    "license": "CC0 1.0",
+    "attribution": "Wikidata contributors, CC0 1.0.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "Wikidata",
+      "source_url": "https://www.wikidata.org/wiki/Q43040129"
+    }
+  },
+  {
+    "source_slug": "wikidata-geo",
+    "source_name": "Wikidata",
+    "source_home": "https://www.wikidata.org/",
+    "external_id": "wikidata:Q117511349",
+    "category_slug": "historical_fact",
+    "title": "Mount Olivet Cemetery",
+    "summary": "Wikidata place record. Open the source for the structured data.",
+    "lat": 42.1064,
+    "lng": -79.2044,
+    "source_url": "https://www.wikidata.org/wiki/Q117511349",
+    "license": "CC0 1.0",
+    "attribution": "Wikidata contributors, CC0 1.0.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "Wikidata",
+      "source_url": "https://www.wikidata.org/wiki/Q117511349"
+    }
+  },
+  {
+    "source_slug": "wikidata-geo",
+    "source_name": "Wikidata",
+    "source_home": "https://www.wikidata.org/",
+    "external_id": "wikidata:Q43040143",
+    "category_slug": "historical_fact",
+    "title": "Mozart Theatre",
+    "summary": "Wikidata place record. Open the source for the structured data.",
+    "lat": 42.09629,
+    "lng": -79.241852,
+    "source_url": "https://www.wikidata.org/wiki/Q43040143",
+    "license": "CC0 1.0",
+    "attribution": "Wikidata contributors, CC0 1.0.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "Wikidata",
+      "source_url": "https://www.wikidata.org/wiki/Q43040143"
+    }
+  },
+  {
+    "source_slug": "wikidata-geo",
+    "source_name": "Wikidata",
+    "source_home": "https://www.wikidata.org/",
+    "external_id": "wikidata:Q138932231",
+    "category_slug": "historical_fact",
+    "title": "Nordstrom Park",
+    "summary": "Wikidata place record. Open the source for the structured data.",
+    "lat": 42.100779,
+    "lng": -79.265547,
+    "source_url": "https://www.wikidata.org/wiki/Q138932231",
+    "license": "CC0 1.0",
+    "attribution": "Wikidata contributors, CC0 1.0.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "Wikidata",
+      "source_url": "https://www.wikidata.org/wiki/Q138932231"
+    }
+  },
+  {
+    "source_slug": "wikidata-geo",
+    "source_name": "Wikidata",
+    "source_home": "https://www.wikidata.org/",
+    "external_id": "wikidata:Q117630614",
+    "category_slug": "historical_fact",
+    "title": "Old Catholic Cemetery",
+    "summary": "Wikidata place record. Open the source for the structured data.",
+    "lat": 42.11759,
+    "lng": -79.2408,
+    "source_url": "https://www.wikidata.org/wiki/Q117630614",
+    "license": "CC0 1.0",
+    "attribution": "Wikidata contributors, CC0 1.0.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "Wikidata",
+      "source_url": "https://www.wikidata.org/wiki/Q117630614"
+    }
+  },
+  {
+    "source_slug": "wikidata-geo",
+    "source_name": "Wikidata",
+    "source_home": "https://www.wikidata.org/",
+    "external_id": "wikidata:Q117490576",
+    "category_slug": "historical_fact",
+    "title": "Old Jamestown Cemetery",
+    "summary": "Wikidata place record. Open the source for the structured data.",
+    "lat": 42.09903,
+    "lng": -79.244,
+    "source_url": "https://www.wikidata.org/wiki/Q117490576",
+    "license": "CC0 1.0",
+    "attribution": "Wikidata contributors, CC0 1.0.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "Wikidata",
+      "source_url": "https://www.wikidata.org/wiki/Q117490576"
+    }
+  },
+  {
+    "source_slug": "wikidata-geo",
+    "source_name": "Wikidata",
+    "source_home": "https://www.wikidata.org/",
+    "external_id": "wikidata:Q43031031",
+    "category_slug": "historical_fact",
+    "title": "Park 60 Drive-In",
+    "summary": "Wikidata place record. Open the source for the structured data.",
+    "lat": 42.066595,
+    "lng": -79.22375,
+    "source_url": "https://www.wikidata.org/wiki/Q43031031",
+    "license": "CC0 1.0",
+    "attribution": "Wikidata contributors, CC0 1.0.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "Wikidata",
+      "source_url": "https://www.wikidata.org/wiki/Q43031031"
+    }
+  },
+  {
+    "source_slug": "wikidata-geo",
+    "source_name": "Wikidata",
+    "source_home": "https://www.wikidata.org/",
+    "external_id": "wikidata:Q117581897",
+    "category_slug": "historical_fact",
+    "title": "Pine Hill Cemetery",
+    "summary": "Wikidata place record. Open the source for the structured data.",
+    "lat": 42.12111,
+    "lng": -79.20417,
+    "source_url": "https://www.wikidata.org/wiki/Q117581897",
+    "license": "CC0 1.0",
+    "attribution": "Wikidata contributors, CC0 1.0.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "Wikidata",
+      "source_url": "https://www.wikidata.org/wiki/Q117581897"
+    }
+  },
+  {
+    "source_slug": "wikidata-geo",
+    "source_name": "Wikidata",
+    "source_home": "https://www.wikidata.org/",
+    "external_id": "wikidata:Q122553579",
+    "category_slug": "historical_fact",
+    "title": "Point Stockholm",
+    "summary": "Wikidata place record. Open the source for the structured data.",
+    "lat": 42.120058,
+    "lng": -79.317548,
+    "source_url": "https://www.wikidata.org/wiki/Q122553579",
+    "license": "CC0 1.0",
+    "attribution": "Wikidata contributors, CC0 1.0.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "Wikidata",
+      "source_url": "https://www.wikidata.org/wiki/Q122553579"
+    }
+  },
+  {
+    "source_slug": "wikidata-geo",
+    "source_name": "Wikidata",
+    "source_home": "https://www.wikidata.org/",
+    "external_id": "wikidata:Q43040157",
+    "category_slug": "historical_fact",
+    "title": "Reg Lenna Civic Center",
+    "summary": "Wikidata place record. Open the source for the structured data.",
+    "lat": 42.095717,
+    "lng": -79.240023,
+    "source_url": "https://www.wikidata.org/wiki/Q43040157",
+    "license": "CC0 1.0",
+    "attribution": "Wikidata contributors, CC0 1.0.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "Wikidata",
+      "source_url": "https://www.wikidata.org/wiki/Q43040157"
+    }
+  },
+  {
+    "source_slug": "wikidata-geo",
+    "source_name": "Wikidata",
+    "source_home": "https://www.wikidata.org/",
+    "external_id": "wikidata:Q61676253",
+    "category_slug": "historical_fact",
+    "title": "Ridgeview Aerodrome",
+    "summary": "Wikidata place record. Open the source for the structured data.",
+    "lat": 42.082002,
+    "lng": -79.312222,
+    "source_url": "https://www.wikidata.org/wiki/Q61676253",
+    "license": "CC0 1.0",
+    "attribution": "Wikidata contributors, CC0 1.0.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "Wikidata",
+      "source_url": "https://www.wikidata.org/wiki/Q61676253"
+    }
+  },
+  {
+    "source_slug": "wikidata-geo",
+    "source_name": "Wikidata",
+    "source_home": "https://www.wikidata.org/",
+    "external_id": "wikidata:Q43040170",
+    "category_slug": "historical_fact",
+    "title": "Roosevelt Theater",
+    "summary": "Wikidata place record. Open the source for the structured data.",
+    "lat": 42.097002,
+    "lng": -79.235326,
+    "source_url": "https://www.wikidata.org/wiki/Q43040170",
+    "license": "CC0 1.0",
+    "attribution": "Wikidata contributors, CC0 1.0.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "Wikidata",
+      "source_url": "https://www.wikidata.org/wiki/Q43040170"
+    }
+  },
+  {
+    "source_slug": "wikidata-geo",
+    "source_name": "Wikidata",
+    "source_home": "https://www.wikidata.org/",
+    "external_id": "wikidata:Q34858873",
+    "category_slug": "historical_fact",
+    "title": "Roseland Park",
+    "summary": "Wikidata place record. Open the source for the structured data.",
+    "lat": 42.111944,
+    "lng": -79.243889,
+    "source_url": "https://www.wikidata.org/wiki/Q34858873",
+    "license": "CC0 1.0",
+    "attribution": "Wikidata contributors, CC0 1.0.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "Wikidata",
+      "source_url": "https://www.wikidata.org/wiki/Q34858873"
+    }
+  },
+  {
+    "source_slug": "wikidata-geo",
+    "source_name": "Wikidata",
+    "source_home": "https://www.wikidata.org/",
+    "external_id": "wikidata:Q43040183",
+    "category_slug": "historical_fact",
+    "title": "Royal Theatre",
+    "summary": "Wikidata place record. Open the source for the structured data.",
+    "lat": 42.094512,
+    "lng": -79.240591,
+    "source_url": "https://www.wikidata.org/wiki/Q43040183",
+    "license": "CC0 1.0",
+    "attribution": "Wikidata contributors, CC0 1.0.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "Wikidata",
+      "source_url": "https://www.wikidata.org/wiki/Q43040183"
+    }
+  },
+  {
+    "source_slug": "wikidata-geo",
+    "source_name": "Wikidata",
+    "source_home": "https://www.wikidata.org/",
+    "external_id": "wikidata:Q116697347",
+    "category_slug": "historical_fact",
+    "title": "S A Carlson",
+    "summary": "Wikidata place record. Open the source for the structured data.",
+    "lat": 42.0933,
+    "lng": -79.2478,
+    "source_url": "https://www.wikidata.org/wiki/Q116697347",
+    "license": "CC0 1.0",
+    "attribution": "Wikidata contributors, CC0 1.0.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "Wikidata",
+      "source_url": "https://www.wikidata.org/wiki/Q116697347"
+    }
+  },
+  {
+    "source_slug": "wikidata-geo",
+    "source_name": "Wikidata",
+    "source_home": "https://www.wikidata.org/",
+    "external_id": "wikidata:Q49558585",
+    "category_slug": "historical_fact",
+    "title": "School Park",
+    "summary": "Wikidata place record. Open the source for the structured data.",
+    "lat": 42.121389,
+    "lng": -79.221389,
+    "source_url": "https://www.wikidata.org/wiki/Q49558585",
+    "license": "CC0 1.0",
+    "attribution": "Wikidata contributors, CC0 1.0.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "Wikidata",
+      "source_url": "https://www.wikidata.org/wiki/Q49558585"
+    }
+  },
+  {
+    "source_slug": "wikidata-geo",
+    "source_name": "Wikidata",
+    "source_home": "https://www.wikidata.org/",
+    "external_id": "wikidata:Q117525491",
+    "category_slug": "historical_fact",
+    "title": "Sunset Hill Cemetery",
+    "summary": "Wikidata place record. Open the source for the structured data.",
+    "lat": 42.0878,
+    "lng": -79.3014,
+    "source_url": "https://www.wikidata.org/wiki/Q117525491",
+    "license": "CC0 1.0",
+    "attribution": "Wikidata contributors, CC0 1.0.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "Wikidata",
+      "source_url": "https://www.wikidata.org/wiki/Q117525491"
+    }
+  },
+  {
+    "source_slug": "wikidata-geo",
+    "source_name": "Wikidata",
+    "source_home": "https://www.wikidata.org/",
+    "external_id": "wikidata:Q61676254",
+    "category_slug": "historical_fact",
+    "title": "Wca Hospital heliport",
+    "summary": "Wikidata place record. Open the source for the structured data.",
+    "lat": 42.092225,
+    "lng": -79.231389,
+    "source_url": "https://www.wikidata.org/wiki/Q61676254",
+    "license": "CC0 1.0",
+    "attribution": "Wikidata contributors, CC0 1.0.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "Wikidata",
+      "source_url": "https://www.wikidata.org/wiki/Q61676254"
+    }
+  },
+  {
+    "source_slug": "wikidata-geo",
+    "source_name": "Wikidata",
+    "source_home": "https://www.wikidata.org/",
+    "external_id": "wikidata:Q7950471",
+    "category_slug": "historical_fact",
+    "title": "WHUG",
+    "summary": "Wikidata place record. Open the source for the structured data.",
+    "lat": 42.1314,
+    "lng": -79.2203,
+    "source_url": "https://www.wikidata.org/wiki/Q7950471",
+    "license": "CC0 1.0",
+    "attribution": "Wikidata contributors, CC0 1.0.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "Wikidata",
+      "source_url": "https://www.wikidata.org/wiki/Q7950471"
+    }
+  },
+  {
+    "source_slug": "wikidata-geo",
+    "source_name": "Wikidata",
+    "source_home": "https://www.wikidata.org/",
+    "external_id": "wikidata:Q7950670",
+    "category_slug": "historical_fact",
+    "title": "WIHR-LP",
+    "summary": "Wikidata place record. Open the source for the structured data.",
+    "lat": 42.095,
+    "lng": -79.2439,
+    "source_url": "https://www.wikidata.org/wiki/Q7950670",
+    "license": "CC0 1.0",
+    "attribution": "Wikidata contributors, CC0 1.0.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "Wikidata",
+      "source_url": "https://www.wikidata.org/wiki/Q7950670"
+    }
+  },
+  {
+    "source_slug": "wikidata-geo",
+    "source_name": "Wikidata",
+    "source_home": "https://www.wikidata.org/",
+    "external_id": "wikidata:Q117503808",
+    "category_slug": "historical_fact",
+    "title": "Wilcox Road Cemetery",
+    "summary": "Wikidata place record. Open the source for the structured data.",
+    "lat": 42.0733,
+    "lng": -79.2697,
+    "source_url": "https://www.wikidata.org/wiki/Q117503808",
+    "license": "CC0 1.0",
+    "attribution": "Wikidata contributors, CC0 1.0.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "Wikidata",
+      "source_url": "https://www.wikidata.org/wiki/Q117503808"
+    }
+  },
+  {
+    "source_slug": "wikidata-geo",
+    "source_name": "Wikidata",
+    "source_home": "https://www.wikidata.org/",
+    "external_id": "wikidata:Q49580911",
+    "category_slug": "historical_fact",
+    "title": "Willard Park",
+    "summary": "Wikidata place record. Open the source for the structured data.",
+    "lat": 42.094722,
+    "lng": -79.217778,
+    "source_url": "https://www.wikidata.org/wiki/Q49580911",
+    "license": "CC0 1.0",
+    "attribution": "Wikidata contributors, CC0 1.0.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "Wikidata",
+      "source_url": "https://www.wikidata.org/wiki/Q49580911"
+    }
+  },
+  {
+    "source_slug": "wikidata-geo",
+    "source_name": "Wikidata",
+    "source_home": "https://www.wikidata.org/",
+    "external_id": "wikidata:Q138932181",
+    "category_slug": "historical_fact",
+    "title": "Willard Street Playground",
+    "summary": "Wikidata place record. Open the source for the structured data.",
+    "lat": 42.097006,
+    "lng": -79.224008,
+    "source_url": "https://www.wikidata.org/wiki/Q138932181",
+    "license": "CC0 1.0",
+    "attribution": "Wikidata contributors, CC0 1.0.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "Wikidata",
+      "source_url": "https://www.wikidata.org/wiki/Q138932181"
+    }
+  },
+  {
+    "source_slug": "wikidata-geo",
+    "source_name": "Wikidata",
+    "source_home": "https://www.wikidata.org/",
+    "external_id": "wikidata:Q43040193",
+    "category_slug": "historical_fact",
+    "title": "Winter Garden Theater",
+    "summary": "Wikidata place record. Open the source for the structured data.",
+    "lat": 42.096371,
+    "lng": -79.242668,
+    "source_url": "https://www.wikidata.org/wiki/Q43040193",
+    "license": "CC0 1.0",
+    "attribution": "Wikidata contributors, CC0 1.0.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "Wikidata",
+      "source_url": "https://www.wikidata.org/wiki/Q43040193"
+    }
+  },
+  {
+    "source_slug": "wikidata-geo",
+    "source_name": "Wikidata",
+    "source_home": "https://www.wikidata.org/",
+    "external_id": "wikidata:Q7951410",
+    "category_slug": "historical_fact",
+    "title": "WJTN",
+    "summary": "Wikidata place record. Open the source for the structured data.",
+    "lat": 42.1047,
+    "lng": -79.2575,
+    "source_url": "https://www.wikidata.org/wiki/Q7951410",
+    "license": "CC0 1.0",
+    "attribution": "Wikidata contributors, CC0 1.0.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "Wikidata",
+      "source_url": "https://www.wikidata.org/wiki/Q7951410"
+    }
+  },
+  {
+    "source_slug": "wikidata-geo",
+    "source_name": "Wikidata",
+    "source_home": "https://www.wikidata.org/",
+    "external_id": "wikidata:Q7951923",
+    "category_slug": "historical_fact",
+    "title": "WKSN",
+    "summary": "Wikidata place record. Open the source for the structured data.",
+    "lat": 42.1047,
+    "lng": -79.2575,
+    "source_url": "https://www.wikidata.org/wiki/Q7951923",
+    "license": "CC0 1.0",
+    "attribution": "Wikidata contributors, CC0 1.0.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "Wikidata",
+      "source_url": "https://www.wikidata.org/wiki/Q7951923"
+    }
+  },
+  {
+    "source_slug": "wikidata-geo",
+    "source_name": "Wikidata",
+    "source_home": "https://www.wikidata.org/",
+    "external_id": "wikidata:Q7957462",
+    "category_slug": "historical_fact",
+    "title": "WWSE",
+    "summary": "Wikidata place record. Open the source for the structured data.",
+    "lat": 42.085,
+    "lng": -79.2897,
+    "source_url": "https://www.wikidata.org/wiki/Q7957462",
+    "license": "CC0 1.0",
+    "attribution": "Wikidata contributors, CC0 1.0.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "Wikidata",
+      "source_url": "https://www.wikidata.org/wiki/Q7957462"
+    }
+  },
+  {
+    "source_slug": "osm-heritage",
+    "source_name": "OpenStreetMap contributors",
+    "source_home": "https://www.openstreetmap.org/copyright",
+    "external_id": "osm:node/12921170538",
+    "category_slug": "public_art",
+    "title": "Big Chair",
+    "summary": "OpenStreetMap records this as artwork.",
+    "lat": 42.095702,
+    "lng": -79.244411,
+    "source_url": "https://www.openstreetmap.org/node/12921170538",
+    "license": "ODbL 1.0",
+    "attribution": "© OpenStreetMap contributors. Data available under the Open Database License.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {}
+  },
+  {
+    "source_slug": "osm-heritage",
+    "source_name": "OpenStreetMap contributors",
+    "source_home": "https://www.openstreetmap.org/copyright",
+    "external_id": "osm:node/12542883584",
+    "category_slug": "historical_fact",
+    "title": "Canoe Statue",
+    "summary": "OpenStreetMap records this as yes.",
+    "lat": 42.094289,
+    "lng": -79.240286,
+    "source_url": "https://www.openstreetmap.org/node/12542883584",
+    "license": "ODbL 1.0",
+    "attribution": "© OpenStreetMap contributors. Data available under the Open Database License.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/12542883584"
+    }
+  },
+  {
+    "source_slug": "osm-heritage",
+    "source_name": "OpenStreetMap contributors",
+    "source_home": "https://www.openstreetmap.org/copyright",
+    "external_id": "osm:node/13285389931",
+    "category_slug": "historical_fact",
+    "title": "Chautauqua Art Gallery",
+    "summary": "OpenStreetMap records this as gallery.",
+    "lat": 42.096981,
+    "lng": -79.241236,
+    "source_url": "https://www.openstreetmap.org/node/13285389931",
+    "license": "ODbL 1.0",
+    "attribution": "© OpenStreetMap contributors. Data available under the Open Database License.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/13285389931"
+    }
+  },
+  {
+    "source_slug": "osm-heritage",
+    "source_name": "OpenStreetMap contributors",
+    "source_home": "https://www.openstreetmap.org/copyright",
+    "external_id": "osm:node/8362005259",
+    "category_slug": "historical_fact",
+    "title": "Chautauqua Sports Hall of Fame",
+    "summary": "OpenStreetMap records this as museum.",
+    "lat": 42.096117,
+    "lng": -79.241918,
+    "source_url": "https://www.openstreetmap.org/node/8362005259",
+    "license": "ODbL 1.0",
+    "attribution": "© OpenStreetMap contributors. Data available under the Open Database License.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/8362005259"
+    }
+  },
+  {
+    "source_slug": "osm-heritage",
+    "source_name": "OpenStreetMap contributors",
+    "source_home": "https://www.openstreetmap.org/copyright",
+    "external_id": "osm:node/8361591981",
+    "category_slug": "historical_fact",
+    "title": "Fenton Museum",
+    "summary": "OpenStreetMap records this as museum.",
+    "lat": 42.091577,
+    "lng": -79.238615,
+    "source_url": "https://www.openstreetmap.org/node/8361591981",
+    "license": "ODbL 1.0",
+    "attribution": "© OpenStreetMap contributors. Data available under the Open Database License.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/8361591981"
+    }
+  },
+  {
+    "source_slug": "osm-heritage",
+    "source_name": "OpenStreetMap contributors",
+    "source_home": "https://www.openstreetmap.org/copyright",
+    "external_id": "osm:way/820285073",
+    "category_slug": "historical_fact",
+    "title": "Governor Fenton Mansion",
+    "summary": "OpenStreetMap records this as house.",
+    "lat": 42.091595,
+    "lng": -79.238596,
+    "source_url": "https://www.openstreetmap.org/way/820285073",
+    "license": "ODbL 1.0",
+    "attribution": "© OpenStreetMap contributors. Data available under the Open Database License.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/way/820285073"
+    }
+  },
+  {
+    "source_slug": "osm-heritage",
+    "source_name": "OpenStreetMap contributors",
+    "source_home": "https://www.openstreetmap.org/copyright",
+    "external_id": "osm:node/12446168906",
+    "category_slug": "historical_fact",
+    "title": "I Love Lucy Mural",
+    "summary": "OpenStreetMap records this as attraction.",
+    "lat": 42.092652,
+    "lng": -79.23996,
+    "source_url": "https://www.openstreetmap.org/node/12446168906",
+    "license": "ODbL 1.0",
+    "attribution": "© OpenStreetMap contributors. Data available under the Open Database License.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/12446168906"
+    }
+  },
+  {
+    "source_slug": "osm-heritage",
+    "source_name": "OpenStreetMap contributors",
+    "source_home": "https://www.openstreetmap.org/copyright",
+    "external_id": "osm:way/617324832",
+    "category_slug": "historical_fact",
+    "title": "Jamestown Gateway Train Station",
+    "summary": "OpenStreetMap records this as building.",
+    "lat": 42.094662,
+    "lng": -79.244538,
+    "source_url": "https://www.openstreetmap.org/way/617324832",
+    "license": "ODbL 1.0",
+    "attribution": "© OpenStreetMap contributors. Data available under the Open Database License.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/way/617324832"
+    }
+  },
+  {
+    "source_slug": "osm-heritage",
+    "source_name": "OpenStreetMap contributors",
+    "source_home": "https://www.openstreetmap.org/copyright",
+    "external_id": "osm:node/8362684858",
+    "category_slug": "public_art",
+    "title": "Lucille Ball",
+    "summary": "OpenStreetMap records this as artwork.",
+    "lat": 42.110639,
+    "lng": -79.282099,
+    "source_url": "https://www.openstreetmap.org/node/8362684858",
+    "license": "ODbL 1.0",
+    "attribution": "© OpenStreetMap contributors. Data available under the Open Database License.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {}
+  },
+  {
+    "source_slug": "osm-heritage",
+    "source_name": "OpenStreetMap contributors",
+    "source_home": "https://www.openstreetmap.org/copyright",
+    "external_id": "osm:node/8342270492",
+    "category_slug": "historical_fact",
+    "title": "Lucille Ball Childhood Home",
+    "summary": "OpenStreetMap records this as museum.",
+    "lat": 42.102703,
+    "lng": -79.286417,
+    "source_url": "https://www.openstreetmap.org/node/8342270492",
+    "license": "ODbL 1.0",
+    "attribution": "© OpenStreetMap contributors. Data available under the Open Database License.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/8342270492"
+    }
+  },
+  {
+    "source_slug": "osm-heritage",
+    "source_name": "OpenStreetMap contributors",
+    "source_home": "https://www.openstreetmap.org/copyright",
+    "external_id": "osm:node/14277176651",
+    "category_slug": "public_art",
+    "title": "Potters Alley Gallery",
+    "summary": "OpenStreetMap records this as artwork.",
+    "lat": 42.096931,
+    "lng": -79.240851,
+    "source_url": "https://www.openstreetmap.org/node/14277176651",
+    "license": "ODbL 1.0",
+    "attribution": "© OpenStreetMap contributors. Data available under the Open Database License.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {}
+  },
+  {
+    "source_slug": "osm-heritage",
+    "source_name": "OpenStreetMap contributors",
+    "source_home": "https://www.openstreetmap.org/copyright",
+    "external_id": "osm:node/8362616233",
+    "category_slug": "public_art",
+    "title": "Reuben E. Fenton",
+    "summary": "OpenStreetMap records this as artwork.",
+    "lat": 42.091726,
+    "lng": -79.238401,
+    "source_url": "https://www.openstreetmap.org/node/8362616233",
+    "license": "ODbL 1.0",
+    "attribution": "© OpenStreetMap contributors. Data available under the Open Database License.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {}
+  },
+  {
+    "source_slug": "osm-heritage",
+    "source_name": "OpenStreetMap contributors",
+    "source_home": "https://www.openstreetmap.org/copyright",
+    "external_id": "osm:way/927938051",
+    "category_slug": "memorial",
+    "title": "Veterans' Memorial",
+    "summary": "OpenStreetMap records this as memorial.",
+    "lat": 42.121558,
+    "lng": -79.306216,
+    "source_url": "https://www.openstreetmap.org/way/927938051",
+    "license": "ODbL 1.0",
+    "attribution": "© OpenStreetMap contributors. Data available under the Open Database License.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/way/927938051"
+    }
+  },
+  {
+    "source_slug": "osm-heritage",
+    "source_name": "OpenStreetMap contributors",
+    "source_home": "https://www.openstreetmap.org/copyright",
+    "external_id": "osm:node/10920153980",
+    "category_slug": "historical_fact",
+    "title": "Walnut Grove Archaeological Site",
+    "summary": "OpenStreetMap records this as archaeological site.",
+    "lat": 42.091168,
+    "lng": -79.23853,
+    "source_url": "https://www.openstreetmap.org/node/10920153980",
+    "license": "ODbL 1.0",
+    "attribution": "© OpenStreetMap contributors. Data available under the Open Database License.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/10920153980"
+    }
+  }
+]

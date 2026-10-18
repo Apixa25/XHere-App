@@ -22,6 +22,7 @@ import world.xhere.shared.geo.Geo
 import world.xhere.shared.geo.LatLng
 import world.xhere.shared.model.ConfirmationVerdict
 import world.xhere.shared.model.DropCard
+import world.xhere.shared.model.DropSource
 import world.xhere.shared.model.DropStatus
 import world.xhere.shared.model.ReportReason
 import world.xhere.shared.model.ReportTarget
@@ -60,6 +61,12 @@ data class DetailUiState(
     val lastConfirmedAt: Instant? = null,
     val isMine: Boolean = false,
     val canAnswer: Boolean = false,
+    /** Public records stay readable without walking closer and are not a user's drop. */
+    val publicRecord: Boolean = false,
+    val sourceName: String? = null,
+    val sourceUrl: String? = null,
+    val license: String? = null,
+    val attribution: String? = null,
     val answering: Boolean = false,
     val locationOff: Boolean = false,
     val listening: Boolean = false,
@@ -297,10 +304,12 @@ class DropDetailViewModel(
 
     private fun publish() {
         val current = card ?: return
+        val publicRecord = current.source == DropSource.OPEN_DATA
         val insideReveal = distance != null && distance!! <= current.revealRadiusM
-        val showBody = current.isMine || (current.revealed && insideReveal)
+        val showBody = publicRecord || current.isMine || (current.revealed && insideReveal)
         val live = current.status == DropStatus.ACTIVE || current.status == DropStatus.CONFIRMED
-        val canAnswer = !current.isMine &&
+        val canAnswer = !publicRecord &&
+            !current.isMine &&
             distance != null &&
             Geo.isWithinConfirmationRange(distance!!, current.revealRadiusM) &&
             live
@@ -326,6 +335,11 @@ class DropDetailViewModel(
                 lastConfirmedAt = current.lastConfirmedAt,
                 isMine = current.isMine,
                 canAnswer = canAnswer,
+                publicRecord = publicRecord,
+                sourceName = current.sourceName,
+                sourceUrl = current.sourceUrl,
+                license = current.license,
+                attribution = current.attribution,
                 answering = false,
                 locationOff = !location.hasPermission(),
                 listening = previous.listening,

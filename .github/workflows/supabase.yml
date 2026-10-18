@@ -43,6 +43,25 @@ jobs:
           deno check supabase/functions/suggest-category/index.ts
           deno check supabase/functions/strip-exif/index.ts
 
+  # The importer is stdlib Python. This job does not call the network and
+  # does not start Docker. It checks the committed Jamestown snapshot
+  # against the region file.
+  open-data:
+    name: open-data
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Check the importer and the Jamestown snapshot
+        run: |
+          set -euo pipefail
+          python3 supabase/scripts/import_open_data.py --self-test
+          python3 supabase/scripts/import_open_data.py \
+            --check supabase/seed/open-data/jamestown-ny.json \
+            --region supabase/regions/us/jamestown-ny.yaml
+
   pgtap:
     name: pgtap
     runs-on: ubuntu-latest

@@ -224,8 +224,9 @@ class InMemoryXHere(
                 throw XHereApiException("drop_not_found", sqlState = XHereApiException.SQL_NOT_FOUND)
             }
             val card = drop.toCard(viewer?.id, distance = null)
-            // Share teasers never include the body, even for the author.
-            // drop_detail is what reveals it.
+            // Share teasers never include the body of a user drop, even for the author.
+            // A public record is already public, so its summary and attribution stay.
+            if (card.source == world.xhere.shared.model.DropSource.OPEN_DATA) return card
             return card.copy(revealed = false, body = null, attributes = null, media = null, tags = null)
         }
 
@@ -341,6 +342,13 @@ class InMemoryXHere(
             val drop = store.drops[dropId] ?: throw XHereApiException("drop_not_found", sqlState = XHereApiException.SQL_NOT_FOUND)
             if (!store.canView(drop, profile.id, clock()) || drop.status !in setOf(DropStatus.ACTIVE, DropStatus.CONFIRMED)) {
                 throw XHereApiException("drop_not_found", sqlState = XHereApiException.SQL_NOT_FOUND)
+            }
+            if (drop.source == world.xhere.shared.model.DropSource.OPEN_DATA) {
+                throw XHereApiException(
+                    "not_a_user_drop",
+                    sqlState = XHereApiException.SQL_VALIDATION,
+                    detail = "public records are not user contributions",
+                )
             }
             val distance = Geo.distanceMeters(location, drop.displayLocation)
             val problems = CategoryRules.checkConfirmation(distance, drop.revealRadiusM, note, drop.authorId == profile.id)
@@ -858,6 +866,11 @@ class StoredDrop(
     val createdAt: Instant,
     val media: List<DropMedia>,
     var removedReason: String? = null,
+    val source: world.xhere.shared.model.DropSource = world.xhere.shared.model.DropSource.USER,
+    val sourceName: String? = null,
+    val sourceUrl: String? = null,
+    val license: String? = null,
+    val attribution: String? = null,
 )
 
 /**
@@ -870,8 +883,9 @@ private fun StoredDrop.passes(categories: List<String>?): Boolean {
 }
 
 private fun StoredDrop.toCard(viewerId: Uuid?, distance: Double?): DropCard {
-    val mine = viewerId != null && authorId == viewerId
-    val revealed = Geo.isRevealed(distance ?: Double.POSITIVE_INFINITY, revealRadiusM, mine)
+    val publicRecord = source == world.xhere.shared.model.DropSource.OPEN_DATA
+    val mine = viewerId != null && authorId == viewerId && !publicRecord
+    val revealed = publicRecord || Geo.isRevealed(distance ?: Double.POSITIVE_INFINITY, revealRadiusM, mine)
     return DropCard(
         id = id,
         shortId = shortId,
@@ -895,8 +909,13 @@ private fun StoredDrop.toCard(viewerId: Uuid?, distance: Double?): DropCard {
         expiresAt = expiresAt,
         lastConfirmedAt = lastConfirmedAt,
         createdAt = createdAt,
-        authorHandle = if (displayAnonymous && category.allowAnonymousDisplay && !mine) null else authorHandle,
+        authorHandle = if (publicRecord || (displayAnonymous && category.allowAnonymousDisplay && !mine)) null else authorHandle,
         isMine = mine,
+        source = source,
+        sourceName = sourceName,
+        sourceUrl = sourceUrl,
+        license = license,
+        attribution = attribution,
     )
 }
 
@@ -910,6 +929,7 @@ private fun StoredDrop.toFeature(): MapFeature = MapFeature(
     latitude = displayLocation.latitude,
     longitude = displayLocation.longitude,
     pointCount = 1,
+    source = source,
 )
 
 private fun LatLng.inBox(box: BoundingBox): Boolean =

@@ -329,3 +329,11 @@ Branch `chore/hosted-supabase-followups` → [PR #17](https://github.com/Apixa25
 ## 2026-10-18 (Sun), ~9:10 AM ET: Hide Google sign-in on tester builds
 
 - The Google button is hidden until GOOGLE_WEB_CLIENT_ID is set, for tester builds.
+
+## 2026-10-18 (Sun), ~4:12 PM ET: Open-data base layer (map is never empty)
+
+Branch `cursor/open-data-base-layer-2211`. This is recommendation #1 from `docs/research/LOCATION-APPS-RESEARCH.md` and the first slice of M10 (PLAN §3, §4.1, §5; `docs/OPEN-DATA-PLAYBOOK.md` §8). XHere stays global. Jamestown is only the pilot region file.
+
+- Imported places are `drops` with `source = open_data` and no author, so they do not count as a person's drops, points, tier, or export. Confirmations are rejected. The detail screen shows **From public records**, the attribution, and **View source**. Still-true is hidden on those pins.
+- Free sources only. Jamestown snapshot after dedupe: Wikipedia 28 (CC BY-SA 4.0), Wikidata 64 (CC0), National Register 11 (public domain), OpenStreetMap historic/heritage/tourism 14 (ODbL). 117 places. HMdb and Atlas Obscura stay link-only.
+- Migration `20261018001600_open_data.sql` is not applied on the hosted project from here. Apply it with `supabase db push` after the repair commands already in `supabase/README.md`, then `psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/seed/open-data/jamestown-ny.sql`. `db push` does not load the seed. Re-running the SQL updates the same external ids.

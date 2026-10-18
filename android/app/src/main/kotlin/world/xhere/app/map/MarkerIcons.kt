@@ -12,7 +12,7 @@ import world.xhere.shared.model.Taxonomy
 internal object MarkerIcons {
     fun idFor(label: String): String = "xhere-" + label.hashCode().toUInt().toString(16)
 
-    fun bitmap(label: String, stroke: Int): Bitmap {
+    fun bitmap(label: String, stroke: Int, publicRecord: Boolean = false): Bitmap {
         val size = 128
         val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
@@ -24,6 +24,13 @@ internal object MarkerIcons {
         }
         canvas.drawCircle(size / 2f, size / 2f, size * 0.42f, fill)
         canvas.drawCircle(size / 2f, size / 2f, size * 0.42f, ring)
+        if (publicRecord) {
+            val mark = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = stroke
+                style = Paint.Style.FILL
+            }
+            canvas.drawRoundRect(size * 0.62f, size * 0.08f, size * 0.92f, size * 0.38f, 8f, 8f, mark)
+        }
         val lines = label.split('\n')
         val text = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = Color.BLACK

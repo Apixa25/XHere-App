@@ -53,6 +53,14 @@ internal fun TeaserCard(
                         style = MaterialTheme.typography.titleMedium,
                         modifier = Modifier.testTag(TestTags.TEASER_TITLE),
                     )
+                    if (teaser.publicRecord) {
+                        Text(
+                            text = stringResource(R.string.detail_public_records),
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.tertiary,
+                            modifier = Modifier.testTag(TestTags.TEASER_PUBLIC),
+                        )
+                    }
                 }
                 TextButton(onClick = onOpen, modifier = Modifier.testTag(TestTags.TEASER_OPEN)) {
                     Text(stringResource(R.string.map_teaser_open))
@@ -73,6 +81,14 @@ internal fun TeaserCard(
                 Text(
                     text = stringResource(R.string.map_teaser_approximate),
                     modifier = Modifier.padding(start = 4.dp, top = 2.dp),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            if (teaser.publicRecord && !teaser.attribution.isNullOrBlank()) {
+                Text(
+                    text = teaser.attribution,
+                    modifier = Modifier.padding(start = 4.dp, top = 6.dp),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

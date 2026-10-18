@@ -1,0 +1,72 @@
+# Pilot region for the open-data base layer.
+# Jamestown, New York is the demo city (PLAN §10 question 3). The importer
+# does not special-case this file: any other region is another YAML like it.
+# bbox is west, south, east, north (longitude, latitude).
+
+region:
+  id: us-ny-jamestown
+  name: Jamestown, New York, USA
+  country: US
+  bbox: [-79.32, 42.05, -79.18, 42.14]
+  timezone: America/New_York
+
+sources:
+  - id: wikipedia-geo
+    adapter: wikipedia_geo
+    publisher: Wikimedia Foundation
+    url: https://en.wikipedia.org/
+    license: CC BY-SA 4.0
+    attribution: "Wikipedia contributors, CC BY-SA 4.0. Titles and coordinates only; article text is not copied."
+    automated_access: allowed
+    cost: 0
+    language: en
+    radius_m: 10000
+    category: historical_fact
+  - id: wikidata-geo
+    adapter: wikidata_geo
+    publisher: Wikidata
+    url: https://www.wikidata.org/
+    license: CC0 1.0
+    attribution: "Wikidata contributors, CC0 1.0."
+    automated_access: allowed
+    cost: 0
+    category: historical_fact
+  - id: nrhp
+    adapter: arcgis_feature
+    publisher: U.S. National Park Service
+    url: https://mapservices.nps.gov/arcgis/rest/services/cultural_resources/nrhp_locations/MapServer
+    license: Public domain
+    attribution: "National Park Service, National Register of Historic Places. Public domain."
+    automated_access: allowed
+    cost: 0
+    layers: [0, 1]
+    category: historical_fact
+    fields:
+      id: NRIS_Refnum
+      title: RESNAME
+      url: NARA_URL
+      city: City
+      state: State
+      kind: ResType
+      address: Address
+  - id: osm-heritage
+    adapter: osm_overpass
+    publisher: OpenStreetMap contributors
+    url: https://www.openstreetmap.org/copyright
+    license: ODbL 1.0
+    attribution: "© OpenStreetMap contributors. Data available under the Open Database License."
+    automated_access: allowed
+    cost: 0
+    historic: true
+    heritage: true
+    tourism: [artwork, attraction, museum, viewpoint, gallery]
+
+candidates:
+  - id: hmdb
+    decision: link-only
+    reason: "HMdb copyright allows non-commercial copying with attribution only. Commercial use needs written permission. Do not import marker text."
+    url: https://www.hmdb.org/copyright.asp
+  - id: atlas-obscura
+    decision: link-only
+    reason: "No open-data license was found. Link out only. Do not copy place text."
+    url: https://www.atlasobscura.com/about

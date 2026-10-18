@@ -74,6 +74,8 @@
     <string name="detail_missing">This drop isn\'t here.</string>
     <string name="detail_author">by @%1$s</string>
     <string name="detail_confirmed">Confirmed</string>
+    <string name="detail_public_records">From public records</string>
+    <string name="detail_view_source">View source</string>
     <string name="detail_progress">%1$d of %2$d say it\'s still true</string>
     <string name="detail_denies">%1$d said this isn\'t true.</string>
     <string name="detail_fresh_never">Not confirmed yet</string>

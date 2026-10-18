@@ -1,5 +1,7 @@
 package world.xhere.app.detail
 
+import android.content.Intent
+import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -256,6 +258,21 @@ private fun DetailBody(
         color = MaterialTheme.colorScheme.primary,
         modifier = Modifier.testTag(TestTags.DETAIL_CATEGORY),
     )
+    if (state.publicRecord) {
+        Surface(
+            shape = MaterialTheme.shapes.small,
+            color = MaterialTheme.colorScheme.tertiaryContainer,
+        ) {
+            Text(
+                text = stringResource(R.string.detail_public_records),
+                modifier = Modifier
+                    .padding(horizontal = 10.dp, vertical = 4.dp)
+                    .testTag(TestTags.DETAIL_PUBLIC),
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onTertiaryContainer,
+            )
+        }
+    }
     Text(
         text = state.title,
         style = MaterialTheme.typography.headlineSmall,
@@ -268,41 +285,43 @@ private fun DetailBody(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-        if (state.isConfirmed) {
-            Surface(
-                shape = MaterialTheme.shapes.small,
-                color = MaterialTheme.colorScheme.primaryContainer,
-            ) {
-                Text(
-                    text = stringResource(R.string.detail_confirmed),
-                    modifier = Modifier
-                        .padding(horizontal = 10.dp, vertical = 4.dp)
-                        .testTag(TestTags.DETAIL_BADGE),
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer,
-                )
+    if (!state.publicRecord) {
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            if (state.isConfirmed) {
+                Surface(
+                    shape = MaterialTheme.shapes.small,
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                ) {
+                    Text(
+                        text = stringResource(R.string.detail_confirmed),
+                        modifier = Modifier
+                            .padding(horizontal = 10.dp, vertical = 4.dp)
+                            .testTag(TestTags.DETAIL_BADGE),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    )
+                }
             }
+            Text(
+                text = stringResource(R.string.detail_progress, state.confirmCount, state.confirmBar),
+                style = MaterialTheme.typography.bodyLarge,
+                modifier = Modifier.testTag(TestTags.DETAIL_PROGRESS),
+            )
+        }
+        if (state.denyCount > 0) {
+            Text(
+                text = stringResource(R.string.detail_denies, state.denyCount),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
         Text(
-            text = stringResource(R.string.detail_progress, state.confirmCount, state.confirmBar),
-            style = MaterialTheme.typography.bodyLarge,
-            modifier = Modifier.testTag(TestTags.DETAIL_PROGRESS),
-        )
-    }
-    if (state.denyCount > 0) {
-        Text(
-            text = stringResource(R.string.detail_denies, state.denyCount),
+            text = freshnessText(state.lastConfirmedAt, Clock.System.now()),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.testTag(TestTags.DETAIL_FRESHNESS),
         )
     }
-    Text(
-        text = freshnessText(state.lastConfirmedAt, Clock.System.now()),
-        style = MaterialTheme.typography.bodyMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.testTag(TestTags.DETAIL_FRESHNESS),
-    )
     if (state.approximate) {
         Text(
             text = stringResource(R.string.map_teaser_approximate),
@@ -328,6 +347,33 @@ private fun DetailBody(
         )
     } else {
         LockedCard(state = state, onUseLocation = onUseLocation)
+    }
+    if (state.publicRecord && !state.attribution.isNullOrBlank()) {
+        Text(
+            text = state.attribution,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.testTag(TestTags.DETAIL_ATTRIBUTION),
+        )
+    }
+    if (state.publicRecord && !state.license.isNullOrBlank() && state.license != state.attribution) {
+        Text(
+            text = state.license,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+    val sourceUrl = state.sourceUrl
+    if (state.publicRecord && !sourceUrl.isNullOrBlank()) {
+        val context = LocalContext.current
+        TextButton(
+            onClick = {
+                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(sourceUrl)))
+            },
+            modifier = Modifier.testTag(TestTags.DETAIL_SOURCE),
+        ) {
+            Text(stringResource(R.string.detail_view_source))
+        }
     }
     if (state.isMine) {
         Text(stringResource(R.string.detail_yours), style = MaterialTheme.typography.bodyLarge)

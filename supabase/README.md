@@ -4,7 +4,7 @@ Postgres / PostGIS schema, Row-Level Security, RPCs, Edge Functions, and pgTAP t
 
 - `config.toml`: local Supabase CLI config (`supabase init`, `project_id = "xhere"`). It holds no secrets; provider credentials are `env(...)` references.
 - `migrations/`: SQL migrations (**M1**), applied in filename order.
-- `seed.sql`: **local demo data** (4 demo users and 15 drops in Jamestown, New York). `supabase db reset` loads it. `supabase db push` does not. It was applied by hand to the pilot project; see [Demo seed on the pilot](#demo-seed-on-the-pilot).
+- `seed.sql`: **local demo data** (4 demo users and 15 drops in Jamestown, New York). `supabase db reset` loads it, then `seed/open-data/jamestown-ny.sql` (the public-record places). `supabase db push` does not load either file. The demo seed was applied by hand to the pilot project; see [Demo seed on the pilot](#demo-seed-on-the-pilot). The open-data file is applied with the steps in [Open-data seed (hosted)](#open-data-seed-hosted).
 - `tests/database/`: pgTAP tests (**M1**), run by `supabase test db`.
 - `functions/`: Supabase Edge Functions. **M5** adds `suggest-category` and `strip-exif`. Later milestones add open-data proxies.
 
@@ -86,6 +86,7 @@ Postgres listens on `127.0.0.1:54322` (user `postgres`, password `postgres`, loc
 | `20261018001300_reference_admin_policies.sql` | Lint 0006: `tier_limits` and `content_filters` admin policies are insert/update/delete only, so SELECT has one policy |
 | `20261018001400_foreign_key_indexes.sql` | Lint 0001: indexes for `category_suggestion_log.chosen_category_id`, `drop_media.owner_id`, `drops (category_id, category_version)`, `moderation_actions.actor_id`, `reports.resolved_by`, `user_moderation.updated_by` |
 | `20261018001500_tip_lines_rls.sql` | RLS enabled on `private.tip_lines`. No client policies. `create_drop` still reads it because that function is security definer |
+| `20261018001600_open_data.sql` | Open-data base layer: `open_data_sources`, `open_data_items`, provenance on `drop_card`, `drops_in_view.source`, `private.upsert_open_data_items`, and a trigger that rejects confirmations of `open_data` drops |
 
 The taxonomy lives in a migration rather than `seed.sql` so a hosted project gets it too. Categories are rows, so adding one doesn't need a new migration type. Every change bumps `categories.version`, and each drop records the version it was validated against (`category_versions`).
 
@@ -104,7 +105,7 @@ The taxonomy lives in a migration rather than `seed.sql` so a hosted project get
 | `drops_in_view(min_lng, min_lat, max_lng, max_lat, categories, zoom)` | anon, user | Map viewport: teasers at zoom ≥ 15, grid clusters with per-category counts below that |
 | `drops_nearby(lat, lng, radius_m, categories, limit)` | user | Distance-ordered `drop_card`s. Body, attributes, and media are filled only inside the drop's reveal radius |
 | `drop_detail(drop_id, lat, lng)` | user | One `drop_card`; counts a view |
-| `drop_teaser(short_id)` | anon, user | Share-page teaser; never reveals content |
+| `drop_teaser(short_id)` | anon, user | Share-page teaser. User drops stay locked. An `open_data` place keeps its short summary and attribution |
 | `create_drop(category, lat, lng, title, body, attributes, tags, reveal_radius_m, expires_at, display_anonymous, media, acknowledge_guidelines)` | user | Validates tier, guidelines, JSON-schema attributes, content filters, reveal radius, lifetime caps, media, and per-tier rate limits. Fuzzes the location, applies pre-moderation, and returns possible duplicates |
 | `confirm_drop(drop_id, verdict, lat, lng, note)` | user | "Still true?" vote: one per user per drop, must be on site, renews the lifetime where the category allows |
 | `report(target_type, target_id, reason, details)` | user | Idempotent. Auto-hides a drop at the category's report threshold |
@@ -135,4 +136,32 @@ Moderator/admin is `profiles.role`. There's no UI to grant it yet. On a hosted p
 
 ## Tests
 
-`tests/database/*.test.sql` (pgTAP): schema/privileges, RLS, nearby/reveal/blur/expiry/blocks, `create_drop` validation, crime (`incident_report`) rules, confirmations, moderation/cron, and the M5 suggestion log, hash embeddings, and fixture score (`07_suggestions.test.sql`, 19 assertions), the M6 reveal fixes, and M7 safety/compliance (`09_safety_compliance.test.sql`: Safety pre-moderation, auto-hide threshold, blocks both ways, hide-for-me, moderator-only access, append-only audit log, export) plus `10_tip_lines.test.sql` (incident reports only inside a tip-line area) and `11_advisor_followups.test.sql` (the `(select auth.uid())` policies, one SELECT policy on the reference tables, the foreign-key indexes, tip-line RLS, and the same read/write access as before). Each file runs in a transaction and rolls back. `supabase/functions/**/*_test.ts` is the Deno suite for the two Edge Functions, including the same 32-phrase fixture set and a 401 for a signed-out suggestion.
+`tests/database/*.test.sql` (pgTAP): schema/privileges, RLS, nearby/reveal/blur/expiry/blocks, `create_drop` validation, crime (`incident_report`) rules, confirmations, moderation/cron, and the M5 suggestion log, hash embeddings, and fixture score (`07_suggestions.test.sql`, 19 assertions), the M6 reveal fixes, and M7 safety/compliance (`09_safety_compliance.test.sql`: Safety pre-moderation, auto-hide threshold, blocks both ways, hide-for-me, moderator-only access, append-only audit log, export) plus `10_tip_lines.test.sql` (incident reports only inside a tip-line area), `11_advisor_followups.test.sql` (the `(select auth.uid())` policies, one SELECT policy on the reference tables, the foreign-key indexes, tip-line RLS, and the same read/write access as before), and `12_open_data.test.sql` (upsert/dedupe, attribution on a far-away card, confirmations rejected, the import is not the caller's drop or export). Each file runs in a transaction and rolls back. `supabase/functions/**/*_test.ts` is the Deno suite for the two Edge Functions, including the same 32-phrase fixture set and a 401 for a signed-out suggestion.
+
+## Open-data seed (hosted)
+
+Migration `20261018001600_open_data.sql` is applied with the other migrations. The Jamestown snapshot is not. `supabase db push` does not run `seed.sql` or `supabase/seed/open-data/jamestown-ny.sql`.
+
+Do this from a machine that already has the Supabase CLI linked, after the history repair in [Before `supabase db push`](#before-supabase-db-push) if that repair has not been done yet. This does not change Auth, SMTP, or any other hosted setting.
+
+```bash
+supabase link --project-ref jpeuldzegtbqfezijhuy
+supabase db push
+```
+
+`db push` applies `20261018001600_open_data.sql` when that version is not on the project yet. Then load the snapshot. `DATABASE_URL` is the Postgres connection string from the dashboard (Project Settings → Database). It is not in git. The SQL runs as the database owner and calls `private.upsert_open_data_items`. The anon key cannot run it.
+
+```bash
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/seed/open-data/jamestown-ny.sql
+```
+
+Refresh later (no paid service, no new migration unless the schema changes):
+
+```bash
+python3 supabase/scripts/import_open_data.py \
+  --region supabase/regions/us/jamestown-ny.yaml \
+  --out supabase/seed/open-data/jamestown-ny.json
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/seed/open-data/jamestown-ny.sql
+```
+
+The second command updates the same external ids and hides rows that left the snapshot. A new city is a new YAML under `supabase/regions/` plus the same script. See `docs/OPEN-DATA-PLAYBOOK.md` §8.
