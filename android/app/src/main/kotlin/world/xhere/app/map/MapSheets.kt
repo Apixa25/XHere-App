@@ -164,7 +164,7 @@ internal fun SubcategorySheet(
 
 /** Docked sheet. A plain surface, so the sheet settles immediately under UI tests. */
 @Composable
-private fun BottomSheet(
+internal fun BottomSheet(
     onDismiss: () -> Unit,
     tag: String,
     semantics: (SemanticsPropertyReceiver.() -> Unit)? = null,

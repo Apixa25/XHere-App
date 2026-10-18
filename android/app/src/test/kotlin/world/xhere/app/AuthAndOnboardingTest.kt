@@ -181,6 +181,7 @@ class FreshSessionRule : TestRule {
                     TestGraph.services.store.drops.values.forEach { drop ->
                         drop.confirmCount = 0
                         drop.denyCount = 0
+                        drop.viewCount = 0
                         drop.lastConfirmedAt = null
                         drop.status = DropStatus.ACTIVE
                         drop.expiresAt = null
@@ -188,6 +189,7 @@ class FreshSessionRule : TestRule {
                 }
             }
             runCatching { GlobalContext.get().get<SignOutNotice>().clear() }
+            runCatching { GlobalContext.get().get<world.xhere.app.drop.PendingDropSpot>().clear() }
             if (TestGraph.isReady()) {
                 TestGraph.location.reset()
                 TestGraph.sharer.last = null

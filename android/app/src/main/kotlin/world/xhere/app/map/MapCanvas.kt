@@ -1,6 +1,8 @@
 package world.xhere.app.map
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -13,8 +15,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import kotlin.math.roundToInt
+import world.xhere.app.R
 import world.xhere.app.ui.TestTags
 import world.xhere.shared.demo.JamestownDemo
 import world.xhere.shared.geo.Geo
@@ -32,6 +36,8 @@ interface MapCanvas {
         onCameraIdle: (CameraFrame) -> Unit,
         onUserPanned: () -> Unit,
         onFeatureClick: (MapFeature) -> Unit,
+        onMapClick: (LatLng) -> Unit,
+        onMapLongClick: (LatLng) -> Unit,
         modifier: Modifier,
     )
 }
@@ -41,11 +47,14 @@ interface MapCanvas {
  * came back. Token 0 is downtown Jamestown, which is also the default when the
  * phone has no location fix.
  */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 internal fun ProgrammaticMap(
     state: MapUiState,
     onCameraIdle: (CameraFrame) -> Unit,
     onFeatureClick: (MapFeature) -> Unit,
+    onMapClick: (LatLng) -> Unit,
+    onMapLongClick: (LatLng) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     LaunchedEffect(state.camera.token) {
@@ -59,6 +68,17 @@ internal fun ProgrammaticMap(
             .testTag(TestTags.MAP_MARKERS),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
+        Text(
+            text = stringResource(R.string.map_tap_here),
+            modifier = Modifier
+                .padding(horizontal = 16.dp)
+                .testTag(TestTags.MAP_TAP_SPOT)
+                .combinedClickable(
+                    onClick = { onMapClick(state.camera.point) },
+                    onLongClick = { onMapLongClick(state.camera.point) },
+                ),
+            style = MaterialTheme.typography.titleMedium,
+        )
         state.features.forEach { feature ->
             val records = if (feature.source == world.xhere.shared.model.DropSource.OPEN_DATA) "  · public record" else ""
             val caption = if (feature.isCluster || feature.title.isNullOrBlank()) {

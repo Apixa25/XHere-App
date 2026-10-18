@@ -38,6 +38,12 @@
     <string name="map_filter_all">All</string>
     <string name="map_filter_save">Save</string>
     <string name="map_near_me">Near me</string>
+    <string name="map_tap_here">What\'s here</string>
+    <string name="here_empty">Nothing is dropped within 300 m of this spot.</string>
+    <string name="here_failed">Couldn\'t load what\'s known about this spot.</string>
+    <string name="here_close">Close</string>
+    <string name="here_public">Public record</string>
+    <string name="here_locked">Walk closer to read this.</string>
     <string name="map_near_title">Near me</string>
     <string name="map_near_body">Closest drops first, within 5 km. The same category filter as the map.</string>
     <string name="map_near_empty">Nothing in this filter within 5 km.</string>
@@ -60,6 +66,7 @@
     <string name="drop_title">A drop takes about three taps</string>
     <string name="drop_body">Photo or a line of text, a suggested category, then post.</string>
     <string name="drop_fab">Drop something here</string>
+    <string name="drop_pinned">Dropping at %1$s</string>
     <string name="drop_shutter">Take photo</string>
     <string name="drop_pick">Choose photo</string>
     <string name="drop_text_label">Or a few words</string>

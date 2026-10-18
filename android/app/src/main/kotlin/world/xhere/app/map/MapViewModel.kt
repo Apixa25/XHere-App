@@ -18,7 +18,14 @@ import world.xhere.shared.data.XHereServices
 import world.xhere.shared.demo.JamestownDemo
 import world.xhere.shared.geo.Geo
 import world.xhere.shared.geo.LatLng
+import world.xhere.shared.here.Here
 import world.xhere.shared.model.MapFeature
+import world.xhere.shared.model.PlaceLabel
+
+/** Reverse-geocodes one spot. Production uses the Nominatim cache. Tests return a fixed name. */
+fun interface SpotNames {
+    suspend fun describe(spot: LatLng): PlaceLabel?
+}
 
 /**
  * Map discovery. Every viewport and "near me" read goes through [XHereServices.drops],
@@ -30,6 +37,7 @@ class MapViewModel(
     private val services: XHereServices,
     private val location: DeviceLocation,
     private val presetStore: FilterPresetStore,
+    private val places: SpotNames,
     private val debounceMs: Long = 320,
 ) : ViewModel() {
     private val _state = MutableStateFlow(MapUiState(presets = presetStore.all()))
@@ -37,6 +45,7 @@ class MapViewModel(
 
     private val locationKick = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     private var cameraJob: Job? = null
+    private var hereJob: Job? = null
     private var lastFrame: CameraFrame? = null
 
     init {
@@ -138,9 +147,21 @@ class MapViewModel(
         openTeaser(shortId, distanceM = null)
     }
 
+    /** Tap on empty map. The same card as a long-press. */
+    fun onMapSpot(point: LatLng) = openHere(point)
+
+    /** Long-press anywhere, including on top of a pin. */
+    fun onMapLongPress(point: LatLng) = openHere(point)
+
+    fun dismissHere() {
+        hereJob?.cancel()
+        _state.update { it.copy(here = null) }
+    }
+
     fun openTeaser(shortId: String, distanceM: Double?) {
+        hereJob?.cancel()
         viewModelScope.launch {
-            _state.update { it.copy(teaserLoading = true, nearMe = null) }
+            _state.update { it.copy(teaserLoading = true, nearMe = null, here = null) }
             try {
                 val card = services.drops.dropTeaser(shortId)
                 val distance = distanceM ?: _state.value.myLocation?.let { here ->
@@ -162,6 +183,8 @@ class MapViewModel(
     }
 
     fun openNearMe() {
+        hereJob?.cancel()
+        _state.update { it.copy(here = null) }
         viewModelScope.launch {
             val origin = _state.value.myLocation ?: JamestownDemo.center
             val slugs = _state.value.selection.slugs
@@ -200,6 +223,47 @@ class MapViewModel(
 
     fun dismissNotice() {
         _state.update { it.copy(notice = null) }
+    }
+
+    private fun openHere(spot: LatLng) {
+        if (!Geo.isValid(spot)) return
+        hereJob?.cancel()
+        hereJob = viewModelScope.launch {
+            _state.update {
+                it.copy(
+                    teaser = null,
+                    teaserLoading = false,
+                    nearMe = null,
+                    here = HereSheet(spot = spot, loading = true),
+                )
+            }
+            val drops = try {
+                services.drops.hereCard(spot, _state.value.myLocation, radiusM = Here.RADIUS_M, limit = Here.LIMIT)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                null
+            }
+            val place = try {
+                places.describe(spot)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                null
+            }
+            _state.update { current ->
+                val open = current.here
+                if (open == null || open.spot != spot) return@update current
+                current.copy(
+                    here = open.copy(
+                        loading = false,
+                        place = place,
+                        drops = drops.orEmpty(),
+                        failed = drops == null,
+                    ),
+                )
+            }
+        }
     }
 
     private fun applySelection(selection: FilterSelection) {

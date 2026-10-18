@@ -3,10 +3,13 @@ package world.xhere.app.map
 import world.xhere.shared.demo.JamestownDemo
 import world.xhere.shared.geo.BoundingBox
 import world.xhere.shared.geo.LatLng
+import world.xhere.shared.here.Here
+import world.xhere.shared.here.isPublicRecord
 import world.xhere.shared.model.CategoryGroup
 import world.xhere.shared.model.DropCard
 import world.xhere.shared.model.DropSource
 import world.xhere.shared.model.MapFeature
+import world.xhere.shared.model.PlaceLabel
 import world.xhere.shared.model.Taxonomy
 
 /** What the map last asked the repository for. Tests read this to prove the RPC arguments. */
@@ -86,6 +89,35 @@ data class TeaserUi(
     val confirmCount: Int = 0,
 )
 
+/**
+ * One place on the map. [spot] is the tap. [drops] are already filtered by
+ * reveal rules: a locked user drop has a null body.
+ */
+data class HereSheet(
+    val spot: LatLng,
+    val loading: Boolean = false,
+    val place: PlaceLabel? = null,
+    val drops: List<DropCard> = emptyList(),
+    val failed: Boolean = false,
+)
+
+/**
+ * Stable text for UI tests. `place|category:shortId:revealed:user` with
+ * groups separated by `;` and rows in a group by `,`. `loading` until the read returns.
+ */
+internal fun describeHere(sheet: HereSheet): String {
+    if (sheet.loading) return "loading"
+    val name = sheet.place?.name?.trim().orEmpty().ifEmpty { "none" }
+    val groups = Here.groups(sheet.drops).joinToString(";") { group ->
+        group.drops.mapIndexed { index, card ->
+            val kind = if (card.isPublicRecord()) "open_data" else "user"
+            val row = "${card.shortId}:${card.revealed}:$kind"
+            if (index == 0) "${group.categorySlug}:$row" else row
+        }.joinToString(",")
+    }
+    return "$name|$groups"
+}
+
 enum class MapNotice {
     LOAD_FAILED,
     TEASER_FAILED,
@@ -108,6 +140,7 @@ data class MapUiState(
     val teaser: TeaserUi? = null,
     val teaserLoading: Boolean = false,
     val nearMe: List<DropCard>? = null,
+    val here: HereSheet? = null,
     val subcategoryGroup: String? = null,
     val savingPreset: Boolean = false,
     val notice: MapNotice? = null,

@@ -16,6 +16,7 @@ import world.xhere.app.detail.IncomingLinks
 import world.xhere.app.drop.CameraXDropCapture
 import world.xhere.app.drop.DropCapture
 import world.xhere.app.drop.DropViewModel
+import world.xhere.app.drop.PendingDropSpot
 import world.xhere.app.drop.ImageLabeler
 import world.xhere.app.drop.MlKitImageLabeler
 import world.xhere.app.location.AndroidDeviceLocation
@@ -24,6 +25,7 @@ import world.xhere.app.map.FilterPresetStore
 import world.xhere.app.map.MapCanvas
 import world.xhere.app.map.MapLibreMapCanvas
 import world.xhere.app.map.MapViewModel
+import world.xhere.app.map.SpotNames
 import world.xhere.app.onboarding.OnboardingStore
 import world.xhere.app.profile.ProfileViewModel
 import world.xhere.app.safety.ModerationViewModel
@@ -37,6 +39,8 @@ import world.xhere.shared.data.XHereServices
 import world.xhere.shared.data.fake.InMemoryXHere
 import world.xhere.shared.data.supabase.SupabaseXHereClient
 import world.xhere.shared.demo.JamestownDemo
+import world.xhere.shared.here.HerePlaces
+import world.xhere.shared.here.NominatimClient
 
 /**
  * Koin, not Hilt. The shared core is plain Kotlin interfaces, so the graph
@@ -64,12 +68,17 @@ val appModule = module {
     single<DropSharer> { AndroidDropSharer(androidContext()) }
     single<DataExporter> { AndroidDataExporter(androidContext()) }
     single { FilterPresetStore(androidContext()) }
+    single { PendingDropSpot() }
+    single {
+        HerePlaces(get<XHereServices>().places, NominatimClient()::reverse)
+    }
+    single<SpotNames> { SpotNames { spot -> get<HerePlaces>().describe(spot) } }
     single<MapCanvas> { MapLibreMapCanvas() }
     single<DropCapture> { CameraXDropCapture() }
     single<ImageLabeler> { MlKitImageLabeler() }
     viewModel { SessionViewModel(get(), get(), get()) }
     viewModel { DropViewModel(get(), get(), get(), get()) }
-    viewModel { MapViewModel(get(), get(), get()) }
+    viewModel { MapViewModel(get(), get(), get(), get()) }
     viewModel { (shortId: String) -> DropDetailViewModel(shortId, get(), get()) }
     viewModel { AuthViewModel(get(), get(), get(), get(), get()) }
     viewModel { ProfileViewModel(get()) }

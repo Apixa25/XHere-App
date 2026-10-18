@@ -23,6 +23,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -43,8 +44,13 @@ import world.xhere.app.ui.TestTags
 fun DropScreen(
     viewModel: DropViewModel = koinViewModel(),
     capture: DropCapture = koinInject(),
+    pending: PendingDropSpot = koinInject(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    LaunchedEffect(pending.spot, pending.label) {
+        val spot = pending.spot
+        if (spot == null) viewModel.clearPin() else viewModel.pin(spot, pending.label)
+    }
     val context = LocalContext.current
     val cameraPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         if (granted) viewModel.shutter(context)
@@ -65,6 +71,15 @@ fun DropScreen(
     ) {
         Text(stringResource(R.string.drop_title), style = MaterialTheme.typography.headlineSmall)
         Text(stringResource(R.string.drop_body), style = MaterialTheme.typography.bodyLarge)
+        state.pinnedLabel?.let { label ->
+            Text(
+                text = stringResource(R.string.drop_pinned, label),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag(TestTags.DROP_PINNED),
+                style = MaterialTheme.typography.titleMedium,
+            )
+        }
         if (state.phase == DropPhase.CAPTURE || state.phase == DropPhase.CHOOSE) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Button(

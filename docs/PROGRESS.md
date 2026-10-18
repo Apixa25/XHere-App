@@ -337,3 +337,12 @@ Branch `cursor/open-data-base-layer-2211`. This is recommendation #1 from `docs/
 - Imported places are `drops` with `source = open_data` and no author, so they do not count as a person's drops, points, tier, or export. Confirmations are rejected. The detail screen shows **From public records**, the attribution, and **View source**. Still-true is hidden on those pins.
 - Free sources only. Jamestown snapshot after dedupe: Wikipedia 28 (CC BY-SA 4.0), Wikidata 64 (CC0), National Register 11 (public domain), OpenStreetMap historic/heritage/tourism 14 (ODbL). 117 places. HMdb and Atlas Obscura stay link-only.
 - Migration `20261018001600_open_data.sql` is not applied on the hosted project from here. After impact feedback landed on main, `20261018210000_open_data_card.sql` puts provenance back on `to_drop_card` (public records stay revealed, and a null author is not "mine"). Apply both with `supabase db push` after the repair commands already in `supabase/README.md`, then `psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/seed/open-data/jamestown-ny.sql`. `db push` does not load the seed. Re-running the SQL updates the same external ids.
+
+## 2026-10-18 (Sun): Here Card
+
+Branch `cursor/here-card-827d`. This is recommendation #3 from `docs/research/LOCATION-APPS-RESEARCH.md` §4.1 and §4.4 (template, no paid model) and PLAN §2 (free geocoding through a cache), §3 (reveal radius), and §4.1 (user drops and `open_data` on the same card). `docs/OPEN-DATA-PLAYBOOK.md` provenance rules stay: public records keep their attribution and a View source link, and a tap is not a new geocode of an offset pin.
+
+- Tap or long-press any spot. One sheet lists nearby drops grouped by category, with distance, seen/confirmed counts, and — for a public record — attribution and View source. User-drop bodies stay hidden until the phone's own location is inside the reveal radius. The tap is not the reveal point, and opening the card does not count a view.
+- The place name is OpenStreetMap via Nominatim: a 0.001° cache in `place_labels`, a global 1.1 second slot, and © OpenStreetMap contributors on the sheet. No paid geocoder. No user id on the cache. The same path works in any region.
+- **Drop something here** opens the composer at that spot.
+- Migration to apply on the hosted project (not applied from here): `supabase/migrations/20261019041827_here_card.sql`. Use `supabase db push` after the repair commands in `supabase/README.md`. Do not paste it into the dashboard. It does not change Auth.

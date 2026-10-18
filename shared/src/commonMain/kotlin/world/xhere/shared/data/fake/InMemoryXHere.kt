@@ -1,5 +1,6 @@
 package world.xhere.shared.data.fake
 
+import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.hours
 import kotlin.time.Instant
 import kotlin.uuid.Uuid
@@ -21,10 +22,12 @@ import world.xhere.shared.data.SessionInfo
 import world.xhere.shared.data.SuggestionRepository
 import world.xhere.shared.data.TaxonomyRepository
 import world.xhere.shared.data.XHereApiException
+import world.xhere.shared.data.PlaceRepository
 import world.xhere.shared.data.XHereServices
 import world.xhere.shared.geo.BoundingBox
 import world.xhere.shared.geo.Geo
 import world.xhere.shared.geo.LatLng
+import world.xhere.shared.here.Here
 import world.xhere.shared.json.ExportJson
 import world.xhere.shared.model.AppRole
 import world.xhere.shared.model.BlockedUser
@@ -40,6 +43,7 @@ import world.xhere.shared.model.Confirmation
 import world.xhere.shared.model.ConfirmationVerdict
 import world.xhere.shared.model.CreateDropResult
 import world.xhere.shared.model.DropCard
+import world.xhere.shared.model.PlaceLabel
 import world.xhere.shared.model.DropMedia
 import world.xhere.shared.model.DropStatus
 import world.xhere.shared.model.MapFeature
@@ -94,6 +98,7 @@ class InMemoryXHere(
         override suspend fun load(force: Boolean): Taxonomy = store.taxonomy
     }
     override val drops: DropRepository = DropRepo()
+    override val places: PlaceRepository = PlaceRepo()
     override val suggestions: SuggestionRepository = SuggestionRepo()
     override val media: MediaRepository = MediaRepo()
     override val reports: ReportRepository = ReportRepo()
@@ -220,6 +225,33 @@ class InMemoryXHere(
                 .sortedWith(compareBy({ it.second }, { -it.first.createdAt.toEpochMilliseconds() }))
                 .take(capped)
                 .map { (drop, distance) -> drop.toCard(viewer?.id, distance, store.verdict(drop.id, viewer?.id)) }
+        }
+
+        override suspend fun hereCard(spot: LatLng, viewer: LatLng?, radiusM: Int, limit: Int): List<DropCard> {
+            if (!Geo.isValid(spot)) {
+                throw XHereApiException.fromViolation(world.xhere.shared.rules.RuleViolation("invalid_location"))
+            }
+            if (viewer != null && !Geo.isValid(viewer)) {
+                throw XHereApiException.fromViolation(world.xhere.shared.rules.RuleViolation("invalid_location"))
+            }
+            if (radiusM !in Here.MIN_RADIUS_M..Here.MAX_RADIUS_M) {
+                throw XHereApiException.fromViolation(
+                    world.xhere.shared.rules.RuleViolation("invalid_radius", "radius must be 25..1000 m"),
+                )
+            }
+            val capped = limit.coerceIn(1, Here.MAX_LIMIT)
+            // `viewer` here is the GPS point used for reveal. The signed-in person
+            // is the outer property. A tap must not become that person.
+            val viewerId = this@InMemoryXHere.viewer?.id
+            return store.visible(viewerId, clock())
+                .map { it to Geo.distanceMeters(spot, it.displayLocation) }
+                .filter { it.second <= radiusM }
+                .sortedWith(compareBy({ it.second }, { -it.first.createdAt.toEpochMilliseconds() }))
+                .take(capped)
+                .map { (drop, distance) ->
+                    val revealDistance = viewer?.let { Geo.distanceMeters(it, drop.displayLocation) }
+                    drop.toCard(viewerId, distance, store.verdict(drop.id, viewerId), revealDistance)
+                }
         }
 
         override suspend fun dropDetail(dropId: Uuid, location: LatLng?): DropCard {
@@ -494,6 +526,53 @@ class InMemoryXHere(
                 mimeType = mime,
                 byteSize = stripped.size.toLong(),
             )
+        }
+    }
+
+    private inner class PlaceRepo : PlaceRepository {
+        override suspend fun cachedLabel(location: LatLng): PlaceLabel? {
+            if (!Geo.isValid(location)) return null
+            val stored = store.placeLabels[Here.cellKey(location)] ?: return null
+            return PlaceLabel(
+                name = stored.name,
+                address = stored.address,
+                attribution = Here.ATTRIBUTION,
+                license = Here.LICENSE,
+                provider = Here.PROVIDER,
+            )
+        }
+
+        override suspend fun claimNominatimSlot(): Boolean {
+            requireViewer()
+            return store.nominatimOpen
+        }
+
+        override suspend fun remember(location: LatLng, name: String, address: String?) {
+            requireViewer()
+            if (!Geo.isValid(location)) {
+                throw XHereApiException.fromViolation(world.xhere.shared.rules.RuleViolation("invalid_location"))
+            }
+            val cleanName = name.trim()
+            if (cleanName.length !in 1..160 || cleanName.any { it.isISOControl() }) {
+                throw XHereApiException(
+                    "invalid_place",
+                    sqlState = XHereApiException.SQL_VALIDATION,
+                    detail = "place name must be 1..160 characters without control characters",
+                )
+            }
+            val cleanAddress = address?.trim()?.ifEmpty { null }
+            if (cleanAddress != null && (cleanAddress.length > 300 || cleanAddress.any { it.isISOControl() })) {
+                throw XHereApiException(
+                    "invalid_place",
+                    sqlState = XHereApiException.SQL_VALIDATION,
+                    detail = "address must be at most 300 characters without control characters",
+                )
+            }
+            val key = Here.cellKey(location)
+            val existing = store.placeLabels[key]
+            val freshUntil = clock() - 90.days
+            if (existing != null && existing.fetchedAt > freshUntil) return
+            store.placeLabels[key] = StoredPlaceLabel(cleanName, cleanAddress, clock())
         }
     }
 
@@ -853,6 +932,10 @@ class MemoryStore(
     val views: MutableSet<Pair<Uuid, Uuid>> = linkedSetOf()
     val impactNotices: MutableList<ImpactNotice> = mutableListOf()
     val mediaBytes: MutableMap<String, ByteArray> = linkedMapOf()
+    /** OpenStreetMap place names, keyed by the 0.001° cell. Not a user trail. */
+    val placeLabels: MutableMap<String, StoredPlaceLabel> = linkedMapOf()
+    /** When false, [PlaceRepository.claimNominatimSlot] refuses, matching a busy global gate. */
+    var nominatimOpen: Boolean = true
     var pendingEmail: String? = null
     private var shortIds: Int = 0
 
@@ -922,6 +1005,13 @@ class MemoryStore(
     }
 }
 
+/** One cached place name. [fetchedAt] is when Nominatim was asked, not when a person stood here. */
+data class StoredPlaceLabel(
+    val name: String,
+    val address: String?,
+    val fetchedAt: Instant,
+)
+
 class StoredSuggestion(
     val id: Uuid,
     val userId: Uuid,
@@ -975,10 +1065,11 @@ private fun StoredDrop.toCard(
     viewerId: Uuid?,
     distance: Double?,
     myVerdict: ConfirmationVerdict?,
+    revealDistance: Double? = distance,
 ): DropCard {
     val publicRecord = source == world.xhere.shared.model.DropSource.OPEN_DATA
     val mine = viewerId != null && authorId == viewerId && !publicRecord
-    val revealed = publicRecord || Geo.isRevealed(distance ?: Double.POSITIVE_INFINITY, revealRadiusM, mine)
+    val revealed = publicRecord || Geo.isRevealed(revealDistance ?: Double.POSITIVE_INFINITY, revealRadiusM, mine)
     return DropCard(
         id = id,
         shortId = shortId,

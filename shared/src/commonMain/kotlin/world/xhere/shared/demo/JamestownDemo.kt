@@ -36,6 +36,13 @@ object JamestownDemo {
 
     /** West 3rd Street, the downtown cafe block. Default camera when location is off. */
     val center = LatLng(42.09636, -79.24202)
+
+    /**
+     * Prendergast Library, the downtown public-record pin.
+     * A Here Card here is a different place from [center]: the library record
+     * and Fenton Mansion are inside a short walk, and the cafe block is not.
+     */
+    val library = LatLng(42.0905, -79.24202)
     const val STREET_ZOOM: Int = 15
     const val CLUSTER_ZOOM: Int = 10
 
