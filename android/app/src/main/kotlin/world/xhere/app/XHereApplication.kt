@@ -1,0 +1,27 @@
+package world.xhere.app
+
+import android.app.Application
+import org.koin.android.ext.koin.androidContext
+import org.koin.core.context.GlobalContext
+import org.koin.core.context.startKoin
+import org.koin.core.context.stopKoin
+import world.xhere.app.di.appModule
+import world.xhere.shared.data.supabase.prepareSupabaseSessionStore
+
+class XHereApplication : Application() {
+    override fun onCreate() {
+        super.onCreate()
+        // The manifest content providers do this on a device. Robolectric often
+        // skips them, and the Supabase client needs the context before Koin builds it.
+        prepareSupabaseSessionStore(this)
+        startXHereKoin(this, listOf(appModule))
+    }
+}
+
+internal fun startXHereKoin(application: Application, modules: List<org.koin.core.module.Module>) {
+    if (GlobalContext.getOrNull() != null) stopKoin()
+    startKoin {
+        androidContext(application)
+        modules(modules)
+    }
+}

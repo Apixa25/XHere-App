@@ -16,6 +16,6 @@ Do not commit `.env` files, keystores, `google-services.json`, or anything under
 
 ## CI
 
-Pull requests and pushes to this repo run [`.github/workflows/ci.yml`](.github/workflows/ci.yml) (gitleaks). [`.github/workflows/android.yml`](.github/workflows/android.yml) builds and tests `shared/` on the Linux runner when Android or Gradle files change (M2). The web workflow is still a placeholder until M8.
+Pull requests and pushes to this repo run [`.github/workflows/ci.yml`](.github/workflows/ci.yml) (gitleaks). [`.github/workflows/android.yml`](.github/workflows/android.yml) builds and tests `shared/` (M2) and, since M3, assembles and Robolectric-tests `:android:app` on the Linux runner when Android or Gradle files change. The web workflow is still a placeholder until M8.
 
 [`.github/workflows/supabase.yml`](.github/workflows/supabase.yml) runs when `supabase/**` changes. It starts the free local Supabase stack (Supabase CLI + Docker on the GitHub runner, no account) and runs `supabase db reset`, `supabase db lint`, and `supabase test db` (pgTAP). See [`supabase/README.md`](supabase/README.md) to run the same thing locally.

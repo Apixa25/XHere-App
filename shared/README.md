@@ -2,7 +2,7 @@
 
 Kotlin Multiplatform core for XHere: domain models, the category rules engine, JSON-schema validation, geo helpers, and `supabase-kt` repositories. PLAN §1.3, §2, and §6. Milestone **M2**.
 
-The UI stays native. This module has no Compose and no SwiftUI. Android consumes it as an AAR (`assembleAndroidMain`). iOS will consume the `Shared` framework in **M15**.
+The UI stays native. This module has no Compose and no SwiftUI. The Compose app (`:android:app`, M3) depends on this module. iOS will consume the `Shared` framework in **M15**.
 
 ## Targets
 

@@ -68,3 +68,48 @@ jobs:
 
       - name: Test and assemble shared
         run: ./gradlew :shared:jvmTest :shared:koverVerify :shared:assembleAndroidMain
+
+  # M3. Separate job so android / shared stays the check it already is.
+  # Compose 1.12 compiles against platform 37 (published as android-37.0).
+  # The shared library still compiles against platform 36, so both are installed.
+  app:
+    name: app
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Install Android SDK
+        run: |
+          set -euo pipefail
+          VERSION=13114758
+          SHA256=7ec965280a073311c339e571cd5de778b9975026cfcbe79f2b1cdcb1e15317ee
+          SDK="$HOME/android-sdk"
+          mkdir -p "$SDK/cmdline-tools"
+          curl -sSLf -o /tmp/commandlinetools.zip \
+            "https://dl.google.com/android/repository/commandlinetools-linux-${VERSION}_latest.zip"
+          echo "${SHA256}  /tmp/commandlinetools.zip" | sha256sum -c -
+          unzip -q /tmp/commandlinetools.zip -d /tmp/android-clt
+          mv /tmp/android-clt/cmdline-tools "$SDK/cmdline-tools/latest"
+          yes | "$SDK/cmdline-tools/latest/bin/sdkmanager" --sdk_root="$SDK" \
+            "platforms;android-36" \
+            "platforms;android-37.0" \
+            "build-tools;36.0.0" \
+            "build-tools;37.0.0" || true
+          test -d "$SDK/platforms/android-36"
+          test -d "$SDK/platforms/android-37.0"
+          echo "ANDROID_HOME=$SDK" >> "$GITHUB_ENV"
+          echo "ANDROID_SDK_ROOT=$SDK" >> "$GITHUB_ENV"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Assemble and test the app
+        run: ./gradlew :android:app:assembleDebug :android:app:testDebugUnitTest

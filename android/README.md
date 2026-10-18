@@ -1,7 +1,42 @@
 # android/
 
-Kotlin / Jetpack Compose app for XHere (`world.xhere.app`).
+Kotlin / Jetpack Compose app for XHere. Application id `world.xhere.app`. Milestone **M3** (PLAN §2 and §7).
 
-This directory is a placeholder. The root Gradle build and the shared module landed in **M2** (`shared/`). **M3** fills this directory with the Compose shell, navigation, and auth (`:android:app`). Map and drop flows follow in **M4–M7**.
+The map, the quick-drop flow, and reveal come in M4–M6. This module is the shell: theme, navigation, sign-in, onboarding, settings.
 
-See [`docs/PLAN.md`](../docs/PLAN.md) §1 and §6.
+## Dependency injection
+
+**Koin** (not Hilt). `shared/` exposes plain Kotlin interfaces (`XHereServices`). Koin binds `SupabaseXHereClient` in the app and `InMemoryXHere` in Robolectric tests, with no annotation processor. AGP 9 already compiles Kotlin itself, so kapt/ksp would be a second toolchain for a graph this small.
+
+## Auth
+
+* Email one-time code and Google ID token both go through `supabase-kt` in `shared/` (`signInWithEmailOtp`, `verifyEmailOtp`, `signInWithIdToken`).
+* Google uses Credential Manager (`GetSignInWithGoogleOption`). The nonce sent to Google is the SHA-256 of the raw nonce; Supabase gets the raw nonce.
+* No Supabase project is required to build or to run the tests. `SupabaseConfig.PLACEHOLDER` matches `.env.example`. With those placeholders the sign-in screen explains that, and it does not call the network.
+* `XHereApplication` calls `prepareSupabaseSessionStore` before Koin builds the client. That is the same context the auth manifest initializers set on a device. Robolectric skips those providers.
+
+To point a debug build at a real project, put these in gitignored `local.properties` (or in a gitignored `.env` at the repo root). Never put `SUPABASE_SERVICE_ROLE_KEY` in either file for the app to read — the Gradle script does not copy it into `BuildConfig`.
+
+```properties
+SUPABASE_URL=https://your-project-ref.supabase.co
+SUPABASE_ANON_KEY=your-anon-key
+GOOGLE_WEB_CLIENT_ID=your-google-web-client-id
+```
+
+## Location
+
+Onboarding explains foreground location, then requests `ACCESS_FINE_LOCATION` and `ACCESS_COARSE_LOCATION` only. "Not now" continues without a request. Background location is not in the manifest. That permission is M13 and stays opt-in.
+
+## Settings
+
+Sign out, and delete account. Delete calls `AccountRepository.deleteMyAccount()`, which `SupabaseXHereClient` implements as the `delete_my_account` RPC (soft-delete now, hard-delete within 30 days via the M1 cron) and then signs out.
+
+## Build
+
+Java 21. `ANDROID_HOME` with platforms `android-36` (shared) and `android-37.0` (this app; Compose 1.12). From the repo root:
+
+```bash
+./gradlew :android:app:assembleDebug :android:app:testDebugUnitTest
+```
+
+`:shared:jvmTest` is unchanged and still runs in the `android / shared` CI job.
