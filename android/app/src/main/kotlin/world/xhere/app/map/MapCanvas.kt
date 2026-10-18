@@ -64,7 +64,7 @@ internal fun ProgrammaticMap(
         modifier = modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(top = 72.dp, bottom = 120.dp)
+            .padding(top = 72.dp, bottom = 220.dp)
             .testTag(TestTags.MAP_MARKERS),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {

@@ -2,6 +2,7 @@ package world.xhere.app.detail
 
 import android.content.Intent
 import android.net.Uri
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.junit4.AndroidComposeTestRule
@@ -12,6 +13,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTextInput
 import androidx.lifecycle.Lifecycle
 import androidx.test.core.app.ApplicationProvider
@@ -207,7 +209,7 @@ class DropDetailTest {
     @Test
     fun publicRecordShowsTheBadgeAndAttributionWithoutAConfirmation() {
         rule.openMap()
-        rule.onNodeWithTag(TestTags.marker("records")).performClick()
+        rule.onNodeWithTag(TestTags.marker("records")).performSemanticsAction(SemanticsActions.OnClick)
         rule.waitForTag(TestTags.TEASER_PUBLIC)
         rule.onNodeWithTag(TestTags.TEASER_PUBLIC).assertTextContains("From public records")
         rule.onNodeWithTag(TestTags.TEASER_OPEN).performClick()

@@ -61,10 +61,15 @@ import world.xhere.shared.data.SessionInfo
 import world.xhere.shared.data.SuggestionRepository
 import world.xhere.shared.data.TaxonomyCache
 import world.xhere.shared.data.TaxonomyRepository
+import world.xhere.shared.data.WalkRepository
 import world.xhere.shared.data.XHereApiException
 import world.xhere.shared.data.XHereServices
 import world.xhere.shared.data.remote.CategoryRow
+import world.xhere.shared.data.remote.CheckInParams
 import world.xhere.shared.data.remote.ConfirmDropParams
+import world.xhere.shared.data.remote.DismissQuestParams
+import world.xhere.shared.data.remote.StartWalkParams
+import world.xhere.shared.data.remote.WalksForPointParams
 import world.xhere.shared.data.remote.DropDetailParams
 import world.xhere.shared.data.remote.HereCardParams
 import world.xhere.shared.data.remote.ImpactNoticesParams
@@ -91,6 +96,7 @@ import world.xhere.shared.here.Here
 import world.xhere.shared.http.platformHttpEngine
 import world.xhere.shared.json.ExportJson
 import world.xhere.shared.json.XHereJson
+import world.xhere.shared.model.CheckInResult
 import world.xhere.shared.model.BlockedUser
 import world.xhere.shared.model.CategoryGroup
 import world.xhere.shared.model.HiddenDrop
@@ -112,7 +118,9 @@ import world.xhere.shared.model.Profile
 import world.xhere.shared.model.ReportReason
 import world.xhere.shared.model.ReportStatus
 import world.xhere.shared.model.ReportTarget
+import world.xhere.shared.model.QuestProgress
 import world.xhere.shared.model.Taxonomy
+import world.xhere.shared.model.Walk
 import world.xhere.shared.model.TierLimits
 import world.xhere.shared.rules.CreateDropRequest
 import world.xhere.shared.rules.RuleViolation
@@ -157,6 +165,7 @@ class SupabaseXHereClient(
     override val blocks: BlockRepository = BlockRepo()
     override val hidden: HiddenDropRepository = HiddenRepo()
     override val impact: ImpactRepository = ImpactRepo()
+    override val walks: WalkRepository = WalkRepo()
     override val account: AccountRepository = AccountRepo()
     override val moderation: ModerationRepository = ModerationRepo()
 
@@ -399,6 +408,41 @@ class SupabaseXHereClient(
         }
     }
 
+    private inner class WalkRepo : WalkRepository {
+        override suspend fun walksFor(point: LatLng): List<Walk> = call {
+            if (!Geo.isValid(point)) {
+                throw invalid("invalid_location", "lat=${point.latitude} lng=${point.longitude}")
+            }
+            decode(supabase.postgrest.rpc(
+                "walks_for_point",
+                WalksForPointParams(point.latitude, point.longitude).rpcJson(),
+            ).data)
+        }
+
+        override suspend fun start(walkId: Uuid): Walk = call {
+            decode(supabase.postgrest.rpc("start_walk", StartWalkParams(walkId).rpcJson()).data)
+        }
+
+        override suspend fun checkIn(point: LatLng, walkId: Uuid?): CheckInResult = call {
+            if (!Geo.isValid(point)) {
+                throw invalid("invalid_location", "lat=${point.latitude} lng=${point.longitude}")
+            }
+            decode(supabase.postgrest.rpc(
+                "check_in",
+                CheckInParams(point.latitude, point.longitude, walkId).rpcJson(),
+            ).data)
+        }
+
+        override suspend fun quests(): List<QuestProgress> = call {
+            decode(supabase.postgrest.rpc("my_quests").data)
+        }
+
+        override suspend fun dismissQuest(questId: Uuid) = call {
+            supabase.postgrest.rpc("dismiss_quest", DismissQuestParams(questId).rpcJson())
+            Unit
+        }
+    }
+
     private inner class AccountRepo : AccountRepository {
         override suspend fun deleteMyAccount() = call {
             supabase.postgrest.rpc("delete_my_account")
@@ -549,6 +593,13 @@ private suspend fun <T> call(block: suspend () -> T): T {
 
 private inline fun <reified T> T.rpcJson(): JsonObject =
     XHereJson.encodeToJsonElement(serializer<T>(), this).jsonObject
+
+/** PostgREST returns a jsonb value as JSON. A quoted string is unwrapped once. */
+private inline fun <reified T> decode(raw: String): T {
+    val element = XHereJson.parseToJsonElement(raw)
+    val body = if (element is JsonPrimitive && element.isString) element.content else raw
+    return XHereJson.decodeFromString(body)
+}
 
 private fun PostgrestRestException.toXHere(): XHereApiException {
     val slug = message?.substringBefore('\n')?.substringBefore(':')?.trim().orEmpty().ifBlank { "request_failed" }

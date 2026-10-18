@@ -346,3 +346,13 @@ Branch `cursor/here-card-827d`. This is recommendation #3 from `docs/research/LO
 - The place name is OpenStreetMap via Nominatim: a 0.001° cache in `place_labels`, a global 1.1 second slot, and © OpenStreetMap contributors on the sheet. No paid geocoder. No user id on the cache. The same path works in any region.
 - **Drop something here** opens the composer at that spot.
 - Migration to apply on the hosted project (not applied from here): `supabase/migrations/20261019041827_here_card.sql`. Use `supabase db push` after the repair commands in `supabase/README.md`. Do not paste it into the dashboard. It does not change Auth.
+
+## 2026-10-18 (Sun), ~7:20 PM ET: Walks and a starter quest
+
+Branch `cursor/walks-starter-quest-57ee`. This is recommendation #4 from `docs/research/LOCATION-APPS-RESEARCH.md` (trails and quests, pulled forward from PLAN §3 quests / M14). XHere stays global. Jamestown is only the pilot walk.
+
+- A walk is an ordered route of stops that name places already on the map (`source_slug` + `external_id`), with a title, description, straight-line distance, and time at 75 m/min. Region files hold the route. The map draws that line, shows the next stop and the distance, checks a stop off inside the same reveal radius as "there", and celebrates once when every stop is done.
+- The starter quest is global (`region_id` null): visit 3 places, confirm 1 drop, make your first drop. Progress is derived. Dismiss hides the card and leaves the counts.
+- Check-in does not store the point. Own drops and hidden drops are not visits. A stop does not check off until the walk is started.
+- The pilot route is Downtown Jamestown history walk, eight public records already in the open-data snapshot, west to east then north: Erie Railroad Station, National Comedy Center, The Wellman Building, Lucille Ball Desi Arnaz Museum & Center for Comedy, Reg Lenna Center for the Arts, Jamestown Downtown Historic District, Robert H. Jackson Center, First Presbyterian Church. Copy on the stops is the snapshot sentence (a National Register building or district, or a Wikipedia article). Nothing was added.
+- Not applied on hosted Supabase from here. After `supabase db push` (which includes `20261018235000_walks_and_quests.sql` and `20261019041827_here_card.sql`), load `supabase/seed/open-data/jamestown-ny.sql` if it is not there yet, then `supabase/seed/walks/jamestown-ny.sql`. `db push` does not load either seed.

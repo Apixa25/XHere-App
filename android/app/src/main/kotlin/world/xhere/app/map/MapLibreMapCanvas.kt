@@ -22,6 +22,7 @@ import org.maplibre.android.maps.MapView
 import org.maplibre.android.maps.Style
 import org.maplibre.android.style.expressions.Expression
 import org.maplibre.android.style.layers.CircleLayer
+import org.maplibre.android.style.layers.LineLayer
 import org.maplibre.android.style.layers.Property
 import org.maplibre.android.style.layers.PropertyFactory
 import org.maplibre.android.style.layers.SymbolLayer
@@ -165,7 +166,7 @@ private fun NativeMap(
                     map.setStyle(styleUrl) { style ->
                         holder.style = style
                         holder.styleUrl = styleUrl
-                        render(style, holder.features, holder.location, holder.taxonomy)
+                        render(style, holder.features, holder.location, holder.taxonomy, emptyList(), emptyList())
                     }
                 }
             }
@@ -186,13 +187,15 @@ private fun NativeMap(
                 )
             }
             val loaded = holder.style
+            val route = state.walk?.let { world.xhere.shared.walks.WalkGuide.route(it) }.orEmpty()
+            val guide = guideLine(state)
             if (loaded != null && holder.styleUrl == styleUrl) {
-                render(loaded, state.features, state.myLocation, state.taxonomy)
+                render(loaded, state.features, state.myLocation, state.taxonomy, route, guide)
             } else if (holder.styleUrl != null && holder.styleUrl != styleUrl) {
                 map.setStyle(styleUrl) { style ->
                     holder.style = style
                     holder.styleUrl = styleUrl
-                    render(style, state.features, state.myLocation, state.taxonomy)
+                    render(style, state.features, state.myLocation, state.taxonomy, route, guide)
                 }
             }
         },
@@ -207,7 +210,16 @@ private fun NativeMap(
     )
 }
 
-private fun render(style: Style, features: List<MapFeature>, location: LatLng?, taxonomy: Taxonomy?) {
+private fun render(
+    style: Style,
+    features: List<MapFeature>,
+    location: LatLng?,
+    taxonomy: Taxonomy?,
+    route: List<LatLng>,
+    guide: List<LatLng>,
+) {
+    drawLine(style, ROUTE_SOURCE, ROUTE_LAYER, route, Color.parseColor("#1B6B4A"), width = 4.5f, dashed = false)
+    drawLine(style, GUIDE_SOURCE, GUIDE_LAYER, guide, Color.parseColor("#C47B0A"), width = 3f, dashed = true)
     features.map { iconKey(it, taxonomy) }.distinct().forEach { key ->
         val id = MarkerIcons.idFor(key)
         if (style.getImage(id) == null) {
@@ -287,9 +299,48 @@ private fun collectionJson(features: List<MapFeature>, taxonomy: Taxonomy?): Str
 private fun pointCollection(longitude: Double, latitude: Double): String =
     """{"type":"FeatureCollection","features":[{"type":"Feature","properties":{},"geometry":{"type":"Point","coordinates":[$longitude,$latitude]}}]}"""
 
+private fun drawLine(
+    style: Style,
+    sourceId: String,
+    layerId: String,
+    points: List<LatLng>,
+    color: Int,
+    width: Float,
+    dashed: Boolean,
+) {
+    val json = lineCollection(points)
+    val existing = style.getSource(sourceId) as? GeoJsonSource
+    if (existing == null) {
+        style.addSource(GeoJsonSource(sourceId, json))
+        val layer = LineLayer(layerId, sourceId).withProperties(
+            PropertyFactory.lineColor(color),
+            PropertyFactory.lineWidth(width),
+            PropertyFactory.lineCap(Property.LINE_CAP_ROUND),
+            PropertyFactory.lineJoin(Property.LINE_JOIN_ROUND),
+        )
+        if (dashed) {
+            layer.setProperties(PropertyFactory.lineDasharray(arrayOf(1.4f, 1.2f)))
+        }
+        val below = if (style.getLayer(DROP_LAYER) != null) DROP_LAYER else null
+        if (below != null) style.addLayerBelow(layer, below) else style.addLayer(layer)
+    } else {
+        existing.setGeoJson(json)
+    }
+}
+
+private fun lineCollection(points: List<LatLng>): String {
+    if (points.size < 2) return EMPTY
+    val coords = points.joinToString(",") { "[${it.longitude},${it.latitude}]" }
+    return """{"type":"FeatureCollection","features":[{"type":"Feature","properties":{},"geometry":{"type":"LineString","coordinates":[$coords]}}]}"""
+}
+
 private const val DROP_SOURCE = "xhere-drops"
 private const val DROP_LAYER = "xhere-drops-symbols"
 private const val ME_SOURCE = "xhere-me"
 private const val ME_HALO = "xhere-me-halo"
 private const val ME_DOT = "xhere-me-dot"
+private const val ROUTE_SOURCE = "xhere-walk-route"
+private const val ROUTE_LAYER = "xhere-walk-route-line"
+private const val GUIDE_SOURCE = "xhere-walk-guide"
+private const val GUIDE_LAYER = "xhere-walk-guide-line"
 private const val EMPTY = """{"type":"FeatureCollection","features":[]}"""
