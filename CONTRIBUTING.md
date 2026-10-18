@@ -16,4 +16,6 @@ Do not commit `.env` files, keystores, `google-services.json`, or anything under
 
 ## CI
 
-Pull requests and pushes to this repo run [`.github/workflows/ci.yml`](.github/workflows/ci.yml) (gitleaks). Path-filtered workflows for Android, Supabase, and web are placeholders until those milestones add real builds.
+Pull requests and pushes to this repo run [`.github/workflows/ci.yml`](.github/workflows/ci.yml) (gitleaks). Path-filtered workflows for Android and web are placeholders until those milestones add real builds.
+
+[`.github/workflows/supabase.yml`](.github/workflows/supabase.yml) runs when `supabase/**` changes. It starts the free local Supabase stack (Supabase CLI + Docker on the GitHub runner, no account) and runs `supabase db reset`, `supabase db lint`, and `supabase test db` (pgTAP). See [`supabase/README.md`](supabase/README.md) to run the same thing locally.
