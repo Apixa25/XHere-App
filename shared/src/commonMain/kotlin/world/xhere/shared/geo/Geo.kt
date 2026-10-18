@@ -8,6 +8,7 @@ import kotlin.math.floor
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.pow
+import kotlin.math.roundToInt
 import kotlin.math.sin
 import kotlin.math.sqrt
 import kotlinx.serialization.Serializable
@@ -82,6 +83,18 @@ object Geo {
 
     fun isWithinConfirmationRange(distanceM: Double, revealRadiusM: Int): Boolean =
         distanceM <= confirmationRangeM(revealRadiusM)
+
+    /**
+     * Whole meters still to walk before [distanceM] is inside [revealRadiusM].
+     * Zero when the drop is already revealed. The detail screen uses this for
+     * "Walk 120 m closer to reveal".
+     */
+    fun revealGapMeters(distanceM: Double, revealRadiusM: Int): Int {
+        if (!distanceM.isFinite()) return 0
+        val gap = distanceM - revealRadiusM
+        if (gap <= 0.0) return 0
+        return gap.roundToInt().coerceAtLeast(1)
+    }
 
     /**
      * Snap to the center of a grid cell about [precisionM] on a side.

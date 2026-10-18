@@ -11,7 +11,7 @@ import world.xhere.shared.json.UuidSerializer
 
 /**
  * Wire shape of `public.drop_card` (`supabase/migrations/20261018000400_rpcs.sql`).
- * [body], [attributes], and [media] are null unless the drop is revealed to the caller.
+ * [body], [attributes], [media], and [tags] are null unless the drop is revealed to the caller.
  * [latitude] and [longitude] are always the display position, never the true one.
  */
 @Serializable
@@ -31,7 +31,7 @@ data class DropCard(
     val body: String? = null,
     val attributes: JsonObject? = null,
     val media: List<DropMedia>? = null,
-    val tags: List<String> = emptyList(),
+    val tags: List<String>? = null,
     val status: DropStatus,
     @SerialName("is_confirmed") val isConfirmed: Boolean,
     @SerialName("confirm_count") val confirmCount: Int,
@@ -59,7 +59,7 @@ data class DropCard(
         title = title,
         body = body,
         attributes = attributes ?: JsonObject(emptyMap()),
-        tags = tags,
+        tags = tags.orEmpty(),
         displayLocation = displayLocation,
         trueLocation = null,
         locationPrecisionM = locationPrecisionM,

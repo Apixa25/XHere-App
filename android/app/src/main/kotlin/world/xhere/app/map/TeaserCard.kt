@@ -22,6 +22,7 @@ import world.xhere.app.ui.TestTags
 internal fun TeaserCard(
     teaser: TeaserUi,
     onClose: () -> Unit,
+    onOpen: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Surface(
@@ -52,6 +53,9 @@ internal fun TeaserCard(
                         style = MaterialTheme.typography.titleMedium,
                         modifier = Modifier.testTag(TestTags.TEASER_TITLE),
                     )
+                }
+                TextButton(onClick = onOpen, modifier = Modifier.testTag(TestTags.TEASER_OPEN)) {
+                    Text(stringResource(R.string.map_teaser_open))
                 }
                 TextButton(onClick = onClose, modifier = Modifier.testTag(TestTags.TEASER_CLOSE)) {
                     Text(stringResource(R.string.map_teaser_close))

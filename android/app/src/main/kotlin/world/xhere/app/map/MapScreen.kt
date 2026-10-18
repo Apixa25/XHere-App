@@ -60,6 +60,7 @@ internal val SubcategorySemantics = SemanticsPropertyKey<String>("Subcategory")
 @Composable
 fun MapScreen(
     onDrop: () -> Unit = {},
+    onOpenDrop: (String) -> Unit = {},
     viewModel: MapViewModel = koinViewModel(),
     canvas: MapCanvas = koinInject(),
 ) {
@@ -121,7 +122,11 @@ fun MapScreen(
                 }
             }
             state.teaser?.let { teaser ->
-                TeaserCard(teaser = teaser, onClose = viewModel::dismissTeaser)
+                TeaserCard(
+                    teaser = teaser,
+                    onClose = viewModel::dismissTeaser,
+                    onOpen = { onOpenDrop(teaser.shortId) },
+                )
             }
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -197,7 +202,7 @@ fun MapScreen(
         state.nearMe?.let { cards ->
             NearMeSheet(
                 cards = cards,
-                onOpen = { card -> viewModel.openTeaser(card.shortId, card.distanceM) },
+                onOpen = { card -> onOpenDrop(card.shortId) },
                 onDismiss = viewModel::closeNearMe,
             )
         }

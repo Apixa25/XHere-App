@@ -9,6 +9,10 @@ import world.xhere.app.auth.AuthViewModel
 import world.xhere.app.auth.CredentialManagerGoogleSignIn
 import world.xhere.app.auth.GoogleIdTokenSource
 import world.xhere.app.config.ClientConfig
+import world.xhere.app.detail.AndroidDropSharer
+import world.xhere.app.detail.DropDetailViewModel
+import world.xhere.app.detail.DropSharer
+import world.xhere.app.detail.IncomingLinks
 import world.xhere.app.drop.CameraXDropCapture
 import world.xhere.app.drop.DropCapture
 import world.xhere.app.drop.DropViewModel
@@ -52,6 +56,8 @@ val appModule = module {
         }
     }
     single<DeviceLocation> { AndroidDeviceLocation(androidContext()) }
+    single { IncomingLinks() }
+    single<DropSharer> { AndroidDropSharer(androidContext()) }
     single { FilterPresetStore(androidContext()) }
     single<MapCanvas> { MapLibreMapCanvas() }
     single<DropCapture> { CameraXDropCapture() }
@@ -59,6 +65,7 @@ val appModule = module {
     viewModel { SessionViewModel(get(), get(), get()) }
     viewModel { DropViewModel(get(), get(), get(), get()) }
     viewModel { MapViewModel(get(), get(), get()) }
+    viewModel { (shortId: String) -> DropDetailViewModel(shortId, get(), get()) }
     viewModel { AuthViewModel(get(), get(), get(), get(), get()) }
     viewModel { ProfileViewModel(get()) }
     viewModel {

@@ -20,6 +20,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -28,12 +29,17 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import org.koin.androidx.compose.koinViewModel
+import org.koin.compose.koinInject
 import world.xhere.app.R
+import world.xhere.app.detail.DropDetailScreen
+import world.xhere.app.detail.IncomingLinks
 import world.xhere.app.drop.DropScreen
 import world.xhere.app.map.MapScreen
 import world.xhere.app.profile.ProfileViewModel
@@ -46,16 +52,27 @@ private object Routes {
     const val DROP = "drop"
     const val PROFILE = "profile"
     const val SETTINGS = "settings"
+    const val DETAIL = "detail/{shortId}"
+
+    fun detail(shortId: String): String = "detail/$shortId"
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainShell() {
     val nav = rememberNavController()
+    val links: IncomingLinks = koinInject()
+    val pending by links.pending.collectAsStateWithLifecycle()
     val backStack by nav.currentBackStackEntryAsState()
     val route = backStack?.destination?.route
-    val showBar = route != Routes.SETTINGS
+    val onDetail = route == Routes.DETAIL
+    val showBar = route != Routes.SETTINGS && !onDetail
     val showTopBar = showBar && route != Routes.MAP
+    LaunchedEffect(pending) {
+        val id = pending ?: return@LaunchedEffect
+        nav.navigate(Routes.detail(id)) { launchSingleTop = true }
+        links.consume()
+    }
     Scaffold(
         topBar = {
             if (showTopBar) {
@@ -95,13 +112,27 @@ fun MainShell() {
             modifier = Modifier.padding(padding),
         ) {
             composable(Routes.MAP) {
-                MapScreen(onDrop = {
-                    nav.navigate(Routes.DROP) { launchSingleTop = true }
-                })
+                MapScreen(
+                    onDrop = {
+                        nav.navigate(Routes.DROP) { launchSingleTop = true }
+                    },
+                    onOpenDrop = { shortId ->
+                        nav.navigate(Routes.detail(shortId)) { launchSingleTop = true }
+                    },
+                )
             }
             composable(Routes.DROP) { DropScreen() }
             composable(Routes.PROFILE) { ProfilePage(onSettings = { nav.navigate(Routes.SETTINGS) }) }
             composable(Routes.SETTINGS) { SettingsScreen(onBack = { nav.popBackStack() }) }
+            composable(
+                route = Routes.DETAIL,
+                arguments = listOf(navArgument("shortId") { type = NavType.StringType }),
+            ) { entry ->
+                DropDetailScreen(
+                    shortId = entry.arguments?.getString("shortId").orEmpty(),
+                    onBack = { nav.popBackStack() },
+                )
+            }
         }
     }
 }
