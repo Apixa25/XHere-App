@@ -23,7 +23,11 @@ import world.xhere.shared.geo.LatLng
 import world.xhere.shared.model.ConfirmationVerdict
 import world.xhere.shared.model.DropCard
 import world.xhere.shared.model.DropStatus
+import world.xhere.shared.model.ReportReason
+import world.xhere.shared.model.ReportTarget
 import world.xhere.shared.model.Taxonomy
+import world.xhere.shared.safety.SafetyDirectory
+import world.xhere.shared.safety.SafetyResources
 import world.xhere.shared.share.ShareLinks
 
 enum class DetailNotice {
@@ -32,6 +36,10 @@ enum class DetailNotice {
     FAILED,
     UNAVAILABLE,
 }
+
+enum class SafetyDialog { REPORT_DROP, REPORT_AUTHOR, BLOCK_AUTHOR }
+
+enum class SafetyMessage { REPORTED, REPORTED_HIDDEN, HIDDEN, BLOCKED, FAILED }
 
 data class DetailUiState(
     val loading: Boolean = true,
@@ -57,6 +65,14 @@ data class DetailUiState(
     val listening: Boolean = false,
     val notice: DetailNotice? = null,
     val shareUrl: String = "",
+    /** Safety & Alerts drops show the tip line and 911 footer. */
+    val safetyResources: SafetyResources? = null,
+    val dialog: SafetyDialog? = null,
+    val sending: Boolean = false,
+    val safetyMessage: SafetyMessage? = null,
+    /** Hidden or blocked from this screen: the drop is gone for this person. */
+    val gone: Boolean = false,
+    val canUndoHide: Boolean = false,
 )
 
 /**
@@ -138,6 +154,86 @@ class DropDetailViewModel(
         }
     }
 
+    fun openDialog(dialog: SafetyDialog) {
+        _state.update { it.copy(dialog = dialog, safetyMessage = null) }
+    }
+
+    fun dismissDialog() {
+        _state.update { it.copy(dialog = null) }
+    }
+
+    fun reportDrop(reason: ReportReason, details: String?, alsoHide: Boolean) {
+        val id = dropId ?: return
+        safetyAction {
+            services.reports.report(ReportTarget.DROP, id, reason, details)
+            if (alsoHide) {
+                services.hidden.hideDrop(id)
+                gone(SafetyMessage.REPORTED_HIDDEN, canUndoHide = true)
+            } else {
+                _state.update { it.copy(sending = false, dialog = null, safetyMessage = SafetyMessage.REPORTED) }
+            }
+        }
+    }
+
+    /** Profiles are reported by id; the drop only carries the handle, so look it up first. */
+    fun reportAuthor(reason: ReportReason, details: String?) {
+        val handle = card?.authorHandle ?: return
+        safetyAction {
+            val author = services.profiles.publicProfile(handle) ?: error("no profile for @$handle")
+            services.reports.report(ReportTarget.PROFILE, author.id, reason, details)
+            _state.update { it.copy(sending = false, dialog = null, safetyMessage = SafetyMessage.REPORTED) }
+        }
+    }
+
+    fun blockAuthor() {
+        val handle = card?.authorHandle ?: return
+        safetyAction {
+            val author = services.profiles.publicProfile(handle) ?: error("no profile for @$handle")
+            services.blocks.blockUser(author.id)
+            gone(SafetyMessage.BLOCKED, canUndoHide = false)
+        }
+    }
+
+    fun hideDrop() {
+        val id = dropId ?: return
+        safetyAction {
+            services.hidden.hideDrop(id)
+            gone(SafetyMessage.HIDDEN, canUndoHide = true)
+        }
+    }
+
+    fun undoHide() {
+        val id = dropId ?: return
+        safetyAction {
+            services.hidden.unhideDrop(id)
+            _state.update { it.copy(sending = false, gone = false, canUndoHide = false, safetyMessage = null) }
+            fetchedInside = null
+            card = services.drops.dropDetail(id, lastFix)
+            publish()
+        }
+    }
+
+    private fun gone(message: SafetyMessage, canUndoHide: Boolean) {
+        detailJob?.cancel()
+        _state.update {
+            it.copy(sending = false, dialog = null, gone = true, canUndoHide = canUndoHide, safetyMessage = message, canAnswer = false)
+        }
+    }
+
+    private fun safetyAction(block: suspend () -> Unit) {
+        if (_state.value.sending) return
+        viewModelScope.launch {
+            _state.update { it.copy(sending = true, safetyMessage = null) }
+            try {
+                block()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                _state.update { it.copy(sending = false, dialog = null, safetyMessage = SafetyMessage.FAILED) }
+            }
+        }
+    }
+
     private suspend fun load() {
         if (shortId.isBlank()) {
             _state.update { it.copy(loading = false, missing = true) }
@@ -170,6 +266,7 @@ class DropDetailViewModel(
     private fun onFix(fix: LatLng) {
         val here = place ?: return
         lastFix = fix
+        if (_state.value.gone) return
         val next = Geo.distanceMeters(fix, here)
         val wasInside = distance?.let { it <= revealRadius }
         distance = next
@@ -234,6 +331,12 @@ class DropDetailViewModel(
                 listening = previous.listening,
                 notice = null,
                 shareUrl = ShareLinks.url(current.shortId),
+                safetyResources = if (current.groupSlug == SAFETY_GROUP) SafetyDirectory.forLocation(current.displayLocation) else null,
+                dialog = previous.dialog,
+                sending = previous.sending,
+                safetyMessage = previous.safetyMessage,
+                gone = previous.gone,
+                canUndoHide = previous.canUndoHide,
             )
         }
     }
@@ -243,5 +346,9 @@ class DropDetailViewModel(
         "rate_limited" -> DetailNotice.RATE_LIMITED
         "drop_not_found" -> DetailNotice.UNAVAILABLE
         else -> DetailNotice.FAILED
+    }
+
+    private companion object {
+        const val SAFETY_GROUP = "safety_alerts"
     }
 }

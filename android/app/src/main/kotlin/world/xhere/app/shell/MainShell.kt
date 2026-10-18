@@ -43,6 +43,9 @@ import world.xhere.app.detail.IncomingLinks
 import world.xhere.app.drop.DropScreen
 import world.xhere.app.map.MapScreen
 import world.xhere.app.profile.ProfileViewModel
+import world.xhere.app.safety.GuidelinesScreen
+import world.xhere.app.safety.ModerationScreen
+import world.xhere.app.safety.SafetyListsScreen
 import world.xhere.app.settings.SettingsScreen
 import world.xhere.app.ui.MapMark
 import world.xhere.app.ui.TestTags
@@ -52,7 +55,13 @@ private object Routes {
     const val DROP = "drop"
     const val PROFILE = "profile"
     const val SETTINGS = "settings"
+    const val GUIDELINES = "guidelines"
+    const val LISTS = "blocked"
+    const val MODERATION = "moderation"
     const val DETAIL = "detail/{shortId}"
+
+    /** Full-screen pages with their own back arrow and no bottom bar. */
+    val fullScreen = setOf(SETTINGS, GUIDELINES, LISTS, MODERATION, DETAIL)
 
     fun detail(shortId: String): String = "detail/$shortId"
 }
@@ -65,8 +74,7 @@ fun MainShell() {
     val pending by links.pending.collectAsStateWithLifecycle()
     val backStack by nav.currentBackStackEntryAsState()
     val route = backStack?.destination?.route
-    val onDetail = route == Routes.DETAIL
-    val showBar = route != Routes.SETTINGS && !onDetail
+    val showBar = route !in Routes.fullScreen
     val showTopBar = showBar && route != Routes.MAP
     LaunchedEffect(pending) {
         val id = pending ?: return@LaunchedEffect
@@ -123,7 +131,17 @@ fun MainShell() {
             }
             composable(Routes.DROP) { DropScreen() }
             composable(Routes.PROFILE) { ProfilePage(onSettings = { nav.navigate(Routes.SETTINGS) }) }
-            composable(Routes.SETTINGS) { SettingsScreen(onBack = { nav.popBackStack() }) }
+            composable(Routes.SETTINGS) {
+                SettingsScreen(
+                    onBack = { nav.popBackStack() },
+                    onGuidelines = { nav.navigate(Routes.GUIDELINES) { launchSingleTop = true } },
+                    onBlocked = { nav.navigate(Routes.LISTS) { launchSingleTop = true } },
+                    onModeration = { nav.navigate(Routes.MODERATION) { launchSingleTop = true } },
+                )
+            }
+            composable(Routes.GUIDELINES) { GuidelinesScreen(onBack = { nav.popBackStack() }) }
+            composable(Routes.LISTS) { SafetyListsScreen(onBack = { nav.popBackStack() }) }
+            composable(Routes.MODERATION) { ModerationScreen(onBack = { nav.popBackStack() }) }
             composable(
                 route = Routes.DETAIL,
                 arguments = listOf(navArgument("shortId") { type = NavType.StringType }),

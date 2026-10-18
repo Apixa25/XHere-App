@@ -2,6 +2,7 @@ package world.xhere.app.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlin.time.Clock
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -10,6 +11,9 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import world.xhere.app.session.SignOutNotice
 import world.xhere.shared.data.XHereServices
+import world.xhere.shared.data.canModerate
+
+enum class ExportStatus { WORKING, READY, FAILED }
 
 data class SettingsUiState(
     val email: String? = null,
@@ -18,11 +22,14 @@ data class SettingsUiState(
     val busy: Boolean = false,
     val confirmingDelete: Boolean = false,
     val error: String? = null,
+    val isModerator: Boolean = false,
+    val export: ExportStatus? = null,
 )
 
 /**
  * Sign-out and account deletion. Deletion calls [world.xhere.shared.data.AccountRepository.deleteMyAccount],
  * which the Supabase client implements as the `delete_my_account` RPC and then signs out.
+ * Download my data calls `export_my_data` and hands the JSON to [exporter].
  */
 class SettingsViewModel(
     private val services: XHereServices,
@@ -30,6 +37,8 @@ class SettingsViewModel(
     private val deletedMessage: String,
     private val deleteFailed: String,
     private val signOutFailed: String,
+    private val exporter: DataExporter,
+    private val clock: Clock = Clock.System,
 ) : ViewModel() {
     private val _state = MutableStateFlow(SettingsUiState())
     val state: StateFlow<SettingsUiState> = _state.asStateFlow()
@@ -37,13 +46,32 @@ class SettingsViewModel(
     init {
         viewModelScope.launch {
             val email = runCatching { services.auth.currentSession()?.email }.getOrNull()
-            val handle = runCatching { services.profiles.currentProfile().handle }.getOrNull()
-            _state.update { it.copy(email = email, handle = handle) }
+            val profile = runCatching { services.profiles.currentProfile() }.getOrNull()
+            _state.update {
+                it.copy(email = email, handle = profile?.handle, isModerator = profile?.canModerate() == true)
+            }
         }
     }
 
     fun setLocationGranted(granted: Boolean) {
         _state.update { it.copy(locationGranted = granted) }
+    }
+
+    fun exportData() {
+        if (_state.value.export == ExportStatus.WORKING) return
+        viewModelScope.launch {
+            _state.update { it.copy(export = ExportStatus.WORKING) }
+            try {
+                val json = services.account.exportMyData()
+                val day = clock.now().toString().take(10)
+                exporter.export("xhere-export-$day.json", json)
+                _state.update { it.copy(export = ExportStatus.READY) }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                _state.update { it.copy(export = ExportStatus.FAILED) }
+            }
+        }
     }
 
     fun signOut() {

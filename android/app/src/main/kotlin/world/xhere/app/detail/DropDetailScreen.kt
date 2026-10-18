@@ -21,6 +21,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
@@ -44,9 +45,13 @@ import org.koin.core.parameter.parametersOf
 import world.xhere.app.R
 import world.xhere.app.location.ForegroundLocation
 import world.xhere.app.map.formatMeters
+import world.xhere.app.safety.BlockDialog
+import world.xhere.app.safety.ReportForm
+import world.xhere.app.safety.SafetyFooter
 import world.xhere.app.ui.TestTags
 import world.xhere.shared.geo.Geo
 import world.xhere.shared.model.ConfirmationVerdict
+import world.xhere.shared.model.ReportReason
 
 /** `yes` while this screen is collecting foreground location fixes. */
 internal val DetailListeningSemantics = SemanticsPropertyKey<String>("DetailListening")
@@ -79,6 +84,13 @@ fun DropDetailScreen(
     val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { granted ->
         if (granted.values.any { it }) viewModel.refreshLocation()
     }
+    if (state.dialog == SafetyDialog.BLOCK_AUTHOR) {
+        BlockDialog(
+            handle = state.authorHandle.orEmpty(),
+            onConfirm = viewModel::blockAuthor,
+            onDismiss = viewModel::dismissDialog,
+        )
+    }
 
     Column(
         modifier = Modifier
@@ -106,6 +118,14 @@ fun DropDetailScreen(
                 CircularProgressIndicator(modifier = Modifier.padding(top = 24.dp))
                 Text(stringResource(R.string.loading), style = MaterialTheme.typography.bodyLarge)
             }
+            state.gone -> {
+                SafetyMessageText(state)
+                if (state.canUndoHide) {
+                    OutlinedButton(onClick = viewModel::undoHide, modifier = Modifier.testTag(TestTags.DETAIL_UNDO_HIDE)) {
+                        Text(stringResource(R.string.safety_undo))
+                    }
+                }
+            }
             state.missing -> {
                 Text(
                     text = stringResource(R.string.detail_missing),
@@ -121,7 +141,104 @@ fun DropDetailScreen(
                 onUseLocation = { permission.launch(ForegroundLocation.permissions) },
             )
         }
+        if (!state.loading && !state.missing && !state.gone) {
+            SafetyActions(
+                state = state,
+                onDialog = viewModel::openDialog,
+                onHide = viewModel::hideDrop,
+                onReportDrop = viewModel::reportDrop,
+                onReportAuthor = viewModel::reportAuthor,
+                onCancel = viewModel::dismissDialog,
+            )
+        }
     }
+}
+
+@Composable
+private fun SafetyActions(
+    state: DetailUiState,
+    onDialog: (SafetyDialog) -> Unit,
+    onHide: () -> Unit,
+    onReportDrop: (ReportReason, String?, Boolean) -> Unit,
+    onReportAuthor: (ReportReason, String?) -> Unit,
+    onCancel: () -> Unit,
+) {
+    SafetyMessageText(state)
+    state.safetyResources?.let { SafetyFooter(it) }
+    if (state.isMine) return
+    when (state.dialog) {
+        SafetyDialog.REPORT_DROP -> {
+            ReportForm(
+                title = stringResource(R.string.safety_report_title),
+                showAlsoHide = true,
+                sending = state.sending,
+                onSend = onReportDrop,
+                onDismiss = onCancel,
+            )
+            return
+        }
+        SafetyDialog.REPORT_AUTHOR -> {
+            ReportForm(
+                title = stringResource(R.string.safety_report_user_title, state.authorHandle.orEmpty()),
+                showAlsoHide = false,
+                sending = state.sending,
+                onSend = { reason, details, _ -> onReportAuthor(reason, details) },
+                onDismiss = onCancel,
+            )
+            return
+        }
+        else -> Unit
+    }
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+        TextButton(
+            onClick = { onDialog(SafetyDialog.REPORT_DROP) },
+            enabled = !state.sending,
+            modifier = Modifier.testTag(TestTags.DETAIL_REPORT),
+        ) {
+            Text(stringResource(R.string.safety_report_drop))
+        }
+        TextButton(
+            onClick = onHide,
+            enabled = !state.sending,
+            modifier = Modifier.testTag(TestTags.DETAIL_HIDE),
+        ) {
+            Text(stringResource(R.string.safety_hide_drop))
+        }
+    }
+    val handle = state.authorHandle ?: return
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+        TextButton(
+            onClick = { onDialog(SafetyDialog.REPORT_AUTHOR) },
+            enabled = !state.sending,
+            modifier = Modifier.testTag(TestTags.DETAIL_REPORT_AUTHOR),
+        ) {
+            Text(stringResource(R.string.safety_report_user, handle))
+        }
+        TextButton(
+            onClick = { onDialog(SafetyDialog.BLOCK_AUTHOR) },
+            enabled = !state.sending,
+            modifier = Modifier.testTag(TestTags.DETAIL_BLOCK_AUTHOR),
+        ) {
+            Text(stringResource(R.string.safety_block_user, handle), color = MaterialTheme.colorScheme.error)
+        }
+    }
+}
+
+@Composable
+private fun SafetyMessageText(state: DetailUiState) {
+    val message = state.safetyMessage ?: return
+    Text(
+        text = when (message) {
+            SafetyMessage.REPORTED -> stringResource(R.string.safety_report_sent)
+            SafetyMessage.REPORTED_HIDDEN -> stringResource(R.string.safety_report_sent_hidden)
+            SafetyMessage.HIDDEN -> stringResource(R.string.safety_hidden)
+            SafetyMessage.BLOCKED -> stringResource(R.string.safety_blocked, state.authorHandle.orEmpty())
+            SafetyMessage.FAILED -> stringResource(R.string.safety_failed)
+        },
+        style = MaterialTheme.typography.bodyLarge,
+        color = if (message == SafetyMessage.FAILED) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+        modifier = Modifier.testTag(TestTags.DETAIL_SAFETY_MESSAGE),
+    )
 }
 
 @Composable

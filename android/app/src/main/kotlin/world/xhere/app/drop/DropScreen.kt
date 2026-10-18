@@ -20,6 +20,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -28,11 +29,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
 import world.xhere.app.R
+import world.xhere.app.safety.SafetyFooter
 import world.xhere.app.ui.TestTags
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -135,6 +138,19 @@ fun DropScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
+            state.safety?.let { panel ->
+                if (state.phase == DropPhase.FORM) {
+                    OutlinedTextField(
+                        value = state.text,
+                        onValueChange = viewModel::onText,
+                        label = { Text(stringResource(R.string.drop_text_label)) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag(TestTags.DROP_TEXT),
+                    )
+                }
+                SafetyPanelCard(panel, showReminder = state.postingNotice == null)
+            }
             AttributeForm(fields = state.fields, values = state.values, onChange = viewModel::onField)
             if (state.sensitive) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -148,7 +164,7 @@ fun DropScreen(
             }
             Button(
                 onClick = viewModel::post,
-                enabled = !state.busy,
+                enabled = !state.busy && state.safety?.canPost != false,
                 modifier = Modifier.testTag(TestTags.DROP_POST),
             ) { Text(stringResource(R.string.drop_post)) }
         }
@@ -166,6 +182,13 @@ fun DropScreen(
                 modifier = Modifier.testTag(TestTags.DROP_SUCCESS),
                 style = MaterialTheme.typography.titleMedium,
             )
+            if (state.held) {
+                Text(
+                    text = stringResource(R.string.drop_held),
+                    modifier = Modifier.testTag(TestTags.DROP_SAFETY_HELD),
+                    style = MaterialTheme.typography.bodyLarge,
+                )
+            }
             state.duplicate?.let { message ->
                 Text(message, modifier = Modifier.testTag(TestTags.DROP_DUPLICATE), style = MaterialTheme.typography.bodyLarge)
             }
@@ -177,4 +200,47 @@ fun DropScreen(
             }
         }
     }
+}
+
+@Composable
+private fun SafetyPanelCard(panel: SafetyPanel, showReminder: Boolean) {
+    Surface(
+        shape = MaterialTheme.shapes.medium,
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        modifier = Modifier
+            .fillMaxWidth()
+            .semantics(mergeDescendants = true) {}
+            .testTag(TestTags.DROP_SAFETY_PANEL),
+    ) {
+        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(stringResource(R.string.safety_panel_title), style = MaterialTheme.typography.titleSmall)
+            if (showReminder) {
+                Text(stringResource(R.string.safety_panel_reminder), style = MaterialTheme.typography.bodyMedium)
+            }
+            Text(stringResource(R.string.safety_panel_disclaimer), style = MaterialTheme.typography.bodyMedium)
+            if (panel.held) {
+                Text(stringResource(R.string.safety_panel_held), style = MaterialTheme.typography.bodyMedium)
+            }
+            if (panel.fuzzM > 0) {
+                Text(stringResource(R.string.safety_panel_fuzz, panel.fuzzM), style = MaterialTheme.typography.bodyMedium)
+            }
+        }
+    }
+    panel.filterMessage?.let { message ->
+        Text(
+            text = message,
+            color = MaterialTheme.colorScheme.error,
+            style = MaterialTheme.typography.bodyLarge,
+            modifier = Modifier.testTag(TestTags.DROP_SAFETY_FILTER),
+        )
+    }
+    if (!panel.available) {
+        Text(
+            text = stringResource(R.string.safety_no_tip_line),
+            color = MaterialTheme.colorScheme.error,
+            style = MaterialTheme.typography.bodyLarge,
+            modifier = Modifier.testTag(TestTags.DROP_SAFETY_UNAVAILABLE),
+        )
+    }
+    SafetyFooter(panel.resources)
 }

@@ -99,4 +99,49 @@ internal object TestTags {
     const val DETAIL_SHARE = "detail_share"
     const val DETAIL_NOTICE = "detail_notice"
     const val DETAIL_LOCATION = "detail_location"
+
+    const val DETAIL_REPORT = "detail_report"
+    const val DETAIL_HIDE = "detail_hide"
+    const val DETAIL_REPORT_AUTHOR = "detail_report_author"
+    const val DETAIL_BLOCK_AUTHOR = "detail_block_author"
+    const val DETAIL_SAFETY_MESSAGE = "detail_safety_message"
+    const val DETAIL_UNDO_HIDE = "detail_undo_hide"
+    const val REPORT_FORM = "report_form"
+    const val REPORT_DETAILS = "report_details"
+    const val REPORT_ALSO_HIDE = "report_also_hide"
+    const val REPORT_SEND = "report_send"
+    const val BLOCK_CONFIRM = "block_confirm"
+    const val SAFETY_FOOTER = "safety_footer"
+    const val SAFETY_TIP_CALL = "safety_tip_call"
+
+    fun reportReason(slug: String): String = "report_reason_$slug"
+
+    const val DROP_SAFETY_PANEL = "drop_safety_panel"
+    const val DROP_SAFETY_FILTER = "drop_safety_filter"
+    const val DROP_SAFETY_HELD = "drop_safety_held"
+    const val DROP_SAFETY_UNAVAILABLE = "drop_safety_unavailable"
+
+    const val SETTINGS_GUIDELINES = "settings_guidelines"
+    const val SETTINGS_BLOCKED = "settings_blocked"
+    const val SETTINGS_EXPORT = "settings_export"
+    const val SETTINGS_EXPORT_STATUS = "settings_export_status"
+    const val SETTINGS_MODERATION = "settings_moderation"
+
+    const val SCREEN_GUIDELINES = "screen_guidelines"
+    const val SCREEN_LISTS = "screen_lists"
+    const val LISTS_BLOCKED_EMPTY = "lists_blocked_empty"
+    const val LISTS_HIDDEN_EMPTY = "lists_hidden_empty"
+
+    fun unblock(handle: String): String = "unblock_$handle"
+
+    fun unhide(shortId: String): String = "unhide_$shortId"
+
+    const val SCREEN_MODERATION = "screen_moderation"
+    const val MOD_EMPTY = "mod_empty"
+    const val MOD_DENIED = "mod_denied"
+    const val MOD_MESSAGE = "mod_message"
+
+    fun queueItem(id: String): String = "queue_$id"
+
+    fun modAction(action: String, id: String): String = "mod_${action}_$id"
 }
