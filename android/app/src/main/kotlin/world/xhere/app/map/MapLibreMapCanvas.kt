@@ -47,6 +47,8 @@ class MapLibreMapCanvas : MapCanvas {
         onCameraIdle: (CameraFrame) -> Unit,
         onUserPanned: () -> Unit,
         onFeatureClick: (MapFeature) -> Unit,
+        onMapClick: (LatLng) -> Unit,
+        onMapLongClick: (LatLng) -> Unit,
         modifier: Modifier,
     ) {
         val context = LocalContext.current
@@ -58,10 +60,10 @@ class MapLibreMapCanvas : MapCanvas {
             }.getOrDefault(false)
         }
         if (!native) {
-            ProgrammaticMap(state, onCameraIdle, onFeatureClick, modifier)
+            ProgrammaticMap(state, onCameraIdle, onFeatureClick, onMapClick, onMapLongClick, modifier)
             return
         }
-        NativeMap(state, onCameraIdle, onUserPanned, onFeatureClick, modifier)
+        NativeMap(state, onCameraIdle, onUserPanned, onFeatureClick, onMapClick, onMapLongClick, modifier)
     }
 }
 
@@ -87,6 +89,8 @@ private fun NativeMap(
     onCameraIdle: (CameraFrame) -> Unit,
     onUserPanned: () -> Unit,
     onFeatureClick: (MapFeature) -> Unit,
+    onMapClick: (LatLng) -> Unit,
+    onMapLongClick: (LatLng) -> Unit,
     modifier: Modifier,
 ) {
     val dark = isSystemInDarkTheme()
@@ -146,10 +150,16 @@ private fun NativeMap(
                         val key = map.queryRenderedFeatures(rect, DROP_LAYER)
                             .firstOrNull()
                             ?.getStringProperty("key")
-                            ?: return@addOnMapClickListener false
-                        val feature = holder.features.firstOrNull { featureKey(it) == key }
-                            ?: return@addOnMapClickListener false
-                        onFeatureClick(feature)
+                        val feature = key?.let { wanted -> holder.features.firstOrNull { featureKey(it) == wanted } }
+                        if (feature != null) {
+                            onFeatureClick(feature)
+                        } else {
+                            onMapClick(LatLng(latLng.latitude, latLng.longitude))
+                        }
+                        true
+                    }
+                    map.addOnMapLongClickListener { latLng ->
+                        onMapLongClick(LatLng(latLng.latitude, latLng.longitude))
                         true
                     }
                     map.setStyle(styleUrl) { style ->

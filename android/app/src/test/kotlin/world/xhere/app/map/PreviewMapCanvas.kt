@@ -1,7 +1,7 @@
 package world.xhere.app.map
 
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -12,6 +12,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import world.xhere.app.ui.TestTags
 import world.xhere.shared.demo.JamestownDemo
+import world.xhere.shared.geo.LatLng
 import world.xhere.shared.model.MapFeature
 
 /**
@@ -25,11 +26,13 @@ class PreviewMapCanvas : MapCanvas {
         onCameraIdle: (CameraFrame) -> Unit,
         onUserPanned: () -> Unit,
         onFeatureClick: (MapFeature) -> Unit,
+        onMapClick: (LatLng) -> Unit,
+        onMapLongClick: (LatLng) -> Unit,
         modifier: Modifier,
     ) {
         Box(modifier) {
-            ProgrammaticMap(state, onCameraIdle, onFeatureClick)
-            Row(
+            ProgrammaticMap(state, onCameraIdle, onFeatureClick, onMapClick, onMapLongClick)
+            Column(
                 modifier = Modifier
                     .align(Alignment.CenterEnd)
                     .padding(top = 80.dp),
@@ -51,6 +54,12 @@ class PreviewMapCanvas : MapCanvas {
                     modifier = Modifier.testTag(TestTags.MAP_ZOOM_OUT),
                 ) {
                     Text("Zoom out")
+                }
+                TextButton(
+                    onClick = { onMapLongClick(JamestownDemo.library) },
+                    modifier = Modifier.testTag(TestTags.MAP_LONG_PRESS),
+                ) {
+                    Text("Long press")
                 }
             }
         }

@@ -39,6 +39,30 @@ internal data class DropsNearbyParams(
 )
 
 @Serializable
+internal data class HereCardParams(
+    @SerialName("p_lat") val lat: Double,
+    @SerialName("p_lng") val lng: Double,
+    @SerialName("p_viewer_lat") val viewerLat: Double? = null,
+    @SerialName("p_viewer_lng") val viewerLng: Double? = null,
+    @SerialName("p_radius_m") val radiusM: Int,
+    @SerialName("p_limit") val limit: Int,
+)
+
+@Serializable
+internal data class PlaceLabelParams(
+    @SerialName("p_lat") val lat: Double,
+    @SerialName("p_lng") val lng: Double,
+)
+
+@Serializable
+internal data class RememberPlaceParams(
+    @SerialName("p_lat") val lat: Double,
+    @SerialName("p_lng") val lng: Double,
+    @SerialName("p_name") val name: String,
+    @SerialName("p_address") val address: String? = null,
+)
+
+@Serializable
 internal data class DropDetailParams(
     @Serializable(with = UuidSerializer::class)
     @SerialName("p_drop_id") val dropId: Uuid,

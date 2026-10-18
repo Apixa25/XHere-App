@@ -20,7 +20,8 @@ The UI stays native. This module has no Compose and no SwiftUI. The Compose app 
 * `rules` — the same checks `create_drop` enforces, so the UI can fail before the round trip. The database remains the source of truth.
 * `validation` — the JSON Schema subset stored on categories, plus the POSIX content-filter patterns (`[[:alnum:]]`, `\m` / `\M`).
 * `geo` — distance, bounding boxes, and the same grid fuzz as `private.fuzz_point`.
-* `data` — repositories over the M1 RPCs (`drops_in_view`, `drops_nearby`, `drop_detail`, `drop_teaser`, `create_drop`, `confirm_drop`, `report`, `block_user`, `unblock_user`, `delete_my_account`, and the moderator RPCs). An in-memory fake implements the same interfaces for tests.
+* `data` — repositories over the M1 RPCs (`drops_in_view`, `drops_nearby`, `drop_detail`, `drop_teaser`, `create_drop`, `confirm_drop`, `report`, `block_user`, `unblock_user`, `delete_my_account`, and the moderator RPCs) plus `here_card` and the OpenStreetMap place-name cache. An in-memory fake implements the same interfaces for tests.
+* `here` — the Here Card helpers: cell rounding that matches Postgres, grouping, and the Nominatim client (one request at a time, with attribution).
 * `TaxonomyCache` — categories in memory for the process. Room and offline map tiles are **v1.2**, not this milestone.
 
 `SupabaseConfig.PLACEHOLDER` matches `.env.example`. The hosted project is `jpeuldzegtbqfezijhuy` (PLAN §8); this module still uses the placeholder until `SUPABASE_URL` and `SUPABASE_ANON_KEY` are set outside git. `SUPABASE_ANON_KEY` is the publishable key (`sb_publishable_…`). Calls with the placeholder fail at the network, which is what the tests want.

@@ -218,6 +218,36 @@ class SupabaseContractTest {
     }
 
     @Test
+    fun hereCardOmitsAMissingViewerPoint() = runTest {
+        var path = ""
+        var body = ""
+        val engine = MockEngine { request ->
+            path = request.url.encodedPath
+            body = when (val content = request.body) {
+                is OutgoingContent.ByteArrayContent -> content.bytes().decodeToString()
+                else -> ""
+            }
+            respond(
+                content = ByteReadChannel("[]"),
+                status = HttpStatusCode.OK,
+                headers = headersOf(HttpHeaders.ContentType, "application/json"),
+            )
+        }
+        val client = SupabaseXHereClient(
+            SupabaseConfig(url = "https://example.supabase.co", anonKey = "test-anon-key"),
+            engine = engine,
+        )
+        assertEquals(emptyList(), client.drops.hereCard(LatLng(40.7, -74.0), viewer = null))
+        assertTrue(path.endsWith("/rest/v1/rpc/here_card"), path)
+        assertTrue(body.contains("\"p_lat\":40.7"), body)
+        assertTrue(body.contains("\"p_lng\":-74.0"), body)
+        assertTrue(body.contains("\"p_radius_m\":300"), body)
+        assertTrue(body.contains("\"p_limit\":40"), body)
+        assertTrue(!body.contains("p_viewer_lat"), body)
+        assertTrue(!body.contains("p_viewer_lng"), body)
+    }
+
+    @Test
     fun placeholderConfigIsNotConfigured() {
         assertTrue(!SupabaseConfig.PLACEHOLDER.isConfigured)
         assertTrue(SupabaseConfig("https://abc.supabase.co", "publishable-key").isConfigured)

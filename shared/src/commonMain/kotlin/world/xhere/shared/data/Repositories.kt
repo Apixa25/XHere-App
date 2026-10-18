@@ -14,8 +14,10 @@ import world.xhere.shared.model.ModerationQueueItem
 import world.xhere.shared.model.PublicProfile
 import world.xhere.shared.model.ConfirmationVerdict
 import world.xhere.shared.model.CreateDropResult
+import world.xhere.shared.here.Here
 import world.xhere.shared.model.DropCard
 import world.xhere.shared.model.DropStatus
+import world.xhere.shared.model.PlaceLabel
 import world.xhere.shared.model.MapFeature
 import world.xhere.shared.model.ModerateDropAction
 import world.xhere.shared.model.Profile
@@ -82,6 +84,18 @@ interface DropRepository {
         radiusM: Int = 1_000,
         categories: List<String>? = null,
         limit: Int = 200,
+    ): List<DropCard>
+
+    /**
+     * Everything visible within a short walk of [spot].
+     * Distance is from the tap. A user drop's body stays hidden until [viewer]
+     * is inside that drop's reveal radius. Does not count a view.
+     */
+    suspend fun hereCard(
+        spot: LatLng,
+        viewer: LatLng? = null,
+        radiusM: Int = Here.RADIUS_M,
+        limit: Int = Here.LIMIT,
     ): List<DropCard>
 
     suspend fun dropDetail(dropId: Uuid, location: LatLng? = null): DropCard
@@ -173,6 +187,18 @@ interface SuggestionRepository {
     suspend fun log(query: SuggestionQuery, suggested: List<String>, chosenSlug: String?): Uuid
 }
 
+/**
+ * Cached OpenStreetMap place names. The database stamps attribution.
+ * [claimNominatimSlot] is the global 1.1 second gate in front of Nominatim.
+ */
+interface PlaceRepository {
+    suspend fun cachedLabel(location: LatLng): PlaceLabel?
+
+    suspend fun claimNominatimSlot(): Boolean
+
+    suspend fun remember(location: LatLng, name: String, address: String?)
+}
+
 /** Photo bytes go to Storage only after Exif/XMP is removed. */
 interface MediaRepository {
     suspend fun uploadPhoto(bytes: ByteArray, mimeType: String): MediaUpload
@@ -184,6 +210,7 @@ interface XHereServices {
     val profiles: ProfileRepository
     val taxonomy: TaxonomyRepository
     val drops: DropRepository
+    val places: PlaceRepository
     val suggestions: SuggestionRepository
     val media: MediaRepository
     val reports: ReportRepository

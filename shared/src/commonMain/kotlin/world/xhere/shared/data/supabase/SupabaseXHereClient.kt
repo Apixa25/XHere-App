@@ -54,6 +54,7 @@ import world.xhere.shared.data.ImpactRepository
 import world.xhere.shared.data.IdentityProvider
 import world.xhere.shared.data.MediaRepository
 import world.xhere.shared.data.ModerationRepository
+import world.xhere.shared.data.PlaceRepository
 import world.xhere.shared.data.ProfileRepository
 import world.xhere.shared.data.ReportRepository
 import world.xhere.shared.data.SessionInfo
@@ -65,7 +66,10 @@ import world.xhere.shared.data.XHereServices
 import world.xhere.shared.data.remote.CategoryRow
 import world.xhere.shared.data.remote.ConfirmDropParams
 import world.xhere.shared.data.remote.DropDetailParams
+import world.xhere.shared.data.remote.HereCardParams
 import world.xhere.shared.data.remote.ImpactNoticesParams
+import world.xhere.shared.data.remote.PlaceLabelParams
+import world.xhere.shared.data.remote.RememberPlaceParams
 import world.xhere.shared.data.remote.MarkImpactReadParams
 import world.xhere.shared.data.remote.DropIdParams
 import world.xhere.shared.data.remote.HandleParams
@@ -83,6 +87,7 @@ import world.xhere.shared.data.remote.toParams
 import world.xhere.shared.geo.BoundingBox
 import world.xhere.shared.geo.Geo
 import world.xhere.shared.geo.LatLng
+import world.xhere.shared.here.Here
 import world.xhere.shared.http.platformHttpEngine
 import world.xhere.shared.json.ExportJson
 import world.xhere.shared.json.XHereJson
@@ -97,6 +102,7 @@ import world.xhere.shared.model.ContentFilter
 import world.xhere.shared.model.CreateDropResult
 import world.xhere.shared.model.DropCard
 import world.xhere.shared.model.ImpactNotice
+import world.xhere.shared.model.PlaceLabel
 import world.xhere.shared.model.DropStatus
 import world.xhere.shared.model.MapFeature
 import world.xhere.shared.model.MediaKind
@@ -144,6 +150,7 @@ class SupabaseXHereClient(
     override val profiles: ProfileRepository = ProfileRepo()
     override val taxonomy: TaxonomyRepository = TaxonomyRepo()
     override val drops: DropRepository = DropRepo()
+    override val places: PlaceRepository = PlaceRepo()
     override val suggestions: SuggestionRepository = SuggestionRepo()
     override val media: MediaRepository = MediaRepo()
     override val reports: ReportRepository = ReportRepo()
@@ -254,6 +261,27 @@ class SupabaseXHereClient(
             ).decodeList<DropCard>()
         }
 
+        override suspend fun hereCard(spot: LatLng, viewer: LatLng?, radiusM: Int, limit: Int): List<DropCard> = call {
+            if (!Geo.isValid(spot)) throw invalid("invalid_location", "lat=${spot.latitude} lng=${spot.longitude}")
+            if (viewer != null && !Geo.isValid(viewer)) {
+                throw invalid("invalid_location", "lat=${viewer.latitude} lng=${viewer.longitude}")
+            }
+            if (radiusM !in Here.MIN_RADIUS_M..Here.MAX_RADIUS_M) {
+                throw invalid("invalid_radius", "radius must be 25..1000 m")
+            }
+            supabase.postgrest.rpc(
+                "here_card",
+                HereCardParams(
+                    lat = spot.latitude,
+                    lng = spot.longitude,
+                    viewerLat = viewer?.latitude,
+                    viewerLng = viewer?.longitude,
+                    radiusM = radiusM,
+                    limit = limit.coerceIn(1, Here.MAX_LIMIT),
+                ).rpcJson(),
+            ).decodeList<DropCard>()
+        }
+
         override suspend fun dropDetail(dropId: Uuid, location: LatLng?): DropCard = call {
             if (location != null && !Geo.isValid(location)) {
                 throw invalid("invalid_location", "lat=${location.latitude} lng=${location.longitude}")
@@ -283,6 +311,30 @@ class SupabaseXHereClient(
                 "confirm_drop",
                 ConfirmDropParams(dropId, verdict, location.latitude, location.longitude, note).rpcJson(),
             ).decodeAs<ConfirmDropResult>()
+        }
+    }
+
+    private inner class PlaceRepo : PlaceRepository {
+        override suspend fun cachedLabel(location: LatLng): PlaceLabel? = call {
+            if (!Geo.isValid(location)) return@call null
+            supabase.postgrest.rpc(
+                "place_label",
+                PlaceLabelParams(location.latitude, location.longitude).rpcJson(),
+            ).decodeList<PlaceLabel>().firstOrNull()
+        }
+
+        override suspend fun claimNominatimSlot(): Boolean = call {
+            val raw = supabase.postgrest.rpc("claim_nominatim_slot").data
+            XHereJson.decodeFromString(serializer<Boolean>(), raw)
+        }
+
+        override suspend fun remember(location: LatLng, name: String, address: String?) = call {
+            if (!Geo.isValid(location)) throw invalid("invalid_location", "lat=${location.latitude} lng=${location.longitude}")
+            supabase.postgrest.rpc(
+                "remember_place_label",
+                RememberPlaceParams(location.latitude, location.longitude, name, address).rpcJson(),
+            )
+            Unit
         }
     }
 

@@ -48,6 +48,7 @@ import world.xhere.app.R
 import world.xhere.app.detail.DropDetailScreen
 import world.xhere.app.detail.IncomingLinks
 import world.xhere.app.drop.DropScreen
+import world.xhere.app.drop.PendingDropSpot
 import world.xhere.app.map.MapScreen
 import world.xhere.app.profile.ProfileViewModel
 import world.xhere.shared.model.ImpactNotice
@@ -79,6 +80,7 @@ private object Routes {
 fun MainShell() {
     val nav = rememberNavController()
     val links: IncomingLinks = koinInject()
+    val pendingDrop: PendingDropSpot = koinInject()
     val pending by links.pending.collectAsStateWithLifecycle()
     val backStack by nav.currentBackStackEntryAsState()
     val route = backStack?.destination?.route
@@ -107,6 +109,7 @@ fun MainShell() {
                         NavigationBarItem(
                             selected = route == tab.route,
                             onClick = {
+                                if (tab.route == Routes.DROP) pendingDrop.clear()
                                 nav.navigate(tab.route) {
                                     popUpTo(nav.graph.findStartDestination().id) { saveState = true }
                                     launchSingleTop = true
@@ -130,6 +133,11 @@ fun MainShell() {
             composable(Routes.MAP) {
                 MapScreen(
                     onDrop = {
+                        pendingDrop.clear()
+                        nav.navigate(Routes.DROP) { launchSingleTop = true }
+                    },
+                    onDropHere = { spot, label ->
+                        pendingDrop.set(spot, label)
                         nav.navigate(Routes.DROP) { launchSingleTop = true }
                     },
                     onOpenDrop = { shortId ->

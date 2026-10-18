@@ -57,9 +57,13 @@ internal val NearCountSemantics = SemanticsPropertyKey<String>("NearCount")
 /** Group slug while the sub-category sheet is open. */
 internal val SubcategorySemantics = SemanticsPropertyKey<String>("Subcategory")
 
+/** Here Card contents once the place read has finished. `loading` until then. */
+internal val HereSemantics = SemanticsPropertyKey<String>("HereCard")
+
 @Composable
 fun MapScreen(
     onDrop: () -> Unit = {},
+    onDropHere: (world.xhere.shared.geo.LatLng, String?) -> Unit = { _, _ -> },
     onOpenDrop: (String) -> Unit = {},
     viewModel: MapViewModel = koinViewModel(),
     canvas: MapCanvas = koinInject(),
@@ -86,6 +90,8 @@ fun MapScreen(
             onCameraIdle = viewModel::onCameraIdle,
             onUserPanned = viewModel::onUserPanned,
             onFeatureClick = viewModel::onFeature,
+            onMapClick = viewModel::onMapSpot,
+            onMapLongClick = viewModel::onMapLongPress,
             modifier = Modifier.fillMaxSize(),
         )
         CategoryChipBar(
@@ -204,6 +210,14 @@ fun MapScreen(
                 cards = cards,
                 onOpen = { card -> onOpenDrop(card.shortId) },
                 onDismiss = viewModel::closeNearMe,
+            )
+        }
+        state.here?.let { sheet ->
+            HereCardSheet(
+                sheet = sheet,
+                taxonomy = state.taxonomy,
+                onDropHere = { onDropHere(sheet.spot, sheet.place?.name) },
+                onDismiss = viewModel::dismissHere,
             )
         }
         if (state.savingPreset) {

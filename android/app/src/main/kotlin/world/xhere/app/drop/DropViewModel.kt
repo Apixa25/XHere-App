@@ -20,6 +20,7 @@ import world.xhere.shared.demo.JamestownDemo
 import world.xhere.shared.form.AttributeFields
 import world.xhere.shared.form.FieldKind
 import world.xhere.shared.geo.LatLng
+import world.xhere.shared.here.Here
 import world.xhere.shared.model.Category
 import world.xhere.shared.model.ContentFilter
 import world.xhere.shared.model.DropStatus
@@ -53,6 +54,19 @@ class DropViewModel(
     private var filters: List<ContentFilter> = emptyList()
     private var tier: UserTier = UserTier.NEW
     private var lastHere: LatLng? = null
+    /** Set when the Here Card asked to drop at a tapped spot. GPS is not used. */
+    private var pinned: LatLng? = null
+
+    fun pin(spot: LatLng, label: String?) {
+        pinned = spot
+        lastHere = spot
+        _state.update { it.copy(pinnedLabel = Here.pinLabel(label, spot)) }
+    }
+
+    fun clearPin() {
+        pinned = null
+        _state.update { it.copy(pinnedLabel = null) }
+    }
 
     fun onText(value: String) {
         _state.update {
@@ -209,7 +223,10 @@ class DropViewModel(
     fun another() {
         photo = null
         labels = emptyList()
-        _state.value = DropUiState(categories = _state.value.categories)
+        _state.value = DropUiState(
+            categories = _state.value.categories,
+            pinnedLabel = _state.value.pinnedLabel,
+        )
     }
 
     private suspend fun loadSuggestions() {
@@ -247,6 +264,7 @@ class DropViewModel(
     }
 
     private suspend fun here(): LatLng {
+        pinned?.let { return it }
         if (!location.hasPermission()) return JamestownDemo.center
         return withTimeoutOrNull(250) { location.fixes().first() } ?: JamestownDemo.center
     }
@@ -316,6 +334,8 @@ data class DropUiState(
     val safety: SafetyPanel? = null,
     /** The last post went to pre-moderation. */
     val held: Boolean = false,
+    /** Place name and coordinates when the composer was opened from a Here Card. */
+    val pinnedLabel: String? = null,
 )
 
 /**

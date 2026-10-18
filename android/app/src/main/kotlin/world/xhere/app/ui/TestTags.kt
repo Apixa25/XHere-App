@@ -57,6 +57,27 @@ internal object TestTags {
     const val MAP_DROP_FAB = "map_drop_fab"
     const val MAP_PAN_AWAY = "map_pan_away"
     const val MAP_ZOOM_OUT = "map_zoom_out"
+    const val MAP_TAP_SPOT = "map_tap_spot"
+    const val MAP_LONG_PRESS = "map_long_press"
+    const val HERE_SHEET = "here_sheet"
+    const val HERE_PLACE = "here_place"
+    const val HERE_ADDRESS = "here_address"
+    const val HERE_ATTRIBUTION = "here_attribution"
+    const val HERE_DROP = "here_drop"
+    const val HERE_EMPTY = "here_empty"
+    const val HERE_CLOSE = "here_close"
+    const val HERE_LOADING = "here_loading"
+    const val HERE_FAILED = "here_failed"
+
+    fun hereRow(shortId: String): String = "here_row_$shortId"
+
+    fun hereBody(shortId: String): String = "here_body_$shortId"
+
+    fun hereSource(shortId: String): String = "here_source_$shortId"
+
+    fun hereGroup(slug: String): String = "here_group_$slug"
+
+    fun hereAttribution(shortId: String): String = "here_attr_$shortId"
     const val PREVIEW_JAMESTOWN = "preview_jamestown"
 
     fun group(slug: String): String = "chip_group_$slug"
@@ -82,6 +103,7 @@ internal object TestTags {
     const val DROP_DUPLICATE = "drop_duplicate"
     const val DROP_FUZZ = "drop_fuzz"
     const val DROP_ANOTHER = "drop_another"
+    const val DROP_PINNED = "drop_pinned"
 
     fun suggestion(slug: String): String = "suggestion_$slug"
 

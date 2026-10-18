@@ -17,12 +17,14 @@ import world.xhere.app.detail.IncomingLinks
 import world.xhere.app.drop.CapturedPhoto
 import world.xhere.app.drop.DropCapture
 import world.xhere.app.drop.DropViewModel
+import world.xhere.app.drop.PendingDropSpot
 import world.xhere.app.drop.ImageLabeler
 import world.xhere.app.location.DeviceLocation
 import world.xhere.app.map.FilterPresetStore
 import world.xhere.app.map.MapCanvas
 import world.xhere.app.map.MapViewModel
 import world.xhere.app.map.PreviewMapCanvas
+import world.xhere.app.map.SpotNames
 import world.xhere.app.onboarding.OnboardingStore
 import world.xhere.app.profile.ProfileViewModel
 import world.xhere.app.safety.ModerationViewModel
@@ -36,6 +38,8 @@ import world.xhere.shared.data.XHereServices
 import world.xhere.shared.data.fake.InMemoryXHere
 import world.xhere.shared.demo.JamestownDemo
 import world.xhere.shared.geo.LatLng
+import world.xhere.shared.here.Here
+import world.xhere.shared.model.PlaceLabel
 import world.xhere.shared.model.Profile
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
@@ -116,10 +120,22 @@ fun testModule() = module {
     viewModel { AuthViewModel(get(), get(), get(), get(), get()) }
     single<DeviceLocation> { location }
     single { FilterPresetStore(androidContext()) }
+    single { PendingDropSpot() }
+    single<SpotNames> {
+        SpotNames {
+            PlaceLabel(
+                name = "West 3rd Street",
+                address = "Jamestown, New York, United States",
+                attribution = Here.ATTRIBUTION,
+                license = Here.LICENSE,
+                provider = Here.PROVIDER,
+            )
+        }
+    }
     single<MapCanvas> { PreviewMapCanvas() }
     single<DropCapture> { FakeDropCapture() }
     single<ImageLabeler> { FakeImageLabeler() }
-    viewModel { MapViewModel(get(), get(), get(), debounceMs = 0) }
+    viewModel { MapViewModel(get(), get(), get(), get(), debounceMs = 0) }
     viewModel { DropViewModel(get(), get(), get(), get()) }
     viewModel { ProfileViewModel(get()) }
     viewModel {
