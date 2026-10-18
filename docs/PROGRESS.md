@@ -227,7 +227,7 @@ Branch `m5/quick-drop` → [PR #10](https://github.com/Apixa25/XHere-App/pull/10
 
 ## 2026-10-18 (Sun), ~4:00 AM ET: M6 drop detail, proximity reveal, "Still true?"
 
-Branch `m6/drop-detail`. Detail screen for PLAN §4 (reveal radius and the confirmation bar) and the §7 M6 row.
+Branch `m6/drop-detail` → [PR #12](https://github.com/Apixa25/XHere-App/pull/12). Detail screen for PLAN §4 (reveal radius and the confirmation bar) and the §7 M6 row.
 
 - A map teaser (M4) and a Near me row open the drop. The screen stays locked until the phone is inside that category's reveal radius. The locked line is "Walk 120 m closer to reveal" when the gap is 120 m, using `Geo.revealGapMeters` and the category default (`eatery_tip` 500 m, `historical_fact` 150 m, `hidden_gem` / `tip` 50 m, and the rest of the §4.2 table).
 - Distance updates only while the app is in the foreground. Leaving the foreground cancels the `LocationManager` updates. Nothing is written down. Background location is still not in the manifest.
