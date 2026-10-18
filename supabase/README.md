@@ -4,7 +4,7 @@ Postgres / PostGIS schema, Row-Level Security, RPCs, Edge Functions, and pgTAP t
 
 - `config.toml`: local Supabase CLI config (`supabase init`, `project_id = "xhere"`). It holds no secrets; provider credentials are `env(...)` references.
 - `migrations/`: SQL migrations (**M1**), applied in filename order.
-- `seed.sql`: **local demo data only** (4 demo users and 15 drops in Lower Manhattan). `supabase db reset` loads it. It is never pushed to a hosted project.
+- `seed.sql`: **local demo data only** (4 demo users and 15 drops in Jamestown, New York). `supabase db reset` loads it. It is never pushed to a hosted project.
 - `tests/database/`: pgTAP tests (**M1**), run by `supabase test db`.
 - `functions/`: Supabase Edge Functions (**M5** suggestion, later open-data proxies).
 

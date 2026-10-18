@@ -76,8 +76,22 @@ Branch `m1/database` → [PR #3](https://github.com/Apixa25/XHere-App/pull/3). B
 
 ### Steven still needs to
 
-- **Pick the demo city** (PLAN §10 question 3). The seed uses Lower Manhattan until then.
+- **Demo city:** Jamestown, New York, chosen 2026-10-18 (PLAN §10 question 3). The seed move is logged below.
 - **Branch protection:** add the **supabase / pgtap** check to the `main` ruleset next to **ci / gitleaks**.
 - **First admin/moderator**, once a hosted Supabase project exists: one SQL line in the dashboard, `update public.profiles set role = 'admin' where handle = '<your handle>';` (see `supabase/README.md`).
 - Review the crime rules and the `person_descriptors` word list in `supabase/migrations/20261018000600_taxonomy.sql`. Tuning means a new migration that updates the row; no code change is needed.
 - Still open from M0: license, secret scanning/push protection toggles, and PLAN §8–§10.
+
+## 2026-10-18 (Sun), ~1:00 AM ET: Demo city is Jamestown
+
+Steven picked **Jamestown, New York** as the demo/test city (PLAN §10 question 3). Branch `seed/jamestown`.
+
+- `supabase/seed.sql` still loads 4 demo accounts and 15 drops, in the same categories as the Lower Manhattan placeholder: `historical_fact` twice, and one each of `viewpoint`, `water_source`, `public_art`, `eatery_tip`, `underground`, `hidden_gem`, `food_truck`, `event`, `hazard`, `yard_sale`, and `note`, plus `incident_report` twice (one from the trusted moderator, one from the regular user waiting on review).
+- Coordinates are real public spots: Fenton History Center (67 Washington Street), the Lucille Ball Desi Arnaz Museum (2 West 3rd), Lucille Ball Memorial Park on the Chautauqua Lake shore in Celoron (the lake view and Carolyn Palmer's 2016 statue), McCrea Point, West 3rd Street, the North Main Street tunnel under the old Erie grade, the I Love Lucy mural by the Chadakoin, Rosa Alley beside the National Comedy Center, Tracy Plaza, the Greater Jamestown Riverwalk at Brooklyn Square, the James Prendergast Library, Allen Park, and West 3rd Street Lot #1.
+- `supabase/README.md` names Jamestown. PLAN §10 question 3 records the answer. The pgTAP files never hardcoded the old placeholder (they use their own fixtures around 40°N, 100°W), so they were left unchanged.
+- `shared/` was not touched. M2 is being built there in parallel.
+- No money spent, no accounts created, no secrets committed. `Apixa25/XHere-Web` was not touched.
+
+### Steven still needs to
+
+- Unchanged from M0 and M1: pick a license, turn on secret scanning and push protection, and add **supabase / pgtap** beside **ci / gitleaks** on the `main` ruleset. PLAN §8 and §9 are still open.
