@@ -77,7 +77,7 @@ import kotlinx.serialization.json.put
  */
 class InMemoryXHere(
     val store: MemoryStore,
-    val viewer: Profile?,
+    viewer: Profile?,
     private val clock: () -> Instant = { kotlin.time.Clock.System.now() },
 ) : XHereServices {
     private val session = MutableStateFlow<SessionInfo?>(null)
@@ -95,6 +95,13 @@ class InMemoryXHere(
     override val hidden: HiddenDropRepository = HiddenRepo()
     override val account: AccountRepository = AccountRepo()
     override val moderation: ModerationRepository = ModerationRepo()
+
+    /** Who is signed in. Tests may swap it, for example to act as a moderator. */
+    var viewer: Profile? = viewer
+        set(value) {
+            field = value
+            if (value != null) store.profiles[value.id] = value
+        }
 
     init {
         if (viewer != null && viewer.id !in store.profiles) store.profiles[viewer.id] = viewer
