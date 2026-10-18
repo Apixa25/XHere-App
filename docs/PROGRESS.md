@@ -134,7 +134,7 @@ Branch `m2/shared-core` → [PR #7](https://github.com/Apixa25/XHere-App/pull/7)
 
 ## 2026-10-18 (Sun), ~1:40 AM ET: M3 Android shell + auth
 
-Branch `m3/android-shell`. Compose app `world.xhere.app` on the M2 shared core (PLAN §2, §7).
+Branch `m3/android-shell` → [PR #8](https://github.com/Apixa25/XHere-App/pull/8). Compose app `world.xhere.app` on the M2 shared core (PLAN §2, §7).
 
 - Material 3 theme with a fixed lagoon-and-amber palette (no dynamic color). Bottom navigation: Map, Drop, and Profile are placeholders for M4–M5. Settings sits on the profile tab.
 - **Koin**, not Hilt. `XHereServices` is a plain Kotlin interface, so the app binds `SupabaseXHereClient` and Robolectric binds `InMemoryXHere` without kapt/ksp. AGP 9 already compiles Kotlin.
