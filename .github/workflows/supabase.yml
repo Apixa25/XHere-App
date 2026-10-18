@@ -14,9 +14,43 @@ permissions:
   contents: read
 
 jobs:
-  placeholder:
-    name: placeholder
+  pgtap:
+    name: pgtap
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
-      - name: Placeholder until pgTAP lands
-        run: echo "Supabase workflow placeholder. pgTAP on postgis/postgis arrives with M1."
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      # Free Supabase CLI, pinned by version and checksum. It runs the local
+      # stack in Docker on the runner; no Supabase account or project is used.
+      - name: Install Supabase CLI
+        run: |
+          set -euo pipefail
+          VERSION=2.121.0
+          SHA256=f6e10fc4086390ca386127bb4fd1a5e578625f95e7db84255a6bb82a159f973f
+          curl -sSLf -o /tmp/supabase.deb \
+            "https://github.com/supabase/cli/releases/download/v${VERSION}/supabase_${VERSION}_linux_amd64.deb"
+          echo "${SHA256}  /tmp/supabase.deb" | sha256sum -c -
+          sudo dpkg -i /tmp/supabase.deb
+          supabase --version
+
+      # Only Postgres is needed for migrations and pgTAP, so the API, Auth,
+      # Storage, Realtime, and Studio containers are skipped.
+      - name: Start local Supabase (database only)
+        run: >-
+          supabase start
+          -x gotrue,realtime,storage-api,imgproxy,kong,mailpit,postgrest,postgres-meta,studio,edge-runtime,logflare,vector,supavisor
+
+      - name: Reset database (migrations + seed)
+        run: supabase db reset
+
+      - name: Lint SQL functions (plpgsql_check)
+        run: supabase db lint --schema public,private --level warning --fail-on warning
+
+      - name: Run pgTAP tests
+        run: supabase test db
+
+      - name: Stop local Supabase
+        if: always()
+        run: supabase stop --no-backup
