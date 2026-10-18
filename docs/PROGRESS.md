@@ -84,7 +84,7 @@ Branch `m1/database` → [PR #3](https://github.com/Apixa25/XHere-App/pull/3). B
 
 ## 2026-10-18 (Sun), ~1:10 AM ET: M2 shared KMP core
 
-Branch `m2/shared-core`. Root Gradle build (Kotlin 2.4.21, version catalog, wrapper 9.5.0) and the `shared/` module.
+Branch `m2/shared-core` → [PR #7](https://github.com/Apixa25/XHere-App/pull/7). Root Gradle build (Kotlin 2.4.21, version catalog, wrapper 9.5.0) and the `shared/` module.
 
 - Targets: Android library (`compileSdk` 36, `minSdk` 26, `com.android.kotlin.multiplatform.library`) and iOS (`iosArm64`, `iosSimulatorArm64`, static framework `Shared`). A JVM target exists only so `commonTest` can run on the Linux runner. iOS compile is not invoked in CI (no Xcode). `kotlin.native.ignoreDisabledTargets=true`.
 - Models mirror the M1 tables: profiles, tiers, categories with field schemas and rules, drops, media, confirmations, reports, blocks.
