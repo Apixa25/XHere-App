@@ -34,6 +34,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import org.koin.androidx.compose.koinViewModel
 import world.xhere.app.R
+import world.xhere.app.map.MapScreen
 import world.xhere.app.profile.ProfileViewModel
 import world.xhere.app.settings.SettingsScreen
 import world.xhere.app.ui.MapMark
@@ -53,9 +54,10 @@ fun MainShell() {
     val backStack by nav.currentBackStackEntryAsState()
     val route = backStack?.destination?.route
     val showBar = route != Routes.SETTINGS
+    val showTopBar = showBar && route != Routes.MAP
     Scaffold(
         topBar = {
-            if (showBar) {
+            if (showTopBar) {
                 CenterAlignedTopAppBar(
                     title = { Text(stringResource(R.string.app_name)) },
                     colors = TopAppBarDefaults.topAppBarColors(
@@ -91,7 +93,7 @@ fun MainShell() {
             startDestination = Routes.MAP,
             modifier = Modifier.padding(padding),
         ) {
-            composable(Routes.MAP) { PlaceholderPage(TestTags.SCREEN_MAP, R.string.map_title, R.string.map_body) }
+            composable(Routes.MAP) { MapScreen() }
             composable(Routes.DROP) { PlaceholderPage(TestTags.SCREEN_DROP, R.string.drop_title, R.string.drop_body) }
             composable(Routes.PROFILE) { ProfilePage(onSettings = { nav.navigate(Routes.SETTINGS) }) }
             composable(Routes.SETTINGS) { SettingsScreen(onBack = { nav.popBackStack() }) }

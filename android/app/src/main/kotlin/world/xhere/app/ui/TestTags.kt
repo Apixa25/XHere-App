@@ -27,4 +27,38 @@ internal object TestTags {
     const val SETTINGS_DELETE = "settings_delete"
     const val SETTINGS_DELETE_CONFIRM = "settings_delete_confirm"
     const val SETTINGS_DELETE_KEEP = "settings_delete_keep"
+
+    const val CHIP_BAR = "chip_bar"
+    const val CHIP_ALL = "chip_all"
+    const val SAVE_PRESET = "save_preset"
+    const val PRESET_NAME = "preset_name"
+    const val PRESET_SAVE = "preset_save"
+    const val TEASER_CARD = "teaser_card"
+    const val TEASER_TITLE = "teaser_title"
+    const val TEASER_CATEGORY = "teaser_category"
+    const val TEASER_BODY = "teaser_body"
+    const val TEASER_LOCKED = "teaser_locked"
+    const val TEASER_CLOSE = "teaser_close"
+    const val NEAR_ME = "near_me"
+    const val NEAR_ME_LIST = "near_me_list"
+    const val MY_LOCATION = "my_location"
+    const val MAP_ATTRIBUTION = "map_attribution"
+    const val MAP_NOTICE = "map_notice"
+    const val MAP_MARKERS = "map_markers"
+    const val MARKER_CLUSTER = "marker_cluster"
+    const val SUBCATEGORY_SHEET = "subcategory_sheet"
+    const val SUBCATEGORY_APPLY = "subcategory_apply"
+    const val MAP_PAN_AWAY = "map_pan_away"
+    const val MAP_ZOOM_OUT = "map_zoom_out"
+    const val PREVIEW_JAMESTOWN = "preview_jamestown"
+
+    fun group(slug: String): String = "chip_group_$slug"
+
+    fun preset(name: String): String = "chip_preset_${name.lowercase()}"
+
+    fun marker(shortId: String): String = "marker_$shortId"
+
+    fun nearRow(shortId: String): String = "near_$shortId"
+
+    fun subcategory(slug: String): String = "sub_$slug"
 }

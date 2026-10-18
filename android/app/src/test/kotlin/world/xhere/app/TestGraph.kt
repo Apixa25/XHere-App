@@ -11,6 +11,11 @@ import world.xhere.app.auth.AuthViewModel
 import world.xhere.app.auth.GoogleIdTokenSource
 import world.xhere.app.auth.GoogleSignInAttempt
 import world.xhere.app.config.ClientConfig
+import world.xhere.app.location.DeviceLocation
+import world.xhere.app.map.FilterPresetStore
+import world.xhere.app.map.MapCanvas
+import world.xhere.app.map.MapViewModel
+import world.xhere.app.map.PreviewMapCanvas
 import world.xhere.app.onboarding.OnboardingStore
 import world.xhere.app.profile.ProfileViewModel
 import world.xhere.app.session.SessionViewModel
@@ -19,9 +24,11 @@ import world.xhere.app.settings.SettingsViewModel
 import world.xhere.shared.SupabaseConfig
 import world.xhere.shared.data.XHereServices
 import world.xhere.shared.data.fake.InMemoryXHere
-import world.xhere.shared.data.fake.MemoryStore
+import world.xhere.shared.demo.JamestownDemo
+import world.xhere.shared.geo.LatLng
 import world.xhere.shared.model.Profile
-import world.xhere.shared.model.Taxonomy
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emptyFlow
 
 class FakeGoogleIdTokenSource : GoogleIdTokenSource {
     var next: GoogleSignInAttempt = GoogleSignInAttempt.Success("test-id-token", "test-nonce")
@@ -43,7 +50,7 @@ object TestGraph {
 
 fun testModule() = module {
     val services = InMemoryXHere(
-        store = MemoryStore(Taxonomy(emptyList(), emptyList(), emptyList(), emptyList())),
+        store = JamestownDemo.store(),
         viewer = TestGraph.profile,
     )
     val google = FakeGoogleIdTokenSource()
@@ -76,6 +83,10 @@ fun testModule() = module {
     }
     viewModel { SessionViewModel(get(), get(), get()) }
     viewModel { AuthViewModel(get(), get(), get(), get(), get()) }
+    single<DeviceLocation> { NoDeviceLocation() }
+    single { FilterPresetStore(androidContext()) }
+    single<MapCanvas> { PreviewMapCanvas() }
+    viewModel { MapViewModel(get(), get(), get(), debounceMs = 0) }
     viewModel { ProfileViewModel(get()) }
     viewModel {
         val context = androidContext()
@@ -87,6 +98,11 @@ fun testModule() = module {
             signOutFailed = context.getString(R.string.settings_sign_out_failed),
         )
     }
+}
+
+class NoDeviceLocation : DeviceLocation {
+    override fun hasPermission(): Boolean = false
+    override fun fixes(): Flow<LatLng> = emptyFlow()
 }
 
 class TestXHereApplication : Application() {

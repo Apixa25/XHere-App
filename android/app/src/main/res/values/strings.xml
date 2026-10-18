@@ -32,8 +32,30 @@
     <string name="nav_drop">Drop</string>
     <string name="nav_profile">Profile</string>
 
-    <string name="map_title">The map is next</string>
-    <string name="map_body">You\'ll stand somewhere and see what\'s known about here. Viewport, filters, and the location puck land in the next milestone.</string>
+    <string name="map_title">Map</string>
+    <string name="map_body">What\'s known about here.</string>
+    <string name="auth_preview_jamestown">Preview Jamestown</string>
+    <string name="map_filter_all">All</string>
+    <string name="map_filter_save">Save</string>
+    <string name="map_near_me">Near me</string>
+    <string name="map_near_title">Near me</string>
+    <string name="map_near_body">Closest drops first, within 5 km. The same category filter as the map.</string>
+    <string name="map_near_empty">Nothing in this filter within 5 km.</string>
+    <string name="map_near_failed">Couldn\'t load what\'s nearby.</string>
+    <string name="map_teaser_close">Close</string>
+    <string name="map_teaser_locked">Walk closer to read this.</string>
+    <string name="map_teaser_approximate">The pin is approximate.</string>
+    <string name="map_teaser_failed">Couldn\'t open that drop.</string>
+    <string name="map_load_failed">Couldn\'t load this part of the map.</string>
+    <string name="map_location_off">Location stays off until you allow it. XHere only uses it while the app is open.</string>
+    <string name="map_my_location">My location</string>
+    <string name="map_subcategory_body">Choose the kinds of drops to show. Hold a group chip to open this again.</string>
+    <string name="map_subcategory_apply">Show these</string>
+    <string name="map_preset_title">Save this filter</string>
+    <string name="map_preset_name">Name</string>
+    <string name="map_preset_save">Save</string>
+    <string name="map_preset_rejected">That name is already used by a built-in filter. Pick another.</string>
+    <string name="map_attribution">© OpenStreetMap contributors · © OpenMapTiles · OpenFreeMap</string>
     <string name="drop_title">A drop takes about three taps</string>
     <string name="drop_body">Photo or a line of text, a suggested category, then post. That flow is next.</string>
 
