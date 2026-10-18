@@ -83,6 +83,9 @@ Branch `m1/database` → [PR #3](https://github.com/Apixa25/XHere-App/pull/3). B
 - Still open from M0: license, secret scanning/push protection toggles, and PLAN §8–§10.
 
 ## 2026-10-18 (Sun), ~1:30 AM ET: Open-data research (Safety pilot) + global playbook
+
+Branch `docs/open-data-playbook` → [PR #5](https://github.com/Apixa25/XHere-App/pull/5).
+
 - Wrote `OPEN-DATA-PLAYBOOK.md`, the region-agnostic standard:
   - source-discovery checklist (global → city, US + UK/Canada/EU equivalents);
   - `SourceAdapter` interface + normalized data contract (precision, provenance, dedup, refresh, retention);
