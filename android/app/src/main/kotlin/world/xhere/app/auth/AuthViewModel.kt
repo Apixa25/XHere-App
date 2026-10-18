@@ -14,6 +14,7 @@ import world.xhere.app.session.SignOutNotice
 import world.xhere.shared.data.IdentityProvider
 import world.xhere.shared.data.XHereApiException
 import world.xhere.shared.data.XHereServices
+import world.xhere.shared.demo.JamestownDemo
 
 data class AuthUiState(
     val email: String = "",
@@ -87,6 +88,16 @@ class AuthViewModel(
         }
         launchBusy {
             services.auth.verifyEmailOtp(email, code)
+            _state.update { it.copy(busy = false) }
+        }
+    }
+
+    /** Local Jamestown drops only. Shown when no Supabase project is configured. */
+    fun previewJamestown() {
+        if (config.serverReady) return
+        launchBusy {
+            services.auth.signInWithEmailOtp(JamestownDemo.PREVIEW_EMAIL)
+            services.auth.verifyEmailOtp(JamestownDemo.PREVIEW_EMAIL, JamestownDemo.PREVIEW_CODE)
             _state.update { it.copy(busy = false) }
         }
     }

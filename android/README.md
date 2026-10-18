@@ -1,8 +1,8 @@
 # android/
 
-Kotlin / Jetpack Compose app for XHere. Application id `world.xhere.app`. Milestone **M3** (PLAN §2 and §7).
+Kotlin / Jetpack Compose app for XHere. Application id `world.xhere.app`. Milestones **M3** (shell and sign-in) and **M4** (map and discovery). PLAN §2, §4.4, and §7.
 
-The map, the quick-drop flow, and reveal come in M4–M6. This module is the shell: theme, navigation, sign-in, onboarding, settings.
+The quick-drop flow and reveal come in M5–M6. This module is the shell plus the map: theme, navigation, sign-in, onboarding, settings, MapLibre, category filters, and teaser cards.
 
 ## Dependency injection
 
@@ -23,9 +23,17 @@ SUPABASE_ANON_KEY=your-anon-key
 GOOGLE_WEB_CLIENT_ID=your-google-web-client-id
 ```
 
+## Map
+
+MapLibre Native (OpenGL build, no API key) loads the OpenFreeMap Liberty style, or Dark when the phone is in dark mode. The visible line on the map credits OpenStreetMap, OpenMapTiles, and OpenFreeMap. MapLibre's own attribution control stays on as well.
+
+The camera starts on downtown Jamestown, New York. A foreground location fix moves it to you; the puck is that fix. Background location is not requested. Panning waits until the camera is idle, then calls `drops_in_view` for that box only. Below zoom 15 the repository returns clusters. A group chip, a long-press sub-category sheet, and the built-in Weekend preset (Events, Food, Sales) are sent as the category argument on that call and on `drops_nearby`. Tapping a marker loads `drop_teaser`, which does not include the body.
+
+With no `SUPABASE_URL`, the app binds the in-memory fake seeded with Jamestown demo drops, and the sign-in screen offers **Preview Jamestown**. Tiles still come from OpenFreeMap and need a network. There is no tile key to put in the repo.
+
 ## Location
 
-Onboarding explains foreground location, then requests `ACCESS_FINE_LOCATION` and `ACCESS_COARSE_LOCATION` only. "Not now" continues without a request. Background location is not in the manifest. That permission is M13 and stays opt-in.
+Onboarding explains foreground location, then requests `ACCESS_FINE_LOCATION` and `ACCESS_COARSE_LOCATION` only. "Not now" continues without a request. The map's location button asks for those same two permissions if they are still off. Background location is not in the manifest. That permission is M13 and stays opt-in.
 
 ## Settings
 

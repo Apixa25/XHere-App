@@ -9,13 +9,21 @@ import world.xhere.app.auth.AuthViewModel
 import world.xhere.app.auth.CredentialManagerGoogleSignIn
 import world.xhere.app.auth.GoogleIdTokenSource
 import world.xhere.app.config.ClientConfig
+import world.xhere.app.location.AndroidDeviceLocation
+import world.xhere.app.location.DeviceLocation
+import world.xhere.app.map.FilterPresetStore
+import world.xhere.app.map.MapCanvas
+import world.xhere.app.map.MapLibreMapCanvas
+import world.xhere.app.map.MapViewModel
 import world.xhere.app.onboarding.OnboardingStore
 import world.xhere.app.profile.ProfileViewModel
 import world.xhere.app.session.SessionViewModel
 import world.xhere.app.session.SignOutNotice
 import world.xhere.app.settings.SettingsViewModel
 import world.xhere.shared.data.XHereServices
+import world.xhere.shared.data.fake.InMemoryXHere
 import world.xhere.shared.data.supabase.SupabaseXHereClient
+import world.xhere.shared.demo.JamestownDemo
 
 /**
  * Koin, not Hilt. The shared core is plain Kotlin interfaces, so the graph
@@ -29,8 +37,20 @@ val appModule = module {
     single { SignOutNotice() }
     single { authStrings() }
     single<GoogleIdTokenSource> { CredentialManagerGoogleSignIn(androidContext(), get()) }
-    single<XHereServices> { SupabaseXHereClient(get<ClientConfig>().supabase) }
+    single<XHereServices> {
+        val config = get<ClientConfig>()
+        if (config.serverReady) {
+            SupabaseXHereClient(config.supabase)
+        } else {
+            // No project yet. The map, filters, and teasers still run on the Jamestown fake.
+            InMemoryXHere(JamestownDemo.store(), JamestownDemo.viewer)
+        }
+    }
+    single<DeviceLocation> { AndroidDeviceLocation(androidContext()) }
+    single { FilterPresetStore(androidContext()) }
+    single<MapCanvas> { MapLibreMapCanvas() }
     viewModel { SessionViewModel(get(), get(), get()) }
+    viewModel { MapViewModel(get(), get(), get()) }
     viewModel { AuthViewModel(get(), get(), get(), get(), get()) }
     viewModel { ProfileViewModel(get()) }
     viewModel {

@@ -49,6 +49,7 @@ fun AuthScreen(viewModel: AuthViewModel = koinViewModel()) {
         onVerify = viewModel::verifyCode,
         onGoogle = viewModel::signInWithGoogle,
         onSwitchEmail = viewModel::useDifferentEmail,
+        onPreview = viewModel::previewJamestown,
     )
 }
 
@@ -62,6 +63,7 @@ internal fun AuthContent(
     onVerify: () -> Unit,
     onGoogle: () -> Unit,
     onSwitchEmail: () -> Unit,
+    onPreview: () -> Unit,
 ) {
     Scaffold { padding ->
         Column(
@@ -96,6 +98,17 @@ internal fun AuthContent(
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                Button(
+                    onClick = onPreview,
+                    enabled = !state.busy,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(52.dp)
+                        .testTag(TestTags.PREVIEW_JAMESTOWN),
+                    shape = MaterialTheme.shapes.large,
+                ) {
+                    Text(stringResource(R.string.auth_preview_jamestown))
+                }
             }
             if (!banner.isNullOrBlank()) {
                 Text(

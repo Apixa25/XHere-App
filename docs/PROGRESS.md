@@ -153,3 +153,24 @@ Branch `m3/android-shell` → [PR #8](https://github.com/Apixa25/XHere-App/pull/
 - **A free Google Cloud OAuth web client id** (same OK as any new account, PLAN §8) in `GOOGLE_WEB_CLIENT_ID`, and the same id as the Google provider client id in Supabase. The SHA-256 nonce above has to match that provider's check.
 - Background location stays off until M13. Do not add it to the manifest for the closed test.
 - Unchanged from M0–M2: license, secret scanning / push protection, first admin SQL once a project exists, crime-rule review, a Mac before iOS (M15), PLAN §8 and §9. The demo city is Jamestown (PR #4). The Jamestown FOIL request is sent; the code-enforcement email to dod@jamestownny.gov is not.
+
+## 2026-10-18 (Sun), ~2:25 AM ET: M4 map, discovery, and category filters
+
+Branch `m4/map-discovery` → [PR #9](https://github.com/Apixa25/XHere-App/pull/9). Map screen for PLAN §4.4 and §7 M4, on the M3 shell.
+
+- MapLibre Native Android 13.7.1, OpenGL build, no API key. Style is OpenFreeMap Liberty, or Dark when the phone is in dark mode (`https://tiles.openfreemap.org/styles/liberty` and `.../dark`). The map shows "© OpenStreetMap contributors · © OpenMapTiles · OpenFreeMap", and MapLibre's own attribution control stays on.
+- Default camera is downtown Jamestown, NY (West 3rd Street). The my-location control uses `ACCESS_FINE_LOCATION` and `ACCESS_COARSE_LOCATION` only, through `LocationManager`. No background permission, no Play Services, no tile key.
+- Camera idle waits 320 ms, then `DropRepository.dropsInView` for that box, zoom, and the current category list. Zoom 15 and above returns drops. Below that the repository returns grid clusters. A cluster tap zooms in.
+- Category chips are the 11 taxonomy groups. Long-press opens a sub-category sheet. The built-in Weekend preset sends `events`, `food_drink`, and `sales_free`. Saved presets live in app-private preferences. Those slugs are the `p_categories` argument on `drops_in_view` and `drops_nearby`. The phone does not filter a downloaded city.
+- Near me is `drops_nearby` from the fix, or from the Jamestown center when there is no fix, within 5 km, nearest first. A marker opens `drop_teaser`. The body stays hidden until reveal (M6). Marker icons come from the taxonomy.
+- With no Supabase URL the app binds `InMemoryXHere` seeded with Jamestown demo drops (Fenton, West 3rd, a food cart, Tracy Plaza, the Riverwalk, Celoron, and one Buffalo drop outside the city so a pan cannot return the whole world). The sign-in screen offers Preview Jamestown. Tests still sign in with the email code against that fake. Tiles need a network; the demo drops do not.
+- Compose UI tests cover the chip bar (including a captured image), the teaser card, viewport pan, group and preset filters, the sub-category sheet, near me, clustering, and a saved preset. `assembleDebug` and the unit tests pass locally. Supabase SQL was not changed, so `supabase / pgtap` is untouched.
+- No money spent, no accounts created, no secrets committed. `Apixa25/XHere-Web` was not touched.
+
+### Steven still needs to
+
+- **Branch protection:** keep **android / app** on the `main` ruleset next to **android / shared**, **ci / gitleaks**, and **supabase / pgtap**. M4 runs in the app job that M3 added.
+- **A free Supabase project** before the map reads live drops (PLAN §8). Until then, Preview Jamestown is the local fake. Put the project URL and the anon key in `local.properties`. Do not put the service-role key in the app.
+- **A network** when you want the OpenFreeMap tiles. There is no tile key to buy or to paste. The demo drops still show if the tiles do not load.
+- Background location stays off until M13.
+- Unchanged from M0–M3: license, secret scanning / push protection, a free Google Cloud OAuth web client id before Google sign-in works, first admin SQL once a project exists, crime-rule review, a Mac before iOS (M15), PLAN §8 and §9. The demo city is Jamestown (PR #4). The Jamestown FOIL request is sent; the code-enforcement email to dod@jamestownny.gov is not.

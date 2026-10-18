@@ -23,7 +23,8 @@ sealed interface Gate {
 
 /**
  * Session plus the one-time location rationale. When [ClientConfig.serverReady]
- * is false the placeholder client is not called, so the shell boots with no project.
+ * is false the app uses the in-memory Jamestown demo instead of calling Supabase.
+ * Session changes are still observed, so "Preview Jamestown" can open the shell.
  */
 class SessionViewModel(
     private val services: XHereServices,
@@ -33,7 +34,7 @@ class SessionViewModel(
     private val session = MutableStateFlow<SessionInfo?>(null)
     private val onboardingComplete = MutableStateFlow(onboarding.isComplete())
 
-    /** Placeholder config never touches the network, so the shell is ready immediately. */
+    /** A missing project never blocks the first frame. The demo client is local. */
     private val restored = MutableStateFlow(!config.serverReady)
 
     val gate: StateFlow<Gate> = combine(session, onboardingComplete, restored) { current, done, ready ->
@@ -49,8 +50,8 @@ class SessionViewModel(
     }.stateIn(viewModelScope, SharingStarted.Eagerly, Gate.Loading)
 
     init {
-        if (config.serverReady) {
-            viewModelScope.launch {
+        viewModelScope.launch {
+            if (config.serverReady) {
                 try {
                     session.value = services.auth.currentSession()
                 } catch (e: CancellationException) {
@@ -58,14 +59,14 @@ class SessionViewModel(
                 } catch (_: Exception) {
                     session.value = null
                 }
-                restored.value = true
-                try {
-                    services.auth.sessionChanges().collect { session.value = it }
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (_: Exception) {
-                    session.value = null
-                }
+            }
+            restored.value = true
+            try {
+                services.auth.sessionChanges().collect { session.value = it }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                if (config.serverReady) session.value = null
             }
         }
     }

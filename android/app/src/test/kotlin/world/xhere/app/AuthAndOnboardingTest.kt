@@ -131,12 +131,17 @@ class AppBootsWithoutSupabaseTest {
         val koin = GlobalContext.get()
         val services = koin.get<world.xhere.shared.data.XHereServices>()
         val config = koin.get<world.xhere.app.config.ClientConfig>()
-        assertEquals(world.xhere.shared.data.supabase.SupabaseXHereClient::class.java.name, services.javaClass.name)
         rule.waitForTag(TestTags.AUTH_EMAIL)
         rule.onNodeWithTag(TestTags.AUTH_GOOGLE).performScrollTo().assertIsDisplayed()
         if (!config.serverReady) {
             rule.onNodeWithTag(TestTags.AUTH_OFFLINE_NOTICE).performScrollTo().assertIsDisplayed()
+            rule.onNodeWithTag(TestTags.PREVIEW_JAMESTOWN).assertIsDisplayed()
             assertEquals(world.xhere.shared.SupabaseConfig.PLACEHOLDER, config.supabase)
+            assertEquals(world.xhere.shared.data.fake.InMemoryXHere::class.java.name, services.javaClass.name)
+            val memory = services as world.xhere.shared.data.fake.InMemoryXHere
+            assertTrue(memory.store.drops.isNotEmpty())
+        } else {
+            assertEquals(world.xhere.shared.data.supabase.SupabaseXHereClient::class.java.name, services.javaClass.name)
         }
     }
 }
@@ -147,6 +152,7 @@ class FreshSessionRule : TestRule {
         override fun evaluate() {
             val app = ApplicationProvider.getApplicationContext<Application>()
             app.getSharedPreferences(OnboardingStore.PREFS, Context.MODE_PRIVATE).edit().clear().commit()
+            app.getSharedPreferences(world.xhere.app.map.FilterPresetStore.PREFS, Context.MODE_PRIVATE).edit().clear().commit()
             if (TestGraph.isReady()) {
                 runBlocking {
                     TestGraph.services.auth.signOut()

@@ -483,9 +483,13 @@ class StoredDrop(
     var removedReason: String? = null,
 )
 
+/**
+ * `drops_in_view` / `drops_nearby` accept category slugs and group slugs in the same array
+ * (`c.slug = any(...) or g.slug = any(...)`). An empty list matches nothing; null means no filter.
+ */
 private fun StoredDrop.passes(categories: List<String>?): Boolean {
     if (categories == null) return true
-    return category.slug in categories
+    return category.slug in categories || groupSlug in categories
 }
 
 private fun StoredDrop.toCard(viewerId: Uuid?, distance: Double?): DropCard {
@@ -524,6 +528,7 @@ private fun StoredDrop.toFeature(): MapFeature = MapFeature(
     dropId = id,
     shortId = shortId,
     categorySlug = category.slug,
+    groupSlug = groupSlug,
     title = title,
     latitude = displayLocation.latitude,
     longitude = displayLocation.longitude,
