@@ -178,15 +178,20 @@ declare
   v_result jsonb;
   v_just boolean := false;
 begin
+  -- Coordinates are the published points. Reading public.drops here would
+  -- see nothing: authenticated has no select on that table.
   for r in
-    select s.position,
-           extensions.st_y(d.display_geog::extensions.geometry) as lat,
-           extensions.st_x(d.display_geog::extensions.geometry) as lng
-    from public.walk_stops s
-    join public.open_data_items i on i.source_slug = s.source_slug and i.external_id = s.external_id
-    join public.drops d on d.id = i.drop_id
-    where s.walk_id = current_setting('t.walk')::uuid
-    order by s.position
+    select * from (values
+      (1, 42.094509::float8, -79.244603::float8),
+      (2, 42.094722::float8, -79.243889::float8),
+      (3, 42.095922::float8, -79.242619::float8),
+      (4, 42.09651::float8, -79.24161::float8),
+      (5, 42.096689::float8, -79.239267::float8),
+      (6, 42.096357::float8, -79.237379::float8),
+      (7, 42.0983::float8, -79.23764::float8),
+      (8, 42.098818::float8, -79.238704::float8)
+    ) as v(position, lat, lng)
+    order by position
   loop
     v_result := public.check_in(r.lat, r.lng, current_setting('t.walk')::uuid);
     if (v_result ->> 'walk_just_completed')::boolean then
@@ -208,9 +213,15 @@ select is(
   'a finished walk does not follow you outside its region'
 );
 
+reset role;
+select set_config('t.anydrop', (select id::text from public.drops limit 1), true);
+set local role authenticated;
+set local request.jwt.claims to '{"sub": "11111111-1111-4111-8111-111111111111", "role": "authenticated"}';
 select throws_ok(
-  $$ insert into public.place_visits (user_id, drop_id)
-     values ('11111111-1111-4111-8111-111111111111', (select id from public.drops limit 1)) $$,
+  format(
+    $$ insert into public.place_visits (user_id, drop_id) values ('11111111-1111-4111-8111-111111111111', %L) $$,
+    current_setting('t.anydrop')
+  ),
   '42501',
   null,
   'a client cannot insert a visit'
@@ -233,11 +244,11 @@ select is(
 );
 
 set local request.jwt.claims to '{"sub": "22222222-2222-4222-8222-222222222222", "role": "authenticated"}';
-select public.create_drop('historical_fact', 41.20, -100.0, 'Hidden mill', 'A mill.');
+select set_config('t.hidden', (public.create_drop('historical_fact', 41.20, -100.0, 'Hidden mill', 'A mill.') ->> 'id'), true);
 set local request.jwt.claims to '{"sub": "33333333-3333-4333-8333-333333333333", "role": "authenticated"}';
 do $$
 begin
-  perform public.hide_drop((select id from public.drops where title = 'Hidden mill'));
+  perform public.hide_drop(current_setting('t.hidden')::uuid);
 end;
 $$;
 select is(
@@ -247,9 +258,9 @@ select is(
 );
 
 set local request.jwt.claims to '{"sub": "22222222-2222-4222-8222-222222222222", "role": "authenticated"}';
-select public.create_drop('historical_fact', 41.30, -100.0, 'Corner stone', 'A stone.');
+select set_config('t.stone', (public.create_drop('historical_fact', 41.30, -100.0, 'Corner stone', 'A stone.') ->> 'id'), true);
 set local request.jwt.claims to '{"sub": "33333333-3333-4333-8333-333333333333", "role": "authenticated"}';
-select public.confirm_drop((select id from public.drops where title = 'Corner stone'), 'not_true', 41.30, -100.0);
+select public.confirm_drop(current_setting('t.stone')::uuid, 'not_true', 41.30, -100.0);
 select is(
   (select (step ->> 'progress')::integer
    from jsonb_array_elements(public.my_quests() -> 0 -> 'steps') step
@@ -257,7 +268,7 @@ select is(
   0,
   'not anymore does not count as a confirm'
 );
-select public.confirm_drop((select id from public.drops where title = 'Corner stone'), 'still_true', 41.30, -100.0);
+select public.confirm_drop(current_setting('t.stone')::uuid, 'still_true', 41.30, -100.0);
 
 set local request.jwt.claims to '{"sub": "22222222-2222-4222-8222-222222222222", "role": "authenticated"}';
 select public.create_drop('note', 41.00, -100.0, 'Bench one', 'A bench.');
