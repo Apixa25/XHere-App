@@ -42,10 +42,16 @@ select is((select view_count from public.drop_detail(current_setting('t.hist')::
 set local request.jwt.claims to '{"sub": "11111111-1111-4111-8111-111111111111", "role": "authenticated"}';
 select is((select view_count from public.drop_detail(current_setting('t.hist')::uuid, 40.0, -100.0)), 2::bigint, 'the author opening their own drop does not count');
 
+reset role;
+do $$
+begin
+  perform set_config('t.hist_short', (select short_id from public.drops where id = current_setting('t.hist')::uuid), true);
+end;
+$$;
 set local role anon;
 set local request.jwt.claims to '';
 select lives_ok(
-  format($$ select public.drop_teaser(%L) $$, (select short_id from public.drops where id = current_setting('t.hist')::uuid)),
+  format($$ select public.drop_teaser(%L) $$, current_setting('t.hist_short')),
   'a signed-out share page can still load the teaser'
 );
 reset role;
