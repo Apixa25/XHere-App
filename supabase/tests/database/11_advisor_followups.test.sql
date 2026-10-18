@@ -28,32 +28,34 @@ select is(
 );
 
 -- Lint 0006. SELECT is only the public-read policy. Writes are split.
-select results_eq(
-  $$ select polname::text from pg_policy pol
-     join pg_class c on c.oid = pol.polrelid
-     join pg_namespace n on n.oid = c.relnamespace
-     where n.nspname = 'public' and c.relname = 'tier_limits'
-     order by 1 $$,
-  array[
-    'tier_limits_admin_delete',
-    'tier_limits_admin_insert',
-    'tier_limits_admin_update',
-    'tier_limits_select'
-  ],
+-- Compare names with IN (name vs unknown) rather than results_eq, which
+-- errors on this database's collation.
+select ok(
+  (select count(*) = 4
+      and count(*) filter (where pol.polname in (
+        'tier_limits_admin_delete',
+        'tier_limits_admin_insert',
+        'tier_limits_admin_update',
+        'tier_limits_select'
+      )) = 4
+   from pg_policy pol
+   join pg_class c on c.oid = pol.polrelid
+   join pg_namespace n on n.oid = c.relnamespace
+   where n.nspname = 'public' and c.relname = 'tier_limits'),
   'tier_limits policies are select plus insert, update, and delete'
 );
-select results_eq(
-  $$ select polname::text from pg_policy pol
-     join pg_class c on c.oid = pol.polrelid
-     join pg_namespace n on n.oid = c.relnamespace
-     where n.nspname = 'public' and c.relname = 'content_filters'
-     order by 1 $$,
-  array[
-    'content_filters_admin_delete',
-    'content_filters_admin_insert',
-    'content_filters_admin_update',
-    'content_filters_select'
-  ],
+select ok(
+  (select count(*) = 4
+      and count(*) filter (where pol.polname in (
+        'content_filters_admin_delete',
+        'content_filters_admin_insert',
+        'content_filters_admin_update',
+        'content_filters_select'
+      )) = 4
+   from pg_policy pol
+   join pg_class c on c.oid = pol.polrelid
+   join pg_namespace n on n.oid = c.relnamespace
+   where n.nspname = 'public' and c.relname = 'content_filters'),
   'content_filters policies are select plus insert, update, and delete'
 );
 select is(
@@ -87,25 +89,16 @@ select is(
 
 -- Lint 0001. The covering-index check matches the advisor: the index's
 -- leading columns equal the foreign key's column list, in that order.
-select results_eq(
-  $$ select indexname::text from pg_indexes
-     where schemaname = 'public' and indexname in (
-       'category_suggestion_log_chosen_category_idx',
-       'drop_media_owner_idx',
-       'drops_category_version_idx',
-       'moderation_actions_actor_idx',
-       'reports_resolved_by_idx',
-       'user_moderation_updated_by_idx'
-     )
-     order by 1 $$,
-  array[
-    'category_suggestion_log_chosen_category_idx',
-    'drop_media_owner_idx',
-    'drops_category_version_idx',
-    'moderation_actions_actor_idx',
-    'reports_resolved_by_idx',
-    'user_moderation_updated_by_idx'
-  ],
+select ok(
+  (select count(*) = 6 from pg_indexes
+   where schemaname = 'public' and indexname in (
+     'category_suggestion_log_chosen_category_idx',
+     'drop_media_owner_idx',
+     'drops_category_version_idx',
+     'moderation_actions_actor_idx',
+     'reports_resolved_by_idx',
+     'user_moderation_updated_by_idx'
+   )),
   'the six previously unindexed foreign keys have indexes'
 );
 select is(
