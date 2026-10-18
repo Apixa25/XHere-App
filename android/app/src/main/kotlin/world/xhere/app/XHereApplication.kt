@@ -1,7 +1,6 @@
 package world.xhere.app
 
 import android.app.Application
-import android.util.Log
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.context.GlobalContext
 import org.koin.core.context.startKoin
@@ -19,8 +18,6 @@ class XHereApplication : Application() {
         // skips them, and the Supabase client needs the context before Koin builds it.
         prepareSupabaseSessionStore(this)
         startXHereKoin(this, listOf(appModule))
-        // The android / release job greps for this after installing the minified APK.
-        Log.i("XHere", "process started")
     }
 }
 

@@ -35,25 +35,33 @@ fi
 
 sleep 8
 
-if ! adb shell ps -A | grep -F "$PKG" >/dev/null; then
-  echo "Process exited after start"
-  adb logcat -d -t 400 || true
+dump_failure() {
+  echo "$1"
+  adb shell pidof "$PKG" || true
+  # aosp_atd is noisy. Keep the failure log to our runtime and the activity manager.
+  adb logcat -d -t 120 -s AndroidRuntime:E ActivityManager:I || true
   exit 1
+}
+
+set +e
+PID="$(adb shell pidof "$PKG" 2>/dev/null | tr -d '\r')"
+set -e
+if [[ -z "$PID" ]]; then
+  dump_failure "Process exited after start"
 fi
 
 # aosp_atd logs FATAL EXCEPTION from unrelated system processes. Only ours counts.
 if adb logcat -d | grep -F "Process: $PKG" >/tmp/xhere-fatal.txt; then
   echo "Fatal exception in $PKG"
   cat /tmp/xhere-fatal.txt
-  adb logcat -d -t 400 || true
-  exit 1
+  dump_failure "See the fatal above"
 fi
 
-if ! adb logcat -d | grep -F "XHere: process started" >/dev/null; then
-  echo "Application onCreate did not finish"
-  adb logcat -d -t 400 || true
-  exit 1
+# The activity manager still has the task. R8 strips android.util.Log calls,
+# so this does not depend on a log line.
+if ! adb shell dumpsys activity activities | grep -F "$PKG/" >/dev/null; then
+  dump_failure "Activity is not running"
 fi
 
-echo "Minified release is running"
+echo "Minified release is running (pid $PID)"
 adb shell ps -A | grep -F "$PKG" || true

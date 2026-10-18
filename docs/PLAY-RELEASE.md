@@ -50,7 +50,7 @@ Play App Signing is separate. When you upload, accept Google's app signing. The 
 
 Release builds run R8 with resource shrinking (`isMinifyEnabled`, `isShrinkResources`). Rules are in `android/app/proguard-rules.pro`: kotlinx.serialization, Ktor, supabase-kt, MapLibre, ML Kit, CameraX, Koin, and Sentry, plus the serialization rules from kotlinx.serialization 1.11. The libraries' own consumer rules are merged as well.
 
-`ReleaseStartupTest` opens the real `XHereApplication` under Robolectric (sign-in, placeholder config, crash reporting left off). The **android / release** job installs the minified APK on an API 34 emulator and checks that `world.xhere.app` is still running, that `XHere: process started` was logged, and that logcat has no fatal exception for that package. The mapping file is uploaded next to the AAB so a crash can be retraced later.
+`ReleaseStartupTest` opens the real `XHereApplication` under Robolectric (sign-in, placeholder config, crash reporting left off). The **android / release** job installs the minified APK on an API 34 emulator and checks that `world.xhere.app` is still running, that the activity manager still has its task, and that logcat has no fatal exception for that package. Hosted runners often have no KVM, so that boot is slow. It still has to finish. The mapping file is uploaded next to the AAB so a crash can be retraced later.
 
 ## Crash reporting
 
