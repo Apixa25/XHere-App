@@ -1,0 +1,6 @@
+# Extends the built-in gitleaks rules. Allowlists are added only when a finding
+# is a known non-secret (for example a masked fingerprint in docs/).
+title = "XHere"
+
+[extend]
+useDefault = true

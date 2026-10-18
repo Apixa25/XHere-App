@@ -1,0 +1,22 @@
+name: supabase
+
+on:
+  push:
+    paths:
+      - "supabase/**"
+      - ".github/workflows/supabase.yml"
+  pull_request:
+    paths:
+      - "supabase/**"
+      - ".github/workflows/supabase.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  placeholder:
+    name: placeholder
+    runs-on: ubuntu-latest
+    steps:
+      - name: Placeholder until pgTAP lands
+        run: echo "Supabase workflow placeholder. pgTAP on postgis/postgis arrives with M1."

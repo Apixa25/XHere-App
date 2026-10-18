@@ -1,0 +1,30 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+build/
+dist/
+out/
+.cxx/
+
+# Gradle / Android local machine files
+.gradle/
+local.properties
+
+# IDE
+.idea/
+
+# User media. Never commit uploads.
+uploads/
+
+# Env files. The example is the only one that belongs in git.
+.env*
+!.env.example
+
+# Signing keys and Firebase client config
+*.keystore
+*.jks
+google-services.json
+
+# Supabase CLI scratch
+supabase/.temp/

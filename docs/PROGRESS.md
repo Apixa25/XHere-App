@@ -37,3 +37,21 @@ All times America/New_York (ET).
 - Secret check before sharing: scanned all docs for API-key, Stripe-key, Postgres-URL, long-hex, and password patterns. None found. Keys appear only as masked fingerprints.
 - Cloud-agent prompts are prepared (`handoff/docs-agent-prompt.md` with the full docs embedded, `handoff/m0-agent-prompt.md`). The launch is done by the main Grok Bot session (grok-4.7, high effort).
 - Next: M0 (repo bootstrap, CI, gitleaks) as a cloud agent after the docs merge.
+
+## 2026-10-17 (Sat), ~11:50 PM ET: M0 repo bootstrap
+
+Started from `main` after the planning docs merged ([PR #1](https://github.com/Apixa25/XHere-App/pull/1), merge `9cf2a6c`).
+
+- Monorepo skeleton from PLAN §6: `android/`, `shared/`, `ios/`, `supabase/` (`migrations/`, `functions/`, `tests/`, each with `.gitkeep`), `web/`, `docs/adr/`, `.github/workflows/`. Each app directory is a short README naming the milestone that fills it. Gradle and the Astro app are not scaffolded (those are M2 and M8).
+- Root files: README layout section (Steven's title and description kept), `LICENSE` ("All rights reserved", Copyright (c) 2026 Steven Sills II, until he picks a license), `.editorconfig`, `.gitattributes` (LF), `.gitignore`, `.env.example` (placeholders only), `CONTRIBUTING.md` with the PLAN §7 ground rules.
+- CI: `.github/workflows/ci.yml` runs gitleaks **8.30.1** (free CLI binary, checksum-pinned) over every commit reachable from `HEAD`. `gitleaks-action` does not need a paid license on this personal account, but its push and pull_request modes scan only the new range, so the CLI is what actually covers full history. Path-filtered placeholders `android.yml`, `supabase.yml`, and `web.yml` run a trivial job. `.gitleaks.toml` extends the default rules. The masked fingerprints in the docs (`AIzaSyAX…iVQ0` and the other shortened keys) were not flagged, so nothing was allowlisted. `.github/dependabot.yml` watches `github-actions` only. Actions are pinned to a major version with `permissions: contents: read`.
+- ADRs in short MADR: [ADR-001](adr/ADR-001-platform.md) (native Android, KMP shared core, SwiftUI later, Expo runner-up) and [ADR-002](adr/ADR-002-backend.md) (Supabase + PostGIS, MapLibre + OpenFreeMap, Astro on Cloudflare Pages).
+- PR: https://github.com/Apixa25/XHere-App/pull/2
+- No money spent, no accounts created, no secrets committed. `Apixa25/XHere-Web` was not touched.
+
+### Steven still needs to
+
+- **Pick a license.** `LICENSE` stays "All rights reserved" until then.
+- **Secret scanning + push protection** (free on this public personal repo): **Settings → Code security** → enable **Secret scanning** and **Push protection**. Do not buy GitHub Advanced Security; gitleaks in CI is the scanner if those toggles are missing.
+- **Branch protection on `main`:** **Settings → Rules → Rulesets** (or Branches → classic protection) requiring the **ci / gitleaks** check before merge. Add the android, supabase, and web checks once they run real builds. Today only `ci` runs on every push and PR.
+- Still open from the plan, unchanged by M0: [§8 costs](PLAN.md), [§9 old-repo cleanup](SECURITY-FIXES.md), [§10 questions](PLAN.md). Supabase and Cloudflare accounts were not created.

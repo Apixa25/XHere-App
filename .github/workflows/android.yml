@@ -1,0 +1,24 @@
+name: android
+
+on:
+  push:
+    paths:
+      - "android/**"
+      - "shared/**"
+      - ".github/workflows/android.yml"
+  pull_request:
+    paths:
+      - "android/**"
+      - "shared/**"
+      - ".github/workflows/android.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  placeholder:
+    name: placeholder
+    runs-on: ubuntu-latest
+    steps:
+      - name: Placeholder until the Android build lands
+        run: echo "Android workflow placeholder. Gradle assemble and unit tests arrive with M2 and M3."
