@@ -81,3 +81,21 @@ Branch `m1/database` → [PR #3](https://github.com/Apixa25/XHere-App/pull/3). B
 - **First admin/moderator**, once a hosted Supabase project exists: one SQL line in the dashboard, `update public.profiles set role = 'admin' where handle = '<your handle>';` (see `supabase/README.md`).
 - Review the crime rules and the `person_descriptors` word list in `supabase/migrations/20261018000600_taxonomy.sql`. Tuning means a new migration that updates the row; no code change is needed.
 - Still open from M0: license, secret scanning/push protection toggles, and PLAN §8–§10.
+
+## 2026-10-18 (Sun), ~1:10 AM ET: M2 shared KMP core
+
+Branch `m2/shared-core`. Root Gradle build (Kotlin 2.4.21, version catalog, wrapper 9.5.0) and the `shared/` module.
+
+- Targets: Android library (`compileSdk` 36, `minSdk` 26, `com.android.kotlin.multiplatform.library`) and iOS (`iosArm64`, `iosSimulatorArm64`, static framework `Shared`). A JVM target exists only so `commonTest` can run on the Linux runner. iOS compile is not invoked in CI (no Xcode). `kotlin.native.ignoreDisabledTargets=true`.
+- Models mirror the M1 tables: profiles, tiers, categories with field schemas and rules, drops, media, confirmations, reports, blocks.
+- Repositories call the M1 RPCs through `supabase-kt` 3.8.0 (`drops_in_view`, `drops_nearby`, `drop_detail`, `drop_teaser`, `create_drop`, `confirm_drop`, `report`, `block_user` / `unblock_user`, `delete_my_account`, `moderate_drop`, `resolve_report`, `suspend_user`) plus auth (email OTP, Google / Apple id token). An in-memory fake implements the same interfaces. Taxonomy is cached in memory. No Room cache: PLAN puts offline maps at v1.2.
+- Client checks mirror `create_drop` (tier, title, body, tags, reveal radius, lifetime, media, content filters, guidelines) and validate attributes against the category JSON schema. POSIX filter patterns (`[[:alnum:]._%+-]`, `\m` / `\M`) are translated before the Kotlin regex runs. Geo helpers match `private.fuzz_point`.
+- `commonTest`: 45 tests. Kover on `rules` and `validation` is 91% line / 86% instruction, bound 80%. `.github/workflows/android.yml` (path-filtered) installs Java 21 and Android platform 36, then runs `:shared:jvmTest`, `:shared:koverVerify`, and `:shared:assembleAndroidMain`.
+- Config is `SupabaseConfig.PLACEHOLDER`, the same strings as `.env.example`. No project, no account, no secrets. `Apixa25/XHere-Web` was not touched.
+
+### Steven still needs to
+
+- **Branch protection:** add **android / shared** next to **ci / gitleaks** and **supabase / pgtap**.
+- **A free Supabase project** before the client can talk to a real API (PLAN §8). Until then the placeholder URL is intentional. Local Postgres from M1 does not serve the PostgREST the app calls.
+- **A Mac** before the iOS framework is actually compiled (M15). The targets are configured now.
+- Unchanged from M0/M1: license, secret scanning / push protection, demo city, first admin SQL, crime-rule review, PLAN §8–§10.

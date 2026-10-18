@@ -1,6 +1,10 @@
 # Keep text files LF in the repo and on checkout (Linux CI, Windows working copies).
 * text=auto eol=lf
 
+# The Windows Gradle script has to keep CRLF or cmd.exe breaks on it.
+gradlew text eol=lf
+gradlew.bat text eol=crlf
+
 # Binaries
 *.png binary
 *.jpg binary
