@@ -14,16 +14,34 @@ import io.github.jan.supabase.postgrest.exception.PostgrestRestException
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Columns
 import io.github.jan.supabase.serializer.KotlinXSerializer
+import io.ktor.client.HttpClient
 import io.ktor.client.engine.HttpClientEngine
+import io.ktor.client.request.header
+import io.ktor.client.request.post
+import io.ktor.client.request.setBody
+import io.ktor.client.statement.bodyAsText
+import io.ktor.http.ContentType
+import io.ktor.http.HttpHeaders
+import io.ktor.http.contentType
+import io.ktor.http.isSuccess
 import kotlin.time.Instant
 import kotlin.uuid.Uuid
 import kotlinx.serialization.serializer
 import kotlinx.coroutines.CancellationException
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.intOrNull
+import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.longOrNull
+import kotlinx.serialization.json.put
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import world.xhere.shared.SupabaseConfig
@@ -32,10 +50,12 @@ import world.xhere.shared.data.AuthRepository
 import world.xhere.shared.data.BlockRepository
 import world.xhere.shared.data.DropRepository
 import world.xhere.shared.data.IdentityProvider
+import world.xhere.shared.data.MediaRepository
 import world.xhere.shared.data.ModerationRepository
 import world.xhere.shared.data.ProfileRepository
 import world.xhere.shared.data.ReportRepository
 import world.xhere.shared.data.SessionInfo
+import world.xhere.shared.data.SuggestionRepository
 import world.xhere.shared.data.TaxonomyCache
 import world.xhere.shared.data.TaxonomyRepository
 import world.xhere.shared.data.XHereApiException
@@ -66,6 +86,8 @@ import world.xhere.shared.model.CreateDropResult
 import world.xhere.shared.model.DropCard
 import world.xhere.shared.model.DropStatus
 import world.xhere.shared.model.MapFeature
+import world.xhere.shared.model.MediaKind
+import world.xhere.shared.model.MediaUpload
 import world.xhere.shared.model.ModerateDropAction
 import world.xhere.shared.model.Profile
 import world.xhere.shared.model.ReportReason
@@ -75,6 +97,9 @@ import world.xhere.shared.model.Taxonomy
 import world.xhere.shared.model.TierLimits
 import world.xhere.shared.rules.CreateDropRequest
 import world.xhere.shared.rules.RuleViolation
+import world.xhere.shared.suggest.CategoryRanker
+import world.xhere.shared.suggest.CategorySuggestion
+import world.xhere.shared.suggest.SuggestionQuery
 
 /**
  * `supabase-kt` repositories over the M1 RPCs.
@@ -85,10 +110,13 @@ import world.xhere.shared.rules.RuleViolation
  * the true position, and RLS only lets the author see their own rows.
  */
 class SupabaseXHereClient(
-    config: SupabaseConfig,
+    private val config: SupabaseConfig,
     engine: HttpClientEngine = platformHttpEngine(),
     private val cache: TaxonomyCache = TaxonomyCache(),
 ) : XHereServices {
+    private val edge = HttpClient(platformHttpEngine()) {
+        expectSuccess = false
+    }
     val supabase: SupabaseClient = createSupabaseClient(
         supabaseUrl = config.url,
         supabaseKey = config.anonKey,
@@ -103,6 +131,8 @@ class SupabaseXHereClient(
     override val profiles: ProfileRepository = ProfileRepo()
     override val taxonomy: TaxonomyRepository = TaxonomyRepo()
     override val drops: DropRepository = DropRepo()
+    override val suggestions: SuggestionRepository = SuggestionRepo()
+    override val media: MediaRepository = MediaRepo()
     override val reports: ReportRepository = ReportRepo()
     override val blocks: BlockRepository = BlockRepo()
     override val account: AccountRepository = AccountRepo()
@@ -285,6 +315,91 @@ class SupabaseXHereClient(
         }
     }
 
+    private inner class SuggestionRepo : SuggestionRepository {
+        override suspend fun suggest(query: SuggestionQuery): List<CategorySuggestion> {
+            try {
+                val response = edge.post(config.url.trimEnd('/') + "/functions/v1/suggest-category") {
+                    header(HttpHeaders.Authorization, "Bearer ${bearer() ?: config.anonKey}")
+                    header("apikey", config.anonKey)
+                    contentType(ContentType.Application.Json)
+                    setBody(XHereJson.encodeToString(SuggestBody.serializer(), query.toBody()))
+                }
+                if (response.status.isSuccess()) {
+                    return parseSuggestions(response.bodyAsText())
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Throwable) {
+                // The phone still ranks locally when the function or the network is down.
+            }
+            return localSuggest(query)
+        }
+
+        override suspend fun log(query: SuggestionQuery, suggested: List<String>, chosenSlug: String?): Uuid = call {
+            val raw = supabase.postgrest.rpc(
+                "log_category_suggestion",
+                LogSuggestionParams(query.toInputs(), suggested, chosenSlug).rpcJson(),
+            ).data
+            Uuid.parse(raw.trim().trim('"'))
+        }
+
+        private suspend fun localSuggest(query: SuggestionQuery): List<CategorySuggestion> {
+            val taxonomy = taxonomy.load()
+            val nearby = nearbyCounts(query)
+            return CategoryRanker.suggest(taxonomy.categories, query, nearby)
+        }
+
+        private suspend fun nearbyCounts(query: SuggestionQuery): Map<String, Int> {
+            val latitude = query.latitude ?: return emptyMap()
+            val longitude = query.longitude ?: return emptyMap()
+            return try {
+                drops.dropsNearby(LatLng(latitude, longitude), radiusM = 500)
+                    .groupingBy { it.categorySlug }
+                    .eachCount()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Throwable) {
+                emptyMap()
+            }
+        }
+    }
+
+    private inner class MediaRepo : MediaRepository {
+        override suspend fun uploadPhoto(bytes: ByteArray, mimeType: String): MediaUpload {
+            val mime = mimeType.substringBefore(';').trim().lowercase()
+            try {
+                val response = edge.post(config.url.trimEnd('/') + "/functions/v1/strip-exif") {
+                    header(HttpHeaders.Authorization, "Bearer ${bearer() ?: ""}")
+                    header("apikey", config.anonKey)
+                    contentType(ContentType.parse(mime))
+                    setBody(bytes)
+                }
+                val payload = response.bodyAsText()
+                if (!response.status.isSuccess()) {
+                    val code = runCatching {
+                        XHereJson.parseToJsonElement(payload).jsonObject["error"]?.jsonPrimitive?.content
+                    }.getOrNull() ?: "upload_failed"
+                    throw XHereApiException(code, detail = "photo upload failed")
+                }
+                val stored = XHereJson.decodeFromString(StoredPhotoWire.serializer(), payload)
+                return MediaUpload(
+                    storagePath = stored.storagePath,
+                    mediaKind = MediaKind.IMAGE,
+                    mimeType = stored.mimeType,
+                    byteSize = stored.byteSize,
+                )
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: XHereApiException) {
+                throw e
+            } catch (e: Throwable) {
+                throw XHereApiException("upload_failed", detail = "photo upload failed", cause = e)
+            }
+        }
+    }
+
+    private suspend fun bearer(): String? = supabase.auth.currentSessionOrNull()?.accessToken
+
     private fun io.github.jan.supabase.auth.user.UserSession.toInfo(): SessionInfo = SessionInfo(
         userId = Uuid.parse(user?.id ?: throw XHereApiException("not_authenticated", sqlState = XHereApiException.SQL_PERMISSION)),
         accessToken = accessToken,
@@ -327,6 +442,63 @@ private fun PostgrestRestException.toXHere(): XHereApiException {
         cause = this,
     )
 }
+
+@Serializable
+private data class SuggestBody(
+    val text: String,
+    val labels: List<String>,
+    val lat: Double? = null,
+    val lng: Double? = null,
+    val hour: Int? = null,
+    @kotlinx.serialization.SerialName("recent_slugs") val recentSlugs: List<String> = emptyList(),
+)
+
+@Serializable
+private data class LogSuggestionParams(
+    @kotlinx.serialization.SerialName("p_inputs") val inputs: JsonObject,
+    @kotlinx.serialization.SerialName("p_suggested") val suggested: List<String>,
+    @kotlinx.serialization.SerialName("p_chosen") val chosen: String? = null,
+)
+
+@Serializable
+private data class StoredPhotoWire(
+    @kotlinx.serialization.SerialName("storage_path") val storagePath: String,
+    @kotlinx.serialization.SerialName("mime_type") val mimeType: String,
+    @kotlinx.serialization.SerialName("byte_size") val byteSize: Long,
+)
+
+private fun SuggestionQuery.toBody(): SuggestBody = SuggestBody(
+    text = text,
+    labels = labels,
+    lat = latitude,
+    lng = longitude,
+    hour = hour,
+    recentSlugs = recentSlugs,
+)
+
+private fun SuggestionQuery.toInputs(): JsonObject = buildJsonObject {
+    put("text", text)
+    put("labels", JsonArray(labels.map { JsonPrimitive(it) }))
+    latitude?.let { put("lat", it) }
+    longitude?.let { put("lng", it) }
+    hour?.let { put("hour", it) }
+    put("recent_slugs", JsonArray(recentSlugs.map { JsonPrimitive(it) }))
+}
+
+private fun parseSuggestions(payload: String): List<CategorySuggestion> {
+    val rows = XHereJson.parseToJsonElement(payload).jsonObject["suggestions"]?.jsonArray ?: return emptyList()
+    return rows.map { element ->
+        val row = element.jsonObject
+        CategorySuggestion(
+            slug = row.string("slug"),
+            label = row.string("label"),
+            score = row["score"]?.jsonPrimitive?.content?.toDoubleOrNull() ?: 0.0,
+        )
+    }
+}
+
+private fun JsonObject.string(name: String): String =
+    this[name]?.jsonPrimitive?.contentOrNull ?: ""
 
 private fun JsonElement?.asDetail(): String? = when (this) {
     null, is JsonNull -> null

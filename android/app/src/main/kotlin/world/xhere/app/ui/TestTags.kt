@@ -48,6 +48,7 @@ internal object TestTags {
     const val MARKER_CLUSTER = "marker_cluster"
     const val SUBCATEGORY_SHEET = "subcategory_sheet"
     const val SUBCATEGORY_APPLY = "subcategory_apply"
+    const val MAP_DROP_FAB = "map_drop_fab"
     const val MAP_PAN_AWAY = "map_pan_away"
     const val MAP_ZOOM_OUT = "map_zoom_out"
     const val PREVIEW_JAMESTOWN = "preview_jamestown"
@@ -61,4 +62,24 @@ internal object TestTags {
     fun nearRow(shortId: String): String = "near_$shortId"
 
     fun subcategory(slug: String): String = "sub_$slug"
+
+    const val DROP_SHUTTER = "drop_shutter"
+    const val DROP_PICK = "drop_pick"
+    const val DROP_TEXT = "drop_text"
+    const val DROP_TEXT_CONTINUE = "drop_text_continue"
+    const val DROP_MORE = "drop_more"
+    const val DROP_POST = "drop_post"
+    const val DROP_GUIDELINES = "drop_guidelines"
+    const val DROP_NOTICE = "drop_notice"
+    const val DROP_ERROR = "drop_error"
+    const val DROP_SUCCESS = "drop_success"
+    const val DROP_DUPLICATE = "drop_duplicate"
+    const val DROP_FUZZ = "drop_fuzz"
+    const val DROP_ANOTHER = "drop_another"
+
+    fun suggestion(slug: String): String = "suggestion_$slug"
+
+    fun category(slug: String): String = "category_$slug"
+
+    fun field(name: String): String = "field_$name"
 }

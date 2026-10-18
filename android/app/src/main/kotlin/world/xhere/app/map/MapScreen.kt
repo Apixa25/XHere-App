@@ -12,7 +12,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -56,6 +59,7 @@ internal val SubcategorySemantics = SemanticsPropertyKey<String>("Subcategory")
 
 @Composable
 fun MapScreen(
+    onDrop: () -> Unit = {},
     viewModel: MapViewModel = koinViewModel(),
     canvas: MapCanvas = koinInject(),
 ) {
@@ -124,6 +128,20 @@ fun MapScreen(
                 horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
+                Surface(
+                    onClick = onDrop,
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.primary,
+                    shadowElevation = 4.dp,
+                    modifier = Modifier.testTag(TestTags.MAP_DROP_FAB),
+                ) {
+                    Icon(
+                        Icons.Filled.Add,
+                        contentDescription = stringResource(R.string.drop_fab),
+                        tint = MaterialTheme.colorScheme.onPrimary,
+                        modifier = Modifier.padding(14.dp),
+                    )
+                }
                 if (state.loading) {
                     CircularProgressIndicator(
                         modifier = Modifier.padding(end = 8.dp),

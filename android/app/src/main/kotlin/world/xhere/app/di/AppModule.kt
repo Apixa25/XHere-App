@@ -9,6 +9,11 @@ import world.xhere.app.auth.AuthViewModel
 import world.xhere.app.auth.CredentialManagerGoogleSignIn
 import world.xhere.app.auth.GoogleIdTokenSource
 import world.xhere.app.config.ClientConfig
+import world.xhere.app.drop.CameraXDropCapture
+import world.xhere.app.drop.DropCapture
+import world.xhere.app.drop.DropViewModel
+import world.xhere.app.drop.ImageLabeler
+import world.xhere.app.drop.MlKitImageLabeler
 import world.xhere.app.location.AndroidDeviceLocation
 import world.xhere.app.location.DeviceLocation
 import world.xhere.app.map.FilterPresetStore
@@ -49,7 +54,10 @@ val appModule = module {
     single<DeviceLocation> { AndroidDeviceLocation(androidContext()) }
     single { FilterPresetStore(androidContext()) }
     single<MapCanvas> { MapLibreMapCanvas() }
+    single<DropCapture> { CameraXDropCapture() }
+    single<ImageLabeler> { MlKitImageLabeler() }
     viewModel { SessionViewModel(get(), get(), get()) }
+    viewModel { DropViewModel(get(), get(), get(), get()) }
     viewModel { MapViewModel(get(), get(), get()) }
     viewModel { AuthViewModel(get(), get(), get(), get(), get()) }
     viewModel { ProfileViewModel(get()) }

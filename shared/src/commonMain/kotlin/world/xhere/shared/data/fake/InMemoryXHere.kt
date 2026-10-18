@@ -1,5 +1,6 @@
 package world.xhere.shared.data.fake
 
+import kotlin.time.Duration.Companion.hours
 import kotlin.time.Instant
 import kotlin.uuid.Uuid
 import kotlinx.coroutines.flow.Flow
@@ -10,10 +11,12 @@ import world.xhere.shared.data.AuthRepository
 import world.xhere.shared.data.BlockRepository
 import world.xhere.shared.data.DropRepository
 import world.xhere.shared.data.IdentityProvider
+import world.xhere.shared.data.MediaRepository
 import world.xhere.shared.data.ModerationRepository
 import world.xhere.shared.data.ProfileRepository
 import world.xhere.shared.data.ReportRepository
 import world.xhere.shared.data.SessionInfo
+import world.xhere.shared.data.SuggestionRepository
 import world.xhere.shared.data.TaxonomyRepository
 import world.xhere.shared.data.XHereApiException
 import world.xhere.shared.data.XHereServices
@@ -29,7 +32,9 @@ import world.xhere.shared.model.DropCard
 import world.xhere.shared.model.DropMedia
 import world.xhere.shared.model.DropStatus
 import world.xhere.shared.model.MapFeature
+import world.xhere.shared.media.ExifStrip
 import world.xhere.shared.model.MediaKind
+import world.xhere.shared.model.MediaUpload
 import world.xhere.shared.model.ModerateDropAction
 import world.xhere.shared.model.Profile
 import world.xhere.shared.model.Report
@@ -40,7 +45,14 @@ import world.xhere.shared.model.Taxonomy
 import world.xhere.shared.rules.CategoryRules
 import world.xhere.shared.rules.CreateDropRequest
 import world.xhere.shared.rules.PostingContext
+import world.xhere.shared.suggest.CategoryRanker
+import world.xhere.shared.suggest.CategorySuggestion
+import world.xhere.shared.suggest.SuggestionQuery
 import kotlin.math.floor
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 
 /**
  * In-memory stand-in for the RPCs, for unit tests and for UI work before a Supabase
@@ -65,6 +77,8 @@ class InMemoryXHere(
         override suspend fun load(force: Boolean): Taxonomy = store.taxonomy
     }
     override val drops: DropRepository = DropRepo()
+    override val suggestions: SuggestionRepository = SuggestionRepo()
+    override val media: MediaRepository = MediaRepo()
     override val reports: ReportRepository = ReportRepo()
     override val blocks: BlockRepository = BlockRepo()
     override val account: AccountRepository = AccountRepo()
@@ -197,14 +211,19 @@ class InMemoryXHere(
                 media = request.media,
                 acknowledgeGuidelines = request.acknowledgeGuidelines,
             )
+            val now = clock()
+            val limits = store.taxonomy.limits(profile.tier)
+            val mine = store.drops.values.filter { it.authorId == profile.id }
             val checked = CategoryRules.check(
                 draft,
                 category,
                 PostingContext(
                     userId = profile.id,
                     tier = profile.tier,
-                    now = clock(),
-                    limits = store.taxonomy.limits(profile.tier),
+                    now = now,
+                    limits = limits,
+                    dropsLastHour = if (limits == null) null else mine.count { it.createdAt >= now - 1.hours },
+                    dropsLastDay = if (limits == null) null else mine.count { it.createdAt >= now - 24.hours },
                 ),
                 store.taxonomy.filters,
             )
@@ -321,6 +340,75 @@ class InMemoryXHere(
         }
     }
 
+    private inner class SuggestionRepo : SuggestionRepository {
+        override suspend fun suggest(query: SuggestionQuery): List<CategorySuggestion> =
+            CategoryRanker.suggest(store.taxonomy.categories, query, nearbyCounts(query))
+
+        override suspend fun log(query: SuggestionQuery, suggested: List<String>, chosenSlug: String?): Uuid {
+            val profile = requireViewer()
+            if (suggested.isEmpty() || suggested.size > 10) {
+                throw XHereApiException("invalid_suggestion", sqlState = XHereApiException.SQL_VALIDATION, detail = "suggested must be 1..10 slugs")
+            }
+            if (chosenSlug != null && store.taxonomy.category(chosenSlug) == null) {
+                throw XHereApiException("category_not_found", sqlState = XHereApiException.SQL_VALIDATION, detail = chosenSlug)
+            }
+            val id = Uuid.random()
+            store.suggestionLogs += StoredSuggestion(
+                id = id,
+                userId = profile.id,
+                inputs = buildJsonObject {
+                    put("text", query.text)
+                    put("labels", JsonArray(query.labels.map { JsonPrimitive(it) }))
+                    query.latitude?.let { put("lat", it) }
+                    query.longitude?.let { put("lng", it) }
+                    query.hour?.let { put("hour", it) }
+                },
+                suggested = suggested,
+                chosenSlug = chosenSlug,
+                createdAt = clock(),
+            )
+            return id
+        }
+
+        private fun nearbyCounts(query: SuggestionQuery): Map<String, Int> {
+            val latitude = query.latitude ?: return emptyMap()
+            val longitude = query.longitude ?: return emptyMap()
+            val origin = LatLng(latitude, longitude)
+            if (!Geo.isValid(origin)) return emptyMap()
+            return store.visible(viewer?.id, clock())
+                .filter { Geo.distanceMeters(origin, it.displayLocation) <= 500.0 }
+                .groupingBy { it.category.slug }
+                .eachCount()
+        }
+    }
+
+    private inner class MediaRepo : MediaRepository {
+        override suspend fun uploadPhoto(bytes: ByteArray, mimeType: String): MediaUpload {
+            val profile = requireViewer()
+            val mime = mimeType.substringBefore(';').trim().lowercase()
+            if (mime != "image/jpeg" && mime != "image/png" && mime != "image/webp") {
+                throw XHereApiException("unsupported_type", sqlState = XHereApiException.SQL_VALIDATION, detail = mime)
+            }
+            if (bytes.isEmpty() || bytes.size > MAX_PHOTO_BYTES) {
+                throw XHereApiException("invalid_image", sqlState = XHereApiException.SQL_VALIDATION, detail = "photo must be 1 byte..10 MB")
+            }
+            val stripped = ExifStrip.strip(bytes, mime)
+            val extension = when (mime) {
+                "image/png" -> "png"
+                "image/webp" -> "webp"
+                else -> "jpg"
+            }
+            val path = "${profile.id}/${Uuid.random()}.$extension"
+            store.mediaBytes[path] = stripped
+            return MediaUpload(
+                storagePath = path,
+                mediaKind = MediaKind.IMAGE,
+                mimeType = mime,
+                byteSize = stripped.size.toLong(),
+            )
+        }
+    }
+
     private inner class ReportRepo : ReportRepository {
         override suspend fun report(targetType: ReportTarget, targetId: Uuid, reason: ReportReason, details: String?): Uuid {
             val profile = requireViewer()
@@ -431,6 +519,8 @@ class MemoryStore(
     val blocks: MutableSet<Pair<Uuid, Uuid>> = linkedSetOf()
     val deleted: MutableSet<Uuid> = linkedSetOf()
     val suspendedUntil: MutableMap<Uuid, Instant> = linkedMapOf()
+    val suggestionLogs: MutableList<StoredSuggestion> = mutableListOf()
+    val mediaBytes: MutableMap<String, ByteArray> = linkedMapOf()
     var pendingEmail: String? = null
     private var shortIds: Int = 0
 
@@ -457,6 +547,15 @@ class MemoryStore(
 
     fun blocked(a: Uuid, b: Uuid): Boolean = (a to b) in blocks || (b to a) in blocks
 }
+
+class StoredSuggestion(
+    val id: Uuid,
+    val userId: Uuid,
+    val inputs: kotlinx.serialization.json.JsonObject,
+    val suggested: List<String>,
+    val chosenSlug: String?,
+    val createdAt: Instant,
+)
 
 class StoredDrop(
     val id: Uuid,
@@ -537,3 +636,5 @@ private fun StoredDrop.toFeature(): MapFeature = MapFeature(
 
 private fun LatLng.inBox(box: BoundingBox): Boolean =
     latitude in box.minLatitude..box.maxLatitude && longitude in box.minLongitude..box.maxLongitude
+
+private const val MAX_PHOTO_BYTES: Int = 10 * 1024 * 1024

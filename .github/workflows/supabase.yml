@@ -14,6 +14,35 @@ permissions:
   contents: read
 
 jobs:
+  # Edge functions do not need the database containers. Deno tests fake the
+  # RPCs and Storage, and they do not download gte-small weights.
+  functions:
+    name: functions
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Install Deno
+        run: |
+          set -euo pipefail
+          VERSION=2.1.4
+          SHA256=54a81939cccb2af114c4d0a68a554cf4a04b1f08728e70f663f83781de19d785
+          curl -sSLf -o /tmp/deno.zip \
+            "https://github.com/denoland/deno/releases/download/v${VERSION}/deno-x86_64-unknown-linux-gnu.zip"
+          echo "${SHA256}  /tmp/deno.zip" | sha256sum -c -
+          unzip -q /tmp/deno.zip -d /tmp/deno-bin
+          sudo mv /tmp/deno-bin/deno /usr/local/bin/deno
+          deno --version
+
+      - name: Test and typecheck Edge Functions
+        run: |
+          set -euo pipefail
+          deno test --allow-net supabase/functions
+          deno check supabase/functions/suggest-category/index.ts
+          deno check supabase/functions/strip-exif/index.ts
+
   pgtap:
     name: pgtap
     runs-on: ubuntu-latest

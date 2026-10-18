@@ -18,7 +18,10 @@ import world.xhere.shared.model.ReportReason
 import world.xhere.shared.model.ReportStatus
 import world.xhere.shared.model.ReportTarget
 import world.xhere.shared.model.Taxonomy
+import world.xhere.shared.model.MediaUpload
 import world.xhere.shared.rules.CreateDropRequest
+import world.xhere.shared.suggest.CategorySuggestion
+import world.xhere.shared.suggest.SuggestionQuery
 
 /** A signed-in session. [accessToken] is omitted from [toString] so it does not land in logs. */
 class SessionInfo(
@@ -118,12 +121,32 @@ interface ModerationRepository {
     suspend fun suspendUser(userId: Uuid, until: Instant?, reason: String? = null)
 }
 
-/** The surface M3 will inject. Both the Supabase client and the in-memory fake implement it. */
+/**
+ * Top-3 category chips for the quick-drop composer (PLAN §4.4, §7 M5).
+ * The Supabase client calls the `suggest-category` Edge Function and falls back
+ * to the on-device ranker when that call cannot be made. The in-memory fake
+ * always uses the on-device ranker.
+ */
+interface SuggestionRepository {
+    suspend fun suggest(query: SuggestionQuery): List<CategorySuggestion>
+
+    /** Records what was offered and what the person picked. Returns the log row id. */
+    suspend fun log(query: SuggestionQuery, suggested: List<String>, chosenSlug: String?): Uuid
+}
+
+/** Photo bytes go to Storage only after Exif/XMP is removed. */
+interface MediaRepository {
+    suspend fun uploadPhoto(bytes: ByteArray, mimeType: String): MediaUpload
+}
+
+/** The surface the app injects. Both the Supabase client and the in-memory fake implement it. */
 interface XHereServices {
     val auth: AuthRepository
     val profiles: ProfileRepository
     val taxonomy: TaxonomyRepository
     val drops: DropRepository
+    val suggestions: SuggestionRepository
+    val media: MediaRepository
     val reports: ReportRepository
     val blocks: BlockRepository
     val account: AccountRepository

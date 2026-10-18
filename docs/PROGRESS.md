@@ -201,3 +201,26 @@ Branch `m8/website` → [PR #11](https://github.com/Apixa25/XHere-App/pull/11). 
 - **A free Supabase project** before a share link can load a live drop (PLAN §8). Set `PUBLIC_SUPABASE_URL` and `PUBLIC_SUPABASE_ANON_KEY` on Pages. Do not set the service-role key.
 - **Branch protection:** add **web / build** next to **android / app**, **android / shared**, **ci / gitleaks**, and **supabase / pgtap**.
 - Unchanged from M0–M4: license, secret scanning / push protection, a free Google Cloud OAuth web client id before Google sign-in works, first admin SQL once a project exists, crime-rule review, a Mac before iOS (M15), PLAN §8 and §9. Background location stays off until M13. The demo city is Jamestown (PR #4). The Jamestown FOIL request is sent; the code-enforcement email to dod@jamestownny.gov is not.
+
+## 2026-10-18 (Sun), ~3:10 AM ET: M5 quick drop
+
+Branch `m5/quick-drop` → [PR #10](https://github.com/Apixa25/XHere-App/pull/10). Composer for PLAN §4.2–§4.4 and the §7 M5 row: a photo or a line of text, three category chips, schema fields, then `create_drop`. A photo of something obvious posts on the shutter and the chip.
+
+- The map has a drop button. The Drop tab is the same screen, and it still says a drop takes about three taps.
+- CameraX takes the photo. The photo picker and a text field are the other ways in. ML Kit image labeling runs on the device. Tests bind a fake shutter and a fake labeler, so the suite does not need a camera or a model download. Robolectric strips the CameraX/ML Kit startup provider.
+- Categories are ranked with a 384-dimension feature hash (`hash-v1`) plus nearby counts, recent picks, and a small time-of-day prior. The same 32 phrases are scored in Kotlin, in the Edge Function, and in pgTAP. All three put the expected category in the top 3 on **32/32 (100%)**, and in the top 1 on 32/32. The bar in PLAN is 70%. pgTAP prints `fixture top-3 32/32`.
+- `suggest-category` calls `suggest_categories` (pgvector) for hash-v1. gte-small is used only when `XHERE_EMBEDDING_MODEL=gte-small` and the platform session exists, and only after `categories.embedding` is rebuilt in that same space. CI does not download weights. If the function cannot be reached, the app ranks on the phone.
+- The form is the category `attributes_schema`. Sensitive categories (`incident_report`, `safety_alert`) always show the notice and a checkbox. `occurred_at` is filled with now so a hazard can post on the chip. An event still asks for start and end. Only `incident_report` blurs the pin (100 m), and the screen says so when the precision is above 0.
+- Photos go to the private `drop-media` bucket through `strip-exif`, which removes JPEG Exif/XMP and PNG text chunks and stores the file under the user's id. The in-memory path strips the same bytes and never calls Storage. No service-role key is in the app or the function.
+- `create_drop` errors are sentences: rate limit, incident reports needing a Regular account, and "describe what happened, not who" for the person-descriptor filter. A matching title within 50 m shows a duplicate hint. `category_suggestion_log` records what was offered and what was picked. Hints do not bump `categories.version`.
+- New SQL is `20261018000700_suggestions.sql`, covered by `07_suggestions.test.sql` (19 assertions). Deno tests run in the supabase workflow (Deno 2.1.4, checksum-pinned) without a Supabase project.
+- No money spent, no accounts created, no secrets committed. `Apixa25/XHere-Web` was not touched.
+
+### Steven still needs to
+
+- **Branch protection:** keep **android / app**, **android / shared**, **ci / gitleaks**, and **supabase / pgtap** on `main`, and add **web / build** from the M8 site. The workflow also runs **supabase / functions** (Deno). Add that check to the ruleset if you want it required; the four above already cover the M5 app, the shared ranker, gitleaks, and pgTAP.
+- **A free Supabase project** before a photo upload, a live suggestion, or a share page hits a server (PLAN §8). Until then the app ranks and stores photos in memory, and the site uses Jamestown fixtures. Put the project URL and the anon key in `local.properties` and on Pages. Do not put the service-role key in the app or the site. Apply the migrations (including `20261018000700_suggestions.sql`) and deploy `suggest-category` and `strip-exif`.
+- **Leave embeddings on hash-v1** until you deliberately set `XHERE_EMBEDDING_MODEL=gte-small` and re-embed every category with that same model. Mixing the two spaces makes the nearest-category search noise. gte-small needs no paid key on Supabase's hosted runtime, and CI never downloads it.
+- **Do not deploy the website** until you approve a free Cloudflare account and the DNS change (`web/CLOUDFLARE.md`). Replace the assetlinks placeholder with the Play App Signing SHA-256, and give `hello@xhere.world` a mailbox (or pick another address). Read the draft privacy, terms, and guidelines before treating them as in effect.
+- Background location stays off until M13.
+- Unchanged from M0–M4: license, secret scanning / push protection, a free Google Cloud OAuth web client id before Google sign-in works, first admin SQL once a project exists, crime-rule review, a Mac before iOS (M15), PLAN §8 and §9. The demo city is Jamestown (PR #4). The Jamestown FOIL request is sent; the code-enforcement email to dod@jamestownny.gov is not.

@@ -1,17 +1,26 @@
 package world.xhere.shared.demo
 
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.days
+import kotlin.time.Duration.Companion.hours
 import kotlin.time.Instant
 import kotlin.uuid.Uuid
+import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonObject
 import world.xhere.shared.data.fake.MemoryStore
 import world.xhere.shared.data.fake.StoredDrop
 import world.xhere.shared.geo.BoundingBox
 import world.xhere.shared.geo.LatLng
 import world.xhere.shared.model.Category
 import world.xhere.shared.model.CategoryGroup
+import world.xhere.shared.model.ContentFilter
 import world.xhere.shared.model.DropStatus
+import world.xhere.shared.model.ModerationMode
 import world.xhere.shared.model.Profile
 import world.xhere.shared.model.Taxonomy
+import world.xhere.shared.model.TierLimits
+import world.xhere.shared.model.UserTier
 
 /**
  * A few Jamestown, NY drops for the in-memory fake (PLAN §7 M4, §10 question 3).
@@ -68,7 +77,7 @@ object JamestownDemo {
     fun store(): MemoryStore {
         val groups = groups()
         val categories = categories(groups)
-        val taxonomy = Taxonomy(groups, categories, emptyList(), emptyList())
+        val taxonomy = Taxonomy(groups, categories, filters(), limits())
         val store = MemoryStore(taxonomy)
         fun put(
             shortId: String,
@@ -185,18 +194,111 @@ object JamestownDemo {
 
     private fun categories(groups: List<CategoryGroup>): List<Category> {
         fun inGroup(slug: String) = groups.first { it.slug == slug }
+        val history = inGroup("history_stories")
+        val nature = inGroup("nature_outdoors")
+        val food = inGroup("food_drink")
+        val events = inGroup("events")
+        val sales = inGroup("sales_free")
+        val safety = inGroup("safety_alerts")
+        val community = inGroup("community_faith")
+        val works = inGroup("infrastructure")
+        val secrets = inGroup("local_secrets")
+        val art = inGroup("art_culture")
+        val notes = inGroup("note")
         return listOf(
-            category(21, inGroup("history_stories"), "historical_fact", "Historical fact", "🏛️", 150, 1),
-            category(22, inGroup("history_stories"), "story", "Story", "📖", 150, 2),
-            category(23, inGroup("nature_outdoors"), "viewpoint", "Viewpoint", "🏞️", 300, 1),
-            category(24, inGroup("food_drink"), "food_truck", "Food truck", "🚚", 500, 1),
-            category(25, inGroup("food_drink"), "eatery_tip", "Eatery tip", "🍽️", 500, 2),
-            category(26, inGroup("events"), "event", "Event", "🎟️", 1000, 1),
-            category(27, inGroup("sales_free"), "yard_sale", "Yard sale", "🏠", 1000, 1),
-            category(28, inGroup("safety_alerts"), "hazard", "Hazard", "⚠️", 2000, 1),
-            category(29, inGroup("note"), "note", "Note", "📍", 100, 1),
+            category(21, history, "historical_fact", "Historical fact", "🏛️", 150, 1, attributes = HISTORICAL_SCHEMA),
+            category(22, history, "story", "Story", "📖", 150, 2, attributes = HISTORICAL_SCHEMA),
+            category(30, history, "memorial", "Memorial", "🕯️", 150, 3, attributes = HISTORICAL_SCHEMA),
+            category(23, nature, "viewpoint", "Viewpoint", "🏞️", 300, 1),
+            category(31, nature, "trail_note", "Trail note", "🥾", 300, 2),
+            category(32, nature, "wildlife", "Wildlife sighting", "🦉", 300, 3),
+            category(33, nature, "water_source", "Water source", "💧", 300, 4),
+            category(24, food, "food_truck", "Food truck", "🚚", 500, 1, attributes = FOOD_SCHEMA),
+            category(25, food, "eatery_tip", "Eatery tip", "🍽️", 500, 2, attributes = FOOD_SCHEMA),
+            category(34, food, "market", "Market", "🧺", 500, 3, attributes = FOOD_SCHEMA),
+            category(
+                26, events, "event", "Event", "🎟️", 1000, 1,
+                attributes = EVENT_SCHEMA,
+                maxTtl = 365.days,
+                maxTtlNew = 30.days,
+                expiresAtAttribute = "ends_at",
+            ),
+            category(
+                35, events, "popup", "Pop-up", "⛺", 1000, 2,
+                attributes = EVENT_SCHEMA,
+                maxTtl = 365.days,
+                maxTtlNew = 30.days,
+                expiresAtAttribute = "ends_at",
+            ),
+            category(27, sales, "yard_sale", "Yard sale", "🏠", 1000, 1),
+            category(36, sales, "for_sale", "For sale", "💵", 1000, 2),
+            category(37, sales, "free_stuff", "Free stuff", "🎁", 1000, 3),
+            category(
+                28, safety, "hazard", "Hazard", "⚠️", 2000, 1,
+                attributes = HAZARD_SCHEMA,
+                defaultTtl = 24.hours,
+                maxTtl = 72.hours,
+                filters = listOf("contact_info"),
+            ),
+            category(
+                38, safety, "safety_alert", "Safety alert", "📢", 2000, 2,
+                attributes = INCIDENT_SCHEMA,
+                sensitive = true,
+                postingNotice = INCIDENT_NOTICE,
+                filters = listOf("contact_info", "person_descriptors"),
+                moderation = ModerationMode.PRE_FOR_NEW,
+                defaultTtl = 72.hours,
+                maxTtl = 72.hours,
+            ),
+            category(
+                39, safety, "incident_report", "Incident report", "🚓", 2000, 3,
+                attributes = INCIDENT_SCHEMA,
+                minTier = UserTier.REGULAR,
+                moderation = ModerationMode.PRE,
+                premodExempt = UserTier.TRUSTED,
+                sensitive = true,
+                postingNotice = INCIDENT_NOTICE,
+                filters = listOf("contact_info", "person_descriptors"),
+                precisionM = 100,
+                defaultTtl = 72.hours,
+                maxTtl = 72.hours,
+            ),
+            category(40, community, "place_of_worship", "Place of worship", "🛐", 300, 1),
+            category(41, community, "community_space", "Community space", "🏘️", 300, 2),
+            category(42, community, "notice_board", "Notice", "📌", 300, 3, minTier = UserTier.REGULAR),
+            category(43, works, "infrastructure", "Infrastructure", "🌉", 200, 1),
+            category(44, works, "construction", "Construction", "🚧", 200, 2),
+            category(45, works, "underground", "Underground", "🚇", 200, 3),
+            category(46, secrets, "hidden_gem", "Hidden gem", "💎", 150, 1),
+            category(47, secrets, "tip", "Local tip", "💡", 150, 2),
+            category(48, art, "street_art", "Street art", "🎨", 150, 1),
+            category(49, art, "public_art", "Public art", "🗿", 150, 2),
+            category(50, art, "music_spot", "Music spot", "🎸", 150, 3),
+            category(29, notes, "note", "Note", "📍", 100, 1),
         )
     }
+
+    private fun filters(): List<ContentFilter> = listOf(
+        ContentFilter(
+            slug = "contact_info",
+            description = "Phone numbers and email addresses.",
+            pattern = """(\+?[0-9][ .()-]*){10,}|[[:alnum:]._%+-]+@[[:alnum:].-]+\.[[:alpha:]]{2,}""",
+            message = "Keep contact in the app. Remove phone numbers and email addresses.",
+        ),
+        ContentFilter(
+            slug = "person_descriptors",
+            description = "Words that describe people.",
+            pattern = """\m(suspects?|perps?|perpetrators?|m[ae]n|wom[ae]n|guys?|gals?|males?|females?|boys?|girls?|teens?|teenagers?|kids?|juveniles?|thugs?|wearing|hoodies?|skin|skinned|complexion|ethnicity|race|racial|black|white|brown|asian|hispanic|latin[oax]|african|arab|middle[- ]eastern|mexican|caucasian|tall|heavyset|skinny|bearded|beard|tattoos?|dreads|dreadlocks|years? old|[0-9]{1,2} ?(yo|y/o))\M""",
+            message = "Describe what happened, not who. Do not name or describe people.",
+        ),
+    )
+
+    private fun limits(): List<TierLimits> = listOf(
+        TierLimits(UserTier.NEW, 3, 10, 20, 10, 4),
+        TierLimits(UserTier.REGULAR, 10, 40, 60, 25, 6),
+        TierLimits(UserTier.TRUSTED, 30, 120, 120, 50, 10),
+        TierLimits(UserTier.GUIDE, 60, 240, 240, 100, 10),
+    )
 
     private fun group(n: Int, slug: String, label: String, icon: String, color: String, sort: Int) = CategoryGroup(
         id = id(n),
@@ -215,6 +317,18 @@ object JamestownDemo {
         icon: String,
         revealM: Int,
         sort: Int,
+        attributes: JsonObject = EMPTY_SCHEMA,
+        minTier: UserTier = UserTier.NEW,
+        moderation: ModerationMode = ModerationMode.POST,
+        premodExempt: UserTier? = null,
+        sensitive: Boolean = false,
+        postingNotice: String? = null,
+        filters: List<String> = emptyList(),
+        precisionM: Int = 0,
+        defaultTtl: Duration? = null,
+        maxTtl: Duration? = null,
+        maxTtlNew: Duration? = null,
+        expiresAtAttribute: String? = null,
     ) = Category(
         id = id(n),
         groupId = group.id,
@@ -222,11 +336,59 @@ object JamestownDemo {
         label = label,
         icon = icon,
         color = group.color,
-        attributesSchema = JsonObject(emptyMap()),
+        attributesSchema = attributes,
+        minTierToPost = minTier,
+        moderationMode = moderation,
+        premodExemptTier = premodExempt,
+        sensitive = sensitive,
+        postingNotice = postingNotice,
+        contentFilters = filters,
         defaultRevealM = revealM,
         maxRevealM = revealM,
+        locationPrecisionM = precisionM,
+        defaultTtl = defaultTtl,
+        maxTtl = maxTtl,
+        maxTtlNew = maxTtlNew,
+        expiresAtAttribute = expiresAtAttribute,
         sort = sort,
     )
 
+    private fun schema(text: String): JsonObject = Json.parseToJsonElement(text).jsonObject
+
     private fun id(n: Int): Uuid = Uuid.parse("00000000-0000-4000-8000-${n.toString().padStart(12, '0')}")
+
+    private val EMPTY_SCHEMA = schema("""{"type":"object","additionalProperties":false,"properties":{}}""")
+    private val HISTORICAL_SCHEMA = schema(
+        """{"type":"object","additionalProperties":false,"properties":{
+        "era":{"type":"string","maxLength":60},
+        "year":{"type":"integer","minimum":-5000,"maximum":2100},
+        "source_url":{"type":"string","format":"uri","maxLength":500}}}""",
+    )
+    private val FOOD_SCHEMA = schema(
+        """{"type":"object","additionalProperties":false,"properties":{
+        "cuisine":{"type":"string","maxLength":60},
+        "price_level":{"type":"integer","minimum":1,"maximum":4}}}""",
+    )
+    private val EVENT_SCHEMA = schema(
+        """{"type":"object","additionalProperties":false,"required":["starts_at","ends_at"],"properties":{
+        "starts_at":{"type":"string","format":"date-time"},
+        "ends_at":{"type":"string","format":"date-time"},
+        "cost":{"type":"string","maxLength":60}}}""",
+    )
+    private val HAZARD_SCHEMA = schema(
+        """{"type":"object","additionalProperties":false,"required":["occurred_at"],"properties":{
+        "occurred_at":{"type":"string","format":"date-time"},
+        "severity":{"enum":["low","med","high"]},
+        "ongoing":{"type":"boolean"}}}""",
+    )
+    private val INCIDENT_SCHEMA = schema(
+        """{"type":"object","additionalProperties":false,"required":["occurred_at"],"properties":{
+        "occurred_at":{"type":"string","format":"date-time"},
+        "severity":{"enum":["low","med","high"]},
+        "ongoing":{"type":"boolean"}}}""",
+    )
+
 }
+
+private const val INCIDENT_NOTICE: String =
+    "Describe what happened, not who. Do not name or describe people. In an emergency call 911. XHere is not a reporting channel to police."

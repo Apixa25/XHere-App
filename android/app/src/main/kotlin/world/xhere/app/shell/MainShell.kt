@@ -34,6 +34,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import org.koin.androidx.compose.koinViewModel
 import world.xhere.app.R
+import world.xhere.app.drop.DropScreen
 import world.xhere.app.map.MapScreen
 import world.xhere.app.profile.ProfileViewModel
 import world.xhere.app.settings.SettingsScreen
@@ -93,8 +94,12 @@ fun MainShell() {
             startDestination = Routes.MAP,
             modifier = Modifier.padding(padding),
         ) {
-            composable(Routes.MAP) { MapScreen() }
-            composable(Routes.DROP) { PlaceholderPage(TestTags.SCREEN_DROP, R.string.drop_title, R.string.drop_body) }
+            composable(Routes.MAP) {
+                MapScreen(onDrop = {
+                    nav.navigate(Routes.DROP) { launchSingleTop = true }
+                })
+            }
+            composable(Routes.DROP) { DropScreen() }
             composable(Routes.PROFILE) { ProfilePage(onSettings = { nav.navigate(Routes.SETTINGS) }) }
             composable(Routes.SETTINGS) { SettingsScreen(onBack = { nav.popBackStack() }) }
         }
