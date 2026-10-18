@@ -1,0 +1,44 @@
+---
+import { renderDraft, renderFooter, renderHeader, renderSkip } from "../lib/chrome.mjs";
+import { canonicalUrl } from "../lib/site.mjs";
+import { siteCss } from "../styles/site-css.mjs";
+
+interface Props {
+  title: string;
+  description: string;
+  draft?: boolean;
+}
+
+const { title, description, draft = false } = Astro.props;
+const fullTitle = title === "XHere" ? "XHere" : `${title} · XHere`;
+const canonical = canonicalUrl(Astro.url.pathname);
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{fullTitle}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <meta name="theme-color" content="#0F6E56" />
+    <meta name="color-scheme" content="light" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="XHere" />
+    <meta property="og:title" content={fullTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    <style is:inline set:html={siteCss}></style>
+  </head>
+  <body>
+    <Fragment set:html={renderSkip()} />
+    <Fragment set:html={renderHeader(Astro.url.pathname)} />
+    <main id="content" class="wrap">
+      {draft && <Fragment set:html={renderDraft()} />}
+      <slot />
+    </main>
+    <Fragment set:html={renderFooter()} />
+  </body>
+</html>

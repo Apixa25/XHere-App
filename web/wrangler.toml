@@ -1,0 +1,8 @@
+# Cloudflare Pages config for the xhere.world site.
+# Do not deploy. There is no account_id on purpose.
+# Steven must approve the Cloudflare account and the DNS change first.
+# See CLOUDFLARE.md.
+
+name = "xhere-world"
+compatibility_date = "2026-10-18"
+pages_build_output_dir = "dist"

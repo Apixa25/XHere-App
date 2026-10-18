@@ -1,0 +1,16 @@
+---
+import { fixtureParams, loadPublicDrop } from "../../lib/drops.mjs";
+import { renderShareDocument } from "../../lib/share-document.mjs";
+
+export function getStaticPaths() {
+  return fixtureParams();
+}
+
+const drop = await loadPublicDrop(String(Astro.params.short_id), {});
+if (!drop) {
+  throw new Error(`Missing fixture ${Astro.params.short_id}`);
+}
+const html = renderShareDocument(drop);
+---
+
+<Fragment set:html={html} />

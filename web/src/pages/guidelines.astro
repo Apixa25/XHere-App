@@ -1,0 +1,112 @@
+---
+import Base from "../layouts/Base.astro";
+import { CONTACT_NOTE, SITE } from "../lib/site.mjs";
+
+const description =
+  "Draft community guidelines for XHere, including the category rules and the stricter rules for incident reports.";
+---
+
+<Base title="Community guidelines" description={description} draft>
+  <h1>Community guidelines</h1>
+  <p>
+    XHere is for information about places, not about hunting people.
+    These rules match the category rules stored with the app.
+    This page is a draft for {SITE.owner} to review. It is not in effect until he says so.
+  </p>
+
+  <h2>The short version</h2>
+  <ul>
+    <li>Describe the place and what happened. Do not describe a person.</li>
+    <li>Be accurate. Say what you saw, and do not dress up a guess as a fact.</li>
+    <li>Keep phone numbers and email addresses out of the text. Contact stays in the app.</li>
+    <li>In an emergency, call 911. XHere is not a reporting channel to police.</li>
+    <li>Do not sell or give away weapons, drugs, or other regulated items.</li>
+  </ul>
+
+  <h2>Everyone</h2>
+  <p>These are not allowed on any drop, comment, or profile:</p>
+  <ul>
+    <li>Harassment, threats, or hate toward a person or a group.</li>
+    <li>Sexual content involving anyone under 18.</li>
+    <li>Private contact details, documents, or account information.</li>
+    <li>Impersonation, spam, and ads that have nothing to do with the place.</li>
+    <li>Naming or describing a suspect, a witness, or a neighbor so that someone could pick them out of a crowd.</li>
+  </ul>
+  <p>
+    You can report a drop or a profile, and you can block someone. Blocked people’s drops are hidden from you.
+    Two reports hide an incident report automatically. Other categories hide after the number of reports set on that category, usually three.
+  </p>
+
+  <h2>History and stories</h2>
+  <p>
+    Historical facts, stories, and memorials reveal within about 150 meters and can stay up.
+    A source or citation is encouraged. Three nearby confirmations earn the confirmed badge.
+  </p>
+
+  <h2>Nature</h2>
+  <p>
+    Viewpoints, trail notes, and water sources can stay up and reveal within about 300 meters.
+    A wildlife sighting expires after 7 days so an old animal report does not sit on the map forever.
+  </p>
+
+  <h2>Food and events</h2>
+  <p>
+    A food truck lasts 6 hours. Someone nearby can say “still here,” which renews it. Other food tips can stay up.
+    An event or pop-up needs a start and an end, and it expires when it ends.
+    A new account can only post an event that ends within 30 days.
+  </p>
+
+  <h2>Sales and free stuff</h2>
+  <p>
+    Yard sales last 3 days. Items for sale and free stuff last 14 days.
+    The author is always shown. Anonymous sales are not allowed.
+    Contact is in the app only. The text filter removes phone numbers and email addresses.
+    No weapons, drugs, or regulated items. The posting screen says this before you publish.
+  </p>
+
+  <h2>Hazards and safety alerts</h2>
+  <p>
+    A hazard (road, sidewalk, flood) reveals from farther away, about 2 kilometers, and lasts 24 hours unless people nearby confirm it.
+    Each confirmation can extend it by 24 hours, up to 72 hours.
+  </p>
+  <p>
+    A safety alert is sensitive. It lasts 72 hours. New accounts are reviewed before it is visible.
+    The same emergency line applies: call 911 if you need help. XHere is not a way to reach the police.
+    Describe what happened, not who.
+  </p>
+
+  <h2>Incident reports</h2>
+  <p>
+    An incident report is for a crime or similar event nearby. It is the strictest category, because a location app can do real harm here.
+  </p>
+  <ul>
+    <li><strong>Who can post.</strong> Regular accounts and above. A new account cannot post one.</li>
+    <li><strong>Review.</strong> Posts are held for review first. Trusted accounts can go live, still marked unconfirmed.</li>
+    <li><strong>Confirmation.</strong> It stays unconfirmed until two people nearby say it is still true. Two denials, or two reports, hide it.</li>
+    <li><strong>Place.</strong> The map shows an approximate area of about 100 meters, not the exact spot and not a person’s home as a pin.</li>
+    <li><strong>Time.</strong> It expires after 72 hours. You have to say when it happened.</li>
+    <li><strong>Words.</strong> Describe what happened, not who. Do not name or describe people. The filter blocks contact details and words for gender, age, race, clothing, build, and similar descriptors.</li>
+    <li><strong>Acknowledgement.</strong> The app asks you to accept these rules before the post goes through.</li>
+    <li><strong>Emergency.</strong> In an emergency call 911. XHere is not a reporting channel to police.</li>
+    <li><strong>The website.</strong> A share link shows the teaser only. It does not include the hidden text, the author’s handle, or an exact address.</li>
+  </ul>
+  <p>
+    Where a city publishes an official incident feed, that layer is separate and labeled as open data.
+    User reports are not a substitute for it.
+  </p>
+
+  <h2>Community, infrastructure, secrets, art, notes</h2>
+  <ul>
+    <li>Places of worship and community spaces can stay up. A notice lasts 30 days and needs a Regular account.</li>
+    <li>Infrastructure and underground notes reveal within about 200 meters. Construction expires when the estimated completion date passes.</li>
+    <li>Hidden gems and local tips reveal only within about 50 meters. You have to be there.</li>
+    <li>Street art, public art, and music spots reveal within about 150 meters.</li>
+    <li>A general note reveals within about 100 meters and lasts 7 days, unless two confirmations keep it. New accounts are reviewed first.</li>
+  </ul>
+
+  <h2>If we remove something</h2>
+  <p>
+    Moderators can hide a drop, remove it, or suspend an account. The reason is kept in an audit log.
+    A formal appeals screen is not built yet. Write to <a href={`mailto:${SITE.contactEmail}`}>{SITE.contactEmail}</a> if you think a decision was wrong. {CONTACT_NOTE}
+  </p>
+</Base>

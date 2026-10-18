@@ -1,0 +1,78 @@
+---
+import Base from "../layouts/Base.astro";
+import { CONTACT_NOTE, SITE } from "../lib/site.mjs";
+
+const description =
+  "Draft privacy notice for XHere, a project by Steven Sills II. What the app and this website handle, and how to delete an account.";
+---
+
+<Base title="Privacy" description={description} draft>
+  <h1>Privacy</h1>
+  <p>
+    XHere is a project by {SITE.owner}. It is not a company, and this draft does not invent an address, a phone number, or a registration.
+    Questions go to <a href={`mailto:${SITE.contactEmail}`}>{SITE.contactEmail}</a>. {CONTACT_NOTE}
+  </p>
+
+  <h2>What XHere is</h2>
+  <p>
+    XHere lets someone attach a short drop to a real-world place and lets other people find it.
+    The pilot city is Jamestown, New York. The app is meant to work anywhere.
+    This website is the public face: a landing page, share links, and these policy pages. It is not the map app.
+  </p>
+
+  <h2>This website</h2>
+  <p>
+    The pages you are reading are static. They do not set cookies, and they do not run analytics.
+    The tester form opens an email to the placeholder address. It does not store what you type on a server.
+    A share link shows a teaser: title, category, and a map image. It does not show the hidden text of a drop.
+    Sensitive drops (safety alerts and incident reports) also hide the author’s name and show only an approximate area.
+  </p>
+  <p>
+    Map images are drawn from OpenFreeMap vector tiles, the same free tiles the Android app loads with MapLibre.
+    Those tiles come from OpenStreetMap and OpenMapTiles. Fetching a tile sends the usual connection data (such as an IP address) to that tile service.
+    XHere does not add an account or an API key to that request.
+  </p>
+
+  <h2>The Android app</h2>
+  <p>When you use the app, it handles:</p>
+  <ul>
+    <li><strong>Account.</strong> An email address if you sign in with a one-time code, or the basic profile Google shares if you use Google sign-in, plus a handle you pick.</li>
+    <li><strong>What you post.</strong> The title, text, category, tags, and photos of drops you create, and confirmations or reports you submit.</li>
+    <li><strong>Location, while the app is open, if you allow it.</strong> The app asks only for foreground location. It uses that position to show drops near you, to place a drop you create, and to measure whether you are close enough to reveal or confirm one. It does not ask for background location.</li>
+  </ul>
+  <p>
+    The app is not supposed to keep a history of where you walked. A confirmation stores the distance, not a trail.
+    For categories that require a blurred location, other people receive the blurred point, not the exact one you stood on.
+    Incident reports are blurred to about 100 meters.
+  </p>
+  <p>
+    There is no hosted database yet. Until {SITE.owner} approves a free Supabase project, the app can run against a local preview and this website shows built-in Jamestown examples.
+    When that project exists, account and drop data will sit in its Postgres database. The service-role key stays off the website and out of the app.
+  </p>
+
+  <h2>What other people can see</h2>
+  <p>
+    Other people can see your handle, unless a drop is shown anonymously or the category is sensitive on the web.
+    They can see the teaser of your drop from far away, and the rest only when they are close enough.
+    They cannot see your exact location history, your email, or the hidden text of a locked drop.
+  </p>
+
+  <h2>How long it stays</h2>
+  <p>
+    Some drops expire on their own (a food truck lasts hours, an incident report lasts 72 hours, a note lasts 7 days unless people confirm it).
+    If you delete your account, the app hides your profile immediately and a scheduled job permanently deletes the login within 30 days.
+    See <a href="/delete-account">Delete account</a> for the steps and for what is removed.
+  </p>
+
+  <h2>Children</h2>
+  <p>XHere is not directed at children under 13, and it does not ask for their information.</p>
+
+  <h2>Selling data</h2>
+  <p>This project does not sell personal information. This draft does not add advertising or a data broker.</p>
+
+  <h2>Changes</h2>
+  <p>
+    {SITE.owner} will replace this draft before the site is the public privacy policy.
+    The date of that approved version will be written here. Until then, this page is a draft for his review.
+  </p>
+</Base>
