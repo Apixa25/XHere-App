@@ -177,7 +177,7 @@ Branch `m4/map-discovery` → [PR #9](https://github.com/Apixa25/XHere-App/pull/
 
 ## 2026-10-18 (Sun), ~3:30 AM ET: M8 website for xhere.world
 
-Branch `m8/website`. Astro site in `web/` for PLAN §1.5 and §7 M8. Not deployed.
+Branch `m8/website` → [PR #11](https://github.com/Apixa25/XHere-App/pull/11). Astro site in `web/` for PLAN §1.5 and §7 M8. Not deployed.
 
 - Landing page: attach any data to any real-world place, and find what others left. Pilot city is Jamestown, NY. The app is global. Category groups match the M1 taxonomy.
 - `/d/{short_id}` is a teaser share page. Open Graph and Twitter tags point at a static SVG map drawn from OpenFreeMap planet vector tiles (the same free tiles as the Android MapLibre styles). No MapLibre GL in the page, so the Lighthouse run stays a static document. Sensitive drops (`safety_alert`, `incident_report`) and any drop with a precision blur draw a dashed area, not a pin. The hidden body, attributes, media, and tags are not on the page type and are not rendered. The author handle is omitted on sensitive teasers.
