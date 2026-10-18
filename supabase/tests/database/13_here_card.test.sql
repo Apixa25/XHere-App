@@ -80,13 +80,14 @@ select ok(
   'the body opens from the viewer location, and distance_m stays measured from the tap'
 );
 
+-- drops is not readable by the client role. Check the counter as the table owner.
+reset role;
 select is(
   (select d.view_count from public.drops d where d.id = current_setting('t.mill')::uuid),
   0::bigint,
   'opening a Here Card does not count a view'
 );
 
-reset role;
 update public.drops set view_count = 37, confirm_count = 4 where id = current_setting('t.mill')::uuid;
 set local role authenticated;
 set local request.jwt.claims to '{"sub": "22222222-2222-4222-8222-222222222222", "role": "authenticated"}';
@@ -220,6 +221,9 @@ begin
 end;
 $$;
 set local request.jwt.claims to '{"sub": "22222222-2222-4222-8222-222222222222", "role": "authenticated"}';
+-- Keep Bob's JWT so here_card still applies his reveal rules, but read drops
+-- as the table owner. The client role has no SELECT on that table.
+reset role;
 select ok(
   (select h.body is null and not h.revealed
       and h.lat = extensions.st_y(d.display_geog::extensions.geometry)
@@ -230,6 +234,7 @@ select ok(
    where h.id = current_setting('t.incident')::uuid),
   'an incident card uses the blurred pin and hides the body when the viewer is far'
 );
+set local role authenticated;
 
 -- Place names. The cell is 0.001°. Attribution is not taken from the client.
 select is(
