@@ -66,3 +66,17 @@ Java 21. `ANDROID_HOME` with platforms `android-36` (shared) and `android-37.0` 
 ```
 
 `:shared:jvmTest` is unchanged and still runs in the `android / shared` CI job.
+
+## Release (M9)
+
+`versionName` `0.9.0`, `versionCode` `900`. See `docs/PLAY-RELEASE.md` for the scheme, the Play Console checklist, and the Data safety answers.
+
+Release builds are minified (R8) and resource-shrunk. Keep rules for supabase-kt, Ktor, kotlinx.serialization, MapLibre, ML Kit, CameraX, and Sentry are in `proguard-rules.pro`.
+
+```bash
+./gradlew :android:app:bundleRelease
+```
+
+The AAB is signed with the upload key only when all four of these are present: `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`, and a keystore at `android/keystore/release.jks` (CI decodes the `ANDROID_KEYSTORE_BASE64` secret into that path) or `ANDROID_KEYSTORE_FILE`. Otherwise the release is debug-signed so CI still produces an AAB. Do not upload the debug-signed AAB. None of those values belong in git.
+
+Sentry is compiled in and left off unless `SENTRY_DSN` is a real DSN. No crash-reporting account is required to build.

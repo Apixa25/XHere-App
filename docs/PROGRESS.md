@@ -263,3 +263,44 @@ Branch `m7/safety` → [PR #13](https://github.com/Apixa25/XHere-App/pull/13). R
 - **Play Console forms:** use [COMPLIANCE.md](COMPLIANCE.md) for the UGC questions, the **Child safety standards** declaration (standards URL `https://xhere.world/guidelines#child-safety`, and you as the point of contact), and the Data safety form (deletion URL `https://xhere.world/delete-account`).
 - **Read the new wording** before treating it as in effect: the sign-in agreement line, the child safety section, the 24-hour review target in the terms, and the export and audit-log text on the delete-account and privacy pages.
 - **A new region gets incident reports only after you add its police tip line**, in `private.tip_lines` and in the shared `SafetyDirectory`, until M16b moves tip lines into the region config.
+
+## 2026-10-18 (Sun), ~6:10 AM ET: M9 Play closed-test prep
+
+Branch `m9/release-prep`. Release prep for PLAN §7 M9 and the Play cost row in PLAN §8. The closed test is ready to upload once Steven does the steps in [PLAY-RELEASE.md](PLAY-RELEASE.md). No Play account was created and the $25 was not spent.
+
+- **Signing.** Gradle reads `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, and `ANDROID_KEY_PASSWORD`. Those names are the GitHub Actions secrets. The keystore is decoded into `android/keystore/release.jks` (gitignored) and is never committed. If any secret is missing, the release AAB is debug-signed so the job still passes. That artifact is not the one to upload.
+- **Version.** `0.9.0` / versionCode `900` (`major * 10000 + minor * 100 + patch`). The next upload has to be a higher code.
+- **R8.** Minify and resource shrinking are on for release. `proguard-rules.pro` keeps kotlinx.serialization, Ktor, supabase-kt, MapLibre, ML Kit, CameraX, Koin, and Sentry. `ReleaseStartupTest` opens the real application class. The **android / release** job installs the minified APK on an API 34 emulator and checks the process stays up.
+- **CI.** `.github/workflows/android.yml` job `release` (check name **android / release**) builds the AAB and uploads `xhere-release-aab` plus the R8 mapping. It does not need the signing secrets.
+- **Crashes.** Sentry is wired and does not start unless `SENTRY_DSN` is a real URL. Auto-init is off. No Sentry account was created. The free tier is the one PLAN §8 already lists.
+- **Listing.** `android/play/` has the title, the short description, the full description, a 1024×500 feature graphic, four 1080×1920 phone screenshots, and a 512 icon. The pictures are rendered from Compose previews of the Jamestown drops.
+- **Paperwork.** `docs/PLAY-RELEASE.md` has the Data safety answers (preview build vs a later Supabase rebuild), the foreground-location declaration, and the ordered checklist: Cloudflare so `https://xhere.world/privacy` resolves, the $25 account, the upload key, 12 testers for 14 days, and the Play App Signing SHA-256 into `web/src/lib/site.mjs` (that is what serves `/.well-known/assetlinks.json`).
+- No money spent, no accounts created, no secrets committed. `Apixa25/XHere-Web` was not touched.
+
+### Steven still needs to
+
+The deduplicated list is the MVP status section below. The Play clicks, in order, are in [PLAY-RELEASE.md](PLAY-RELEASE.md).
+
+## MVP status (M0–M9)
+
+The closed-test app is in the repo. M0 through M9 are merged or in this branch: the repo and CI, the database and the Jamestown seed, the shared Kotlin core, the Android app (sign-in, map, quick drop, reveal, safety), the xhere.world site, and this Play release prep. What is left is yours. Each item is listed once.
+
+1. **Google Play, $25 once.** Approve the developer account (PLAN §8). Create the app `world.xhere.app`, paste the listing from `android/play/`, paste the Data safety and location answers from `docs/PLAY-RELEASE.md`, upload the **signed** AAB from the **android / release** artifact, and run a closed test with **12 testers opted in for 14 days** before you apply for production. The closed test itself can start as soon as they opt in. Do not upload the debug-signed AAB that CI builds while the keystore secrets are empty.
+2. **Upload key.** Create a keystore on your machine (command in `docs/PLAY-RELEASE.md`). Add GitHub Actions secrets `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, and `ANDROID_KEY_PASSWORD`. Re-run **android / release** and download `xhere-release-aab`.
+3. **Play App Signing SHA-256.** After the first upload, copy the **App signing key** SHA-256 (not the upload key) into `fingerprintPlaceholder` in `web/src/lib/site.mjs`. That is the value `/.well-known/assetlinks.json` serves. The string in the repo is not a certificate. App Links stay unverified until you replace it and redeploy the site.
+4. **The website.** Approve a free Cloudflare account and the DNS change (`web/CLOUDFLARE.md`) before anyone deploys. Play loads the privacy policy from **https://xhere.world/privacy**, which does not serve this site while `xhere.world` still points at the old Render services. Do not reactivate Render. GoDaddy registration runs through December 2026.
+5. **A mailbox for hello@xhere.world**, or a different address, before the contact link can receive mail. The address on the site is a placeholder.
+6. **Approve the draft privacy, terms, and guidelines**, including the sign-in agreement, the child-safety section, the 24-hour review line, and the export and audit-log text. They are not in effect until you say so.
+7. **A free Supabase project** (PLAN §8) before live sign-in, photo upload, suggestions, or a share page can load a real drop. Put the project URL and the anon key in `local.properties` and on Pages. Do not put the service-role key in the app or the site. Apply every migration through `20261018001100_tip_lines.sql`, and deploy `suggest-category` and `strip-exif`. Leave category embeddings on hash-v1. Rebuild the AAB after this and update Data safety to the "with Supabase" column in `docs/PLAY-RELEASE.md`.
+8. **A free Google Cloud OAuth web client id** before Google sign-in works. The same id goes in `GOOGLE_WEB_CLIENT_ID` and in the Supabase Google provider.
+9. **First admin.** Once the project exists, run the SQL in `supabase/README.md`. Then check Settings → Moderation queue about once a day. The terms say reports are reviewed, aiming for within 24 hours. Auto-hide only covers the wait.
+10. **Incident reports in a new region** need that region's police tip line in `private.tip_lines` and in `SafetyDirectory`, until M16b moves tip lines into the region config. Jamestown is already seeded.
+11. **Branch protection on `main`.** Require **ci / gitleaks**, **android / shared**, **android / app**, **android / release**, **supabase / pgtap**, **supabase / functions**, and **web / build**.
+12. **Secret scanning and push protection** (free on this repo): Settings → Code security. Do not buy GitHub Advanced Security. Gitleaks in CI is the scanner if those toggles are missing.
+13. **Pick a license.** `LICENSE` stays "All rights reserved" until you do.
+14. **Sentry is optional.** Crash reporting is off until `SENTRY_DSN` is set. A free Sentry account needs your OK (PLAN §8). If you turn it on, say so on the Data safety form.
+15. **A Mac and the Apple Developer Program ($99/year)** only when iOS starts (M15). Not needed for the Play test.
+16. **Old repo (PLAN §9, `docs/SECURITY-FIXES.md`).** Rotate or delete the Render Postgres credentials that were committed, restrict the old Google Maps keys, and consider making `XHere-Web` private. Do not reactivate Render. This work does not touch that repo.
+17. **Jamestown.** The demo city is Jamestown (PR #4). The FOIL request was sent. The code-enforcement email to dod@jamestownny.gov has not been sent.
+18. **Still open, and not blocking the closed test:** whether a drop can hide its author from the public, and whether you want a business tier later (PLAN §10). You still need about 12 people for the tester count in item 1.
+19. **Background location stays off** until M13. Do not add it to the manifest for this test.

@@ -1,0 +1,20 @@
+XHere attaches a short note to a real place. Open the map, see what is nearby, and walk closer when you want to read it.
+
+The demo drops are in Jamestown, New York: the Fenton History Center, West 3rd Street, the Riverwalk, Tracy Plaza, and the lake shore at Celoron. The app is not limited to one city.
+
+What you can do
+• Browse the map by category: history, food, events, hazards, local tips, and more.
+• Leave a drop in about three taps. A photo or a line of text, a suggested category, then post.
+• Confirm a drop when you are close enough, or say it is not true anymore.
+• Share a link. The web page shows a teaser. The rest stays on the map until you are there.
+• Report, block, or hide. Safety posts follow stricter rules, and incident reports are shown as an area, not a pinpoint.
+
+Location
+XHere asks for location only while the app is open, and only if you allow it. That is how nearby drops show up, how a new drop is placed, and how a drop unlocks when you are close enough. You can tap Not now and still look around the map. The app does not ask to follow you in the background, and it does not keep a trail of where you walked.
+
+Your account
+You can download a copy of your data in the app. You can delete the account in the app, or at https://xhere.world/delete-account.
+
+Privacy policy: https://xhere.world/privacy
+
+XHere is a project by Steven Sills II. This build is for closed testing.

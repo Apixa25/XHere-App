@@ -113,3 +113,94 @@ jobs:
 
       - name: Assemble and test the app
         run: ./gradlew :android:app:assembleDebug :android:app:testDebugUnitTest
+
+  # M9. Check name is android / release. Builds the closed-test AAB and
+  # proves the minified release APK starts. Signing secrets are optional:
+  # when they are absent the AAB is debug-signed and this job still passes.
+  release:
+    name: release
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    permissions:
+      contents: read
+      actions: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Install Android SDK
+        run: |
+          set -euo pipefail
+          VERSION=13114758
+          SHA256=7ec965280a073311c339e571cd5de778b9975026cfcbe79f2b1cdcb1e15317ee
+          SDK="$HOME/android-sdk"
+          mkdir -p "$SDK/cmdline-tools"
+          curl -sSLf -o /tmp/commandlinetools.zip \
+            "https://dl.google.com/android/repository/commandlinetools-linux-${VERSION}_latest.zip"
+          echo "${SHA256}  /tmp/commandlinetools.zip" | sha256sum -c -
+          unzip -q /tmp/commandlinetools.zip -d /tmp/android-clt
+          mv /tmp/android-clt/cmdline-tools "$SDK/cmdline-tools/latest"
+          yes | "$SDK/cmdline-tools/latest/bin/sdkmanager" --sdk_root="$SDK" \
+            "platforms;android-36" \
+            "platforms;android-37.0" \
+            "build-tools;36.0.0" \
+            "build-tools;37.0.0" || true
+          test -d "$SDK/platforms/android-36"
+          test -d "$SDK/platforms/android-37.0"
+          echo "ANDROID_HOME=$SDK" >> "$GITHUB_ENV"
+          echo "ANDROID_SDK_ROOT=$SDK" >> "$GITHUB_ENV"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      # Exact secret names. None of them are in the repo. When any one is
+      # empty, Gradle debug-signs the release build. See docs/PLAY-RELEASE.md.
+      - name: Decode the upload keystore when secrets exist
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          if [ -z "${ANDROID_KEYSTORE_BASE64}" ] || [ -z "${ANDROID_KEYSTORE_PASSWORD}" ] || [ -z "${ANDROID_KEY_ALIAS}" ] || [ -z "${ANDROID_KEY_PASSWORD}" ]; then
+            echo "Upload-key secrets are absent. The AAB will be debug-signed."
+            exit 0
+          fi
+          mkdir -p android/keystore
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 -d > android/keystore/release.jks
+          test -s android/keystore/release.jks
+          echo "Upload keystore decoded. Passwords were not printed."
+
+      - name: Build the release AAB and APK
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: ./gradlew :android:app:assembleRelease :android:app:bundleRelease --stacktrace
+
+      - name: Minified release starts
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          target: aosp_atd
+          emulator-options: -no-snapshot-save -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect
+          disable-animations: true
+          script: bash android/scripts/assert-minified-release-starts.sh android/app/build/outputs/apk/release/app-release.apk
+
+      - name: Upload the AAB and the R8 mapping
+        uses: actions/upload-artifact@v7
+        with:
+          name: xhere-release-aab
+          if-no-files-found: error
+          retention-days: 14
+          path: |
+            android/app/build/outputs/bundle/release/*.aab
+            android/app/build/outputs/mapping/release/mapping.txt
