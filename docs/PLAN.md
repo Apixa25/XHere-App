@@ -367,7 +367,7 @@ Rough pace with agents: M0–M2 in ~1 week, M3–M7 in ~2–3 weeks, M8–M9 in 
 ## 10. Open questions for Steven
 1. Does he have (or want) a Mac, or is "Android first, iOS later" acceptable?
 2. Is the new repo private (default) or public? License?
-3. Which city or area should be the demo/seed area (for testers and open data)?
+3. Which city or area should be the demo/seed area (for testers and open data)? **Jamestown, New York** (answered 2026-10-18): downtown, the Chadakoin River, the National Comedy Center, Lucille Ball sites, and the Chautauqua Lake shore. See `supabase/seed.sql`.
 4. Does he have about 12 testers for the 14-day Play closed test (friends, family, a local group)?
 5. Should drops allow anonymous *display* (author hidden publicly but known to moderators)?
 6. Monetization appetite later: claimed places/business tier vs. none.
