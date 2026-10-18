@@ -4,9 +4,10 @@ package world.xhere.shared
  * Public Supabase client config. [anonKey] is the publishable (anon) key from
  * `.env.example` (`SUPABASE_ANON_KEY`). Never put the service-role key in the app.
  *
- * [PLACEHOLDER] matches the example file. No project has been created; calls with
- * it fail at the network, which is expected until Steven approves a free Supabase
- * account (PLAN §8).
+ * [PLACEHOLDER] matches `.env.example`. The hosted project is
+ * `jpeuldzegtbqfezijhuy` (PLAN §8). Calls with the placeholder fail at the
+ * network until `SUPABASE_URL` and `SUPABASE_ANON_KEY` are set outside git.
+ * `SUPABASE_ANON_KEY` is the publishable key (`sb_publishable_…`).
  */
 data class SupabaseConfig(
     val url: String,

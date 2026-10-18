@@ -23,6 +23,24 @@ export interface SuggestDeps {
   embed?(text: string, model: string): Promise<{ vector: number[]; model: string }>;
 }
 
+/** The caller has no user session. Same JSON shape as strip-exif. */
+export class NotAuthenticatedError extends Error {
+  constructor() {
+    super("not_authenticated");
+    this.name = "NotAuthenticatedError";
+  }
+}
+
+/**
+ * PostgREST answers 401 when the JWT is missing or is only the anon key, and
+ * 403 when a granted function raises `not_authenticated` (SQLSTATE 42501).
+ * Anything else stays a thrown error so the platform returns 500.
+ */
+export function errorForRpcStatus(fn: string, status: number): Error {
+  if (status === 401 || status === 403) return new NotAuthenticatedError();
+  return new Error(`rpc_${fn}_${status}`);
+}
+
 export async function handleSuggest(req: Request, deps: SuggestDeps): Promise<Response> {
   if (req.method !== "POST") {
     return json({ error: "method_not_allowed" }, 405);
@@ -33,21 +51,28 @@ export async function handleSuggest(req: Request, deps: SuggestDeps): Promise<Re
   } catch {
     return json({ error: "invalid_json" }, 400);
   }
-  const text = [body.text ?? "", ...(body.labels ?? [])].map((part) => part.trim()).filter(Boolean).join(" ");
-  const model = await deps.model();
-  if (model === "gte-small") {
-    const embedded = await (deps.embed ?? embedQuery)(text, model);
-    if (embedded.model === "gte-small") {
-      const matches = await deps.match(embedded.vector);
-      const nearby = body.lat != null && body.lng != null ? await deps.nearby(body.lat, body.lng) : {};
-      return json({ model: "gte-small", suggestions: blendGivenCosine(matches, nearby, body) });
+  try {
+    const text = [body.text ?? "", ...(body.labels ?? [])].map((part) => part.trim()).filter(Boolean).join(" ");
+    const model = await deps.model();
+    if (model === "gte-small") {
+      const embedded = await (deps.embed ?? embedQuery)(text, model);
+      if (embedded.model === "gte-small") {
+        const matches = await deps.match(embedded.vector);
+        const nearby = body.lat != null && body.lng != null ? await deps.nearby(body.lat, body.lng) : {};
+        return json({ model: "gte-small", suggestions: blendGivenCosine(matches, nearby, body) });
+      }
     }
+    const suggestions = await deps.suggestHash(body, text);
+    return json({
+      model: "hash-v1",
+      suggestions: suggestions.slice(0, 3).map(publicSuggestion),
+    });
+  } catch (error) {
+    if (error instanceof NotAuthenticatedError) {
+      return json({ error: "not_authenticated" }, 401);
+    }
+    throw error;
   }
-  const suggestions = await deps.suggestHash(body, text);
-  return json({
-    model: "hash-v1",
-    suggestions: suggestions.slice(0, 3).map(publicSuggestion),
-  });
 }
 
 function blendGivenCosine(

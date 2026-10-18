@@ -3,7 +3,13 @@
 // Set XHERE_EMBEDDING_MODEL=gte-small only after categories.embedding was
 // rebuilt with that model. Supabase injects SUPABASE_URL and SUPABASE_ANON_KEY.
 
-import { handleSuggest, type SuggestBody, type SuggestDeps } from "./handler.ts";
+import {
+  errorForRpcStatus,
+  handleSuggest,
+  NotAuthenticatedError,
+  type SuggestBody,
+  type SuggestDeps,
+} from "./handler.ts";
 import type { Ranked } from "../_shared/rank.ts";
 
 Deno.serve((req) => {
@@ -52,15 +58,26 @@ async function rpc<T>(fn: string, args: unknown, authorization: string): Promise
   const base = Deno.env.get("SUPABASE_URL");
   const key = Deno.env.get("SUPABASE_ANON_KEY");
   if (!base || !key) throw new Error("supabase_not_configured");
+  // No user JWT: do not call the RPC as the anon key. That used to throw
+  // rpc_suggest_categories_401 and the platform turned it into a 500.
+  if (!authorization.trim()) throw new NotAuthenticatedError();
   const response = await fetch(`${base}/rest/v1/rpc/${fn}`, {
     method: "POST",
     headers: {
       apikey: key,
-      Authorization: authorization || `Bearer ${key}`,
+      Authorization: authorization,
       "content-type": "application/json",
     },
     body: JSON.stringify(args),
   });
-  if (!response.ok) throw new Error(`rpc_${fn}_${response.status}`);
+  if (!response.ok) {
+    const status = response.status;
+    try {
+      await response.body?.cancel();
+    } catch {
+      // Dropping the unread body must not turn a 401 into a 500.
+    }
+    throw errorForRpcStatus(fn, status);
+  }
   return await response.json();
 }

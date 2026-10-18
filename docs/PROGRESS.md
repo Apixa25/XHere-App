@@ -291,9 +291,9 @@ The closed-test app is in the repo. M0 through M9 are merged or in this branch: 
 4. **The website.** Approve a free Cloudflare account and the DNS change (`web/CLOUDFLARE.md`) before anyone deploys. Play loads the privacy policy from **https://xhere.world/privacy**, which does not serve this site while `xhere.world` still points at the old Render services. Do not reactivate Render. GoDaddy registration runs through December 2026.
 5. **A mailbox for hello@xhere.world**, or a different address, before the contact link can receive mail. The address on the site is a placeholder.
 6. **Approve the draft privacy, terms, and guidelines**, including the sign-in agreement, the child-safety section, the 24-hour review line, and the export and audit-log text. They are not in effect until you say so.
-7. **A free Supabase project** (PLAN §8) before live sign-in, photo upload, suggestions, or a share page can load a real drop. Put the project URL and the anon key in `local.properties` and on Pages. Do not put the service-role key in the app or the site. Apply every migration through `20261018001100_tip_lines.sql`, and deploy `suggest-category` and `strip-exif`. Leave category embeddings on hash-v1. Rebuild the AAB after this and update Data safety to the "with Supabase" column in `docs/PLAY-RELEASE.md`.
+7. **Hosted Supabase is up** (ref `jpeuldzegtbqfezijhuy`, us-east-1, PLAN §1.4 and §8, free tier). Put the project URL and the publishable key (it starts with `sb_publishable_`) in `local.properties` as `SUPABASE_URL` and `SUPABASE_ANON_KEY`, and on Pages as `PUBLIC_SUPABASE_URL` and `PUBLIC_SUPABASE_ANON_KEY`. Do not commit the key. Do not put the service-role key in the app or the site. The twelve migrations through `20261018001100_tip_lines.sql`, the Jamestown demo seed, and both Edge Functions are already applied. Apply the four migrations named in the hosted follow-up entry below (`…01200` through `…01500`). Before `supabase db push`, run the `migration repair` commands in `supabase/README.md`. Leave embeddings on hash-v1. Rebuild the AAB after the key is baked in and update Data safety to the "with Supabase" column in `docs/PLAY-RELEASE.md`.
 8. **A free Google Cloud OAuth web client id** before Google sign-in works. The same id goes in `GOOGLE_WEB_CLIENT_ID` and in the Supabase Google provider.
-9. **First admin.** Once the project exists, run the SQL in `supabase/README.md`. Then check Settings → Moderation queue about once a day. The terms say reports are reviewed, aiming for within 24 hours. Auto-hide only covers the wait.
+9. **First admin.** The project exists. After you sign up, run the SQL in `supabase/README.md`. Then check Settings → Moderation queue about once a day. The terms say reports are reviewed, aiming for within 24 hours. Auto-hide only covers the wait.
 10. **Incident reports in a new region** need that region's police tip line in `private.tip_lines` and in `SafetyDirectory`, until M16b moves tip lines into the region config. Jamestown is already seeded.
 11. **Branch protection on `main`.** Require **ci / gitleaks**, **android / shared**, **android / app**, **android / release**, **supabase / pgtap**, **supabase / functions**, and **web / build**.
 12. **Secret scanning and push protection** (free on this repo): Settings → Code security. Do not buy GitHub Advanced Security. Gitleaks in CI is the scanner if those toggles are missing.
@@ -304,3 +304,24 @@ The closed-test app is in the repo. M0 through M9 are merged or in this branch: 
 17. **Jamestown.** The demo city is Jamestown (PR #4). The FOIL request was sent. The code-enforcement email to dod@jamestownny.gov has not been sent.
 18. **Still open, and not blocking the closed test:** whether a drop can hide its author from the public, and whether you want a business tier later (PLAN §10). You still need about 12 people for the tester count in item 1.
 19. **Background location stays off** until M13. Do not add it to the manifest for this test.
+
+## 2026-10-18 (Sun), ~7:45 AM ET: Hosted Supabase follow-ups
+
+Branch `chore/hosted-supabase-followups`. The free project **XHere** (`jpeuldzegtbqfezijhuy`, us-east-1) was created earlier this morning from `main` at `0d2796a` (PLAN §1.4, §8). This entry is the repo side of that. No key values are in git. `Apixa25/XHere-Web` was not touched. No paid service was used.
+
+- **`suggest-category` 401.** A signed-out caller (no user JWT, or PostgREST 401/403) used to throw `rpc_suggest_categories_401` and the function returned 500. It now returns **401** `{"error":"not_authenticated"}`, the same JSON as `strip-exif`. Deno tests cover the hash path, the gte-small path, and a non-auth RPC failure that still throws.
+- **Migrations to apply on the hosted project** (not applied from here; the dashboard/MCP apply is a separate step):
+  - `20261018001200_rls_auth_uid_initplan.sql` — lint 0003, 18 policies, `(select auth.uid())`, same allow/deny.
+  - `20261018001300_reference_admin_policies.sql` — lint 0006, `tier_limits` and `content_filters` admin policies are insert/update/delete only.
+  - `20261018001400_foreign_key_indexes.sql` — lint 0001, six foreign-key indexes.
+  - `20261018001500_tip_lines_rls.sql` — RLS on `private.tip_lines`, no new client policy. `create_drop` still reads the table.
+- pgTAP `11_advisor_followups.test.sql` (25 assertions) checks those four and that a non-admin still cannot write the reference rows, an admin still can, a user can still edit only their own profile, a signed-out visitor can still read tier limits and content filters, and an incident report in Jamestown still goes through.
+- **Docs.** `supabase/README.md` has the project ref, the `supabase migration repair` commands (hosted versions are apply timestamps, so `db push` would otherwise re-run the first twelve), and how to remove the demo seed that was applied to the pilot: `delete from auth.users where raw_user_meta_data->>'demo' = 'true';`. `.env.example`, the Android README, and the website Cloudflare note say the publishable `sb_publishable_…` key goes in `SUPABASE_ANON_KEY` / `PUBLIC_SUPABASE_ANON_KEY`. The placeholder strings stay in git so local builds keep using fixtures.
+
+### Steven still needs to
+
+- **Apply the four migrations above** on `jpeuldzegtbqfezijhuy`, in filename order, after the repair commands if you use the CLI.
+- **Paste the publishable key** into gitignored `local.properties` and, when Pages exists, into `PUBLIC_SUPABASE_ANON_KEY`. Do not commit it.
+- **Dashboard, not this PR:** Auth site URL `https://xhere.world` and the Android redirect; the sign-in email must include `{{ .Token }}`; Google provider still needs the OAuth web client (PLAN §8); first admin SQL after you sign up. The built-in SMTP is only for team addresses. Custom SMTP (Resend free tier) needs your OK. The project pauses after about 7 days without activity.
+- **Demo data** is on the pilot on purpose. Delete it with the SQL above when you want a clean map. It ages itself down to the evergreen drops after about three days.
+- Unchanged: do not deploy the website until you approve Cloudflare and DNS. Do not touch `Apixa25/XHere-Web`. Background location stays off until M13.

@@ -23,7 +23,7 @@ The UI stays native. This module has no Compose and no SwiftUI. The Compose app 
 * `data` — repositories over the M1 RPCs (`drops_in_view`, `drops_nearby`, `drop_detail`, `drop_teaser`, `create_drop`, `confirm_drop`, `report`, `block_user`, `unblock_user`, `delete_my_account`, and the moderator RPCs). An in-memory fake implements the same interfaces for tests.
 * `TaxonomyCache` — categories in memory for the process. Room and offline map tiles are **v1.2**, not this milestone.
 
-`SupabaseConfig.PLACEHOLDER` matches `.env.example`. No Supabase project exists yet. Calls with the placeholder fail at the network until Steven approves a free project (PLAN §8).
+`SupabaseConfig.PLACEHOLDER` matches `.env.example`. The hosted project is `jpeuldzegtbqfezijhuy` (PLAN §8); this module still uses the placeholder until `SUPABASE_URL` and `SUPABASE_ANON_KEY` are set outside git. `SUPABASE_ANON_KEY` is the publishable key (`sb_publishable_…`). Calls with the placeholder fail at the network, which is what the tests want.
 
 ## Tests
 
