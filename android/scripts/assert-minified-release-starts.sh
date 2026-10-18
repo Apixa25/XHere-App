@@ -22,13 +22,24 @@ fi
 adb install -r -d "$APK"
 adb logcat -c || true
 
-set +e
-START="$(adb shell am start -W -n "$ACTIVITY" 2>&1)"
-CODE=$?
-set -e
-printf '%s\n' "$START"
-if [[ "$CODE" -ne 0 ]] || ! printf '%s' "$START" | grep -q "Status: ok"; then
-  echo "Activity did not start"
+# aosp_atd sometimes returns "Status: timeout" from `am start -W` even when
+# the APK is fine. Try again before failing the job.
+started=0
+for attempt in 1 2 3; do
+  set +e
+  START="$(adb shell am start -W -n "$ACTIVITY" 2>&1)"
+  CODE=$?
+  set -e
+  printf '%s\n' "$START"
+  if [[ "$CODE" -eq 0 ]] && printf '%s' "$START" | grep -q "Status: ok"; then
+    started=1
+    break
+  fi
+  echo "Activity did not start (attempt $attempt)"
+  adb shell am force-stop "$PKG" || true
+  sleep 5
+done
+if [[ "$started" -ne 1 ]]; then
   adb logcat -d -t 400 || true
   exit 1
 fi
