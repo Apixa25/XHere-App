@@ -81,3 +81,18 @@ Branch `m1/database` → [PR #3](https://github.com/Apixa25/XHere-App/pull/3). B
 - **First admin/moderator**, once a hosted Supabase project exists: one SQL line in the dashboard, `update public.profiles set role = 'admin' where handle = '<your handle>';` (see `supabase/README.md`).
 - Review the crime rules and the `person_descriptors` word list in `supabase/migrations/20261018000600_taxonomy.sql`. Tuning means a new migration that updates the row; no code change is needed.
 - Still open from M0: license, secret scanning/push protection toggles, and PLAN §8–§10.
+
+## 2026-10-18 (Sun), ~1:30 AM ET: Open-data research (Safety pilot) + global playbook
+- Wrote `OPEN-DATA-PLAYBOOK.md`, the region-agnostic standard:
+  - source-discovery checklist (global → city, US + UK/Canada/EU equivalents);
+  - `SourceAdapter` interface + normalized data contract (precision, provenance, dedup, refresh, retention);
+  - per-region YAML config;
+  - legal checklist per jurisdiction profile (US/UK/CA/EU incl. GDPR Art. 10, Apple 1.7) + standard disclaimers;
+  - display rules (official = exact + sourced; user reports = area-only with thresholds);
+  - non-crime categories;
+  - M10/M16a–e fit.
+- Wrote `CRIME-OPEN-DATA.md` (Jamestown/Chautauqua worked example): 18 sources assessed.
+  - Usable free now: data.ny.gov Index Crimes + Adult Arrests (Socrata API), DEA clan-lab register (manual CSV; the site blocks bots), city news RSS, county parcels (geocoding), JPD tip line.
+  - Address-level code enforcement / Ch. 214 nuisance / condemned lists aren't published, so the next step is a FOIL + data request. Drafted but not sent.
+  - Excluded: courts (terms), Sheriff bookings / news blotters (person-level), SpotCrime (paid, $199+/mo, cost item).
+- PLAN.md on `main` was not replaced. Merged in only the M16a–e split and the open-data / global-playbook references. M0 and M1 progress entries are unchanged.
