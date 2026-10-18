@@ -10,6 +10,7 @@ import world.xhere.shared.data.AccountRepository
 import world.xhere.shared.data.AuthRepository
 import world.xhere.shared.data.BlockRepository
 import world.xhere.shared.data.DropRepository
+import world.xhere.shared.data.HiddenDropRepository
 import world.xhere.shared.data.IdentityProvider
 import world.xhere.shared.data.MediaRepository
 import world.xhere.shared.data.ModerationRepository
@@ -23,8 +24,16 @@ import world.xhere.shared.data.XHereServices
 import world.xhere.shared.geo.BoundingBox
 import world.xhere.shared.geo.Geo
 import world.xhere.shared.geo.LatLng
+import world.xhere.shared.json.ExportJson
 import world.xhere.shared.model.AppRole
+import world.xhere.shared.model.BlockedUser
 import world.xhere.shared.model.ConfirmDropResult
+import world.xhere.shared.model.HiddenDrop
+import world.xhere.shared.model.ModerationAction
+import world.xhere.shared.model.ModerationActionType
+import world.xhere.shared.model.ModerationQueueItem
+import world.xhere.shared.model.PublicProfile
+import world.xhere.shared.model.QueueItemKind
 import world.xhere.shared.model.Confirmation
 import world.xhere.shared.model.ConfirmationVerdict
 import world.xhere.shared.model.CreateDropResult
@@ -45,11 +54,15 @@ import world.xhere.shared.model.Taxonomy
 import world.xhere.shared.rules.CategoryRules
 import world.xhere.shared.rules.CreateDropRequest
 import world.xhere.shared.rules.PostingContext
+import world.xhere.shared.safety.SafetyDirectory
+import world.xhere.shared.safety.SafetyFlow
 import world.xhere.shared.suggest.CategoryRanker
 import world.xhere.shared.suggest.CategorySuggestion
 import world.xhere.shared.suggest.SuggestionQuery
 import kotlin.math.floor
 import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -66,7 +79,7 @@ import kotlinx.serialization.json.put
  */
 class InMemoryXHere(
     val store: MemoryStore,
-    val viewer: Profile?,
+    viewer: Profile?,
     private val clock: () -> Instant = { kotlin.time.Clock.System.now() },
 ) : XHereServices {
     private val session = MutableStateFlow<SessionInfo?>(null)
@@ -81,8 +94,20 @@ class InMemoryXHere(
     override val media: MediaRepository = MediaRepo()
     override val reports: ReportRepository = ReportRepo()
     override val blocks: BlockRepository = BlockRepo()
+    override val hidden: HiddenDropRepository = HiddenRepo()
     override val account: AccountRepository = AccountRepo()
     override val moderation: ModerationRepository = ModerationRepo()
+
+    /** Who is signed in. Tests may swap it, for example to act as a moderator. */
+    var viewer: Profile? = viewer
+        set(value) {
+            field = value
+            if (value != null) store.profiles[value.id] = value
+        }
+
+    init {
+        if (viewer != null && viewer.id !in store.profiles) store.profiles[viewer.id] = viewer
+    }
 
     private fun requireViewer(): Profile {
         val current = viewer ?: throw XHereApiException("not_authenticated", sqlState = XHereApiException.SQL_PERMISSION)
@@ -125,6 +150,15 @@ class InMemoryXHere(
 
     private inner class ProfileRepo : ProfileRepository {
         override suspend fun currentProfile(): Profile = requireViewer()
+
+        override suspend fun publicProfile(handle: String): PublicProfile? {
+            requireViewer()
+            val wanted = handle.trim().lowercase()
+            val known = store.profiles.values.firstOrNull { it.handle == wanted && it.id !in store.deleted && it.deletedAt == null }
+            if (known != null) return PublicProfile(known.id, known.handle, known.displayName, known.createdAt)
+            val author = store.drops.values.firstOrNull { it.authorHandle == wanted && it.authorId !in store.deleted } ?: return null
+            return PublicProfile(author.authorId, author.authorHandle, null, author.createdAt)
+        }
     }
 
     private inner class DropRepo : DropRepository {
@@ -230,6 +264,13 @@ class InMemoryXHere(
                 store.taxonomy.filters,
             )
             if (!checked.isValid) throw XHereApiException.fromViolation(checked.violations.first(), checked.violations)
+            if (!SafetyFlow.availableAt(category, SafetyDirectory.forLocation(LatLng(request.latitude, request.longitude)))) {
+                throw XHereApiException(
+                    "incident_reports_unavailable",
+                    sqlState = XHereApiException.SQL_PERMISSION,
+                    hint = "Incident reports are only available where a local police tip line is set up. In an emergency call 911.",
+                )
+            }
             val display = checkNotNull(checked.displayLocation)
             val duplicates = store.drops.values.filter { existing ->
                 existing.category.slug == category.slug &&
@@ -449,7 +490,10 @@ class InMemoryXHere(
                     val open = store.reports.values.count {
                         it.targetType == ReportTarget.DROP && it.targetId == targetId && it.status == ReportStatus.OPEN
                     }
-                    if (open >= drop.category.reportsToHide) drop.status = DropStatus.PENDING_REVIEW
+                    if (open >= drop.category.reportsToHide) {
+                        drop.status = DropStatus.PENDING_REVIEW
+                        store.log(null, "drop", drop.id, ModerationActionType.AUTO_HIDE, "report threshold reached", clock())
+                    }
                 }
             }
             return id
@@ -460,12 +504,51 @@ class InMemoryXHere(
         override suspend fun blockUser(userId: Uuid) {
             val profile = requireViewer()
             if (userId == profile.id) throw XHereApiException("cannot_block_self", sqlState = XHereApiException.SQL_VALIDATION)
-            store.blocks.add(profile.id to userId)
+            if (store.blocks.add(profile.id to userId)) store.blockedAt[profile.id to userId] = clock()
         }
 
         override suspend fun unblockUser(userId: Uuid) {
             val profile = requireViewer()
             store.blocks.remove(profile.id to userId)
+            store.blockedAt.remove(profile.id to userId)
+        }
+
+        override suspend fun myBlocks(): List<BlockedUser> {
+            val profile = requireViewer()
+            return store.blocks.filter { it.first == profile.id }.map { pair ->
+                val other = store.profiles[pair.second]
+                val handle = other?.handle ?: store.drops.values.firstOrNull { it.authorId == pair.second }?.authorHandle ?: "unknown"
+                BlockedUser(pair.second, handle, other?.displayName, store.blockedAt[pair] ?: clock())
+            }.sortedByDescending { it.blockedAt }
+        }
+    }
+
+    private inner class HiddenRepo : HiddenDropRepository {
+        override suspend fun hideDrop(dropId: Uuid) {
+            val profile = requireViewer()
+            if ((profile.id to dropId) in store.hidden) return
+            val drop = store.drops[dropId]
+            if (drop == null || !store.canView(drop, profile.id, clock())) {
+                throw XHereApiException("drop_not_found", sqlState = XHereApiException.SQL_NOT_FOUND)
+            }
+            if (drop.authorId == profile.id) throw XHereApiException("cannot_hide_own_drop", sqlState = XHereApiException.SQL_VALIDATION)
+            store.hidden[profile.id to dropId] = clock()
+        }
+
+        override suspend fun unhideDrop(dropId: Uuid) {
+            val profile = requireViewer()
+            store.hidden.remove(profile.id to dropId)
+        }
+
+        override suspend fun myHiddenDrops(): List<HiddenDrop> {
+            val profile = requireViewer()
+            val now = clock()
+            return store.hidden.filterKeys { it.first == profile.id }.mapNotNull { (key, at) ->
+                val drop = store.drops[key.second] ?: return@mapNotNull null
+                val live = drop.status == DropStatus.ACTIVE || drop.status == DropStatus.CONFIRMED
+                if (!live || (drop.expiresAt != null && drop.expiresAt!! <= now)) return@mapNotNull null
+                HiddenDrop(drop.id, drop.shortId, drop.title, drop.category.slug, at)
+            }.sortedByDescending { it.hiddenAt }
         }
     }
 
@@ -476,6 +559,102 @@ class InMemoryXHere(
             store.blocks.removeAll { it.first == profile.id }
             session.value = null
         }
+
+        override suspend fun exportMyData(): String {
+            val profile = requireViewer()
+            return ExportJson.encodeToString(JsonObject.serializer(), exportFor(profile))
+        }
+    }
+
+    private fun exportFor(profile: Profile): JsonObject = buildJsonObject {
+        put("format", "xhere-export-v1")
+        put("exported_at", clock().toString())
+        put("user_id", profile.id.toString())
+        put("email", session.value?.email)
+        put("profile", buildJsonObject {
+            put("handle", profile.handle)
+            put("display_name", profile.displayName)
+            put("tier", profile.tier.name.lowercase())
+            put("role", profile.role.name.lowercase())
+            put("points", profile.points)
+            put("home_area", profile.homeArea)
+            put("created_at", profile.createdAt.toString())
+        })
+        put("suspension", store.suspendedUntil[profile.id]?.let { until ->
+            buildJsonObject { put("suspended_until", until.toString()) }
+        } ?: JsonNull)
+        put("drops", JsonArray(store.drops.values.filter { it.authorId == profile.id }.map { drop ->
+            buildJsonObject {
+                put("id", drop.id.toString())
+                put("short_id", drop.shortId)
+                put("category", drop.category.slug)
+                put("title", drop.title)
+                put("body", drop.body)
+                put("attributes", drop.attributes)
+                put("tags", JsonArray(drop.tags.map { JsonPrimitive(it) }))
+                put("lat", drop.trueLocation.latitude)
+                put("lng", drop.trueLocation.longitude)
+                put("display_lat", drop.displayLocation.latitude)
+                put("display_lng", drop.displayLocation.longitude)
+                put("reveal_radius_m", drop.revealRadiusM)
+                put("status", drop.status.name.lowercase())
+                put("expires_at", drop.expiresAt?.toString())
+                put("created_at", drop.createdAt.toString())
+                put("media", JsonArray(drop.media.map { JsonPrimitive(it.storagePath) }))
+            }
+        }))
+        put("confirmations", JsonArray(store.confirmations.values.filter { it.userId == profile.id }.map { row ->
+            buildJsonObject {
+                put("drop_id", row.dropId.toString())
+                put("verdict", row.verdict.name.lowercase())
+                put("note", row.note)
+                put("distance_m", row.distanceM)
+                put("created_at", row.createdAt.toString())
+            }
+        }))
+        put("reports_filed", JsonArray(store.reports.values.filter { it.reporterId == profile.id }.map { report ->
+            buildJsonObject {
+                put("id", report.id.toString())
+                put("target_type", report.targetType.name.lowercase())
+                put("target_id", report.targetId.toString())
+                put("reason", report.reason.name.lowercase())
+                put("details", report.details)
+                put("status", report.status.name.lowercase())
+                put("created_at", report.createdAt.toString())
+            }
+        }))
+        put("blocks", JsonArray(store.blocks.filter { it.first == profile.id }.map { pair ->
+            buildJsonObject {
+                put("user_id", pair.second.toString())
+                put("created_at", store.blockedAt[pair]?.toString())
+            }
+        }))
+        put("hidden_drops", JsonArray(store.hidden.filterKeys { it.first == profile.id }.map { (key, at) ->
+            buildJsonObject {
+                put("drop_id", key.second.toString())
+                put("created_at", at.toString())
+            }
+        }))
+        put("category_suggestions", JsonArray(store.suggestionLogs.filter { it.userId == profile.id }.map { row ->
+            buildJsonObject {
+                put("inputs", row.inputs)
+                put("suggested", JsonArray(row.suggested.map { JsonPrimitive(it) }))
+                put("chosen", row.chosenSlug)
+                put("created_at", row.createdAt.toString())
+            }
+        }))
+        val mine = store.drops.values.filter { it.authorId == profile.id }.map { it.id }.toSet()
+        put("moderation_of_my_content", JsonArray(store.auditLog.filter {
+            (it.targetType == "profile" && it.targetId == profile.id) || (it.targetType == "drop" && it.targetId in mine)
+        }.map { action ->
+            buildJsonObject {
+                put("action", action.action.name.lowercase())
+                put("target_type", action.targetType)
+                put("target_id", action.targetId.toString())
+                put("reason", action.reason)
+                put("created_at", action.createdAt.toString())
+            }
+        }))
     }
 
     private inner class ModerationRepo : ModerationRepository {
@@ -484,27 +663,40 @@ class InMemoryXHere(
             if (!profile.isModerator) throw XHereApiException("not_moderator", sqlState = XHereApiException.SQL_PERMISSION)
             val drop = store.drops[dropId] ?: throw XHereApiException("drop_not_found", sqlState = XHereApiException.SQL_NOT_FOUND)
             if (drop.authorId == profile.id) throw XHereApiException("cannot_moderate_own_drop", sqlState = XHereApiException.SQL_PERMISSION)
+            val logged: ModerationActionType
+            val reportStatus: ReportStatus
             when (action) {
                 ModerateDropAction.APPROVE -> {
                     if (drop.status != DropStatus.PENDING_REVIEW) {
                         throw XHereApiException("invalid_transition", sqlState = XHereApiException.SQL_VALIDATION)
                     }
                     drop.status = DropStatus.ACTIVE
+                    logged = ModerationActionType.APPROVE
+                    reportStatus = ReportStatus.DISMISSED
                 }
                 ModerateDropAction.RESTORE -> {
                     if (drop.status != DropStatus.REMOVED && drop.status != DropStatus.DISPUTED) {
                         throw XHereApiException("invalid_transition", sqlState = XHereApiException.SQL_VALIDATION)
                     }
                     drop.status = DropStatus.ACTIVE
+                    drop.removedReason = null
+                    logged = ModerationActionType.RESTORE
+                    reportStatus = ReportStatus.DISMISSED
                 }
                 ModerateDropAction.REMOVE -> {
                     if (drop.status == DropStatus.REMOVED) {
                         throw XHereApiException("invalid_transition", sqlState = XHereApiException.SQL_VALIDATION)
                     }
+                    logged = if (drop.status == DropStatus.PENDING_REVIEW) ModerationActionType.REJECT else ModerationActionType.REMOVE
                     drop.status = DropStatus.REMOVED
                     drop.removedReason = reason ?: "removed by moderator"
+                    reportStatus = ReportStatus.ACTIONED
                 }
             }
+            store.reports.values.filter {
+                it.targetType == ReportTarget.DROP && it.targetId == drop.id && it.status == ReportStatus.OPEN
+            }.forEach { store.reports[it.id] = it.copy(status = reportStatus) }
+            store.log(profile.id, "drop", drop.id, logged, reason, clock())
             return drop.status
         }
 
@@ -515,6 +707,8 @@ class InMemoryXHere(
             val report = store.reports[reportId] ?: throw XHereApiException("report_not_found", sqlState = XHereApiException.SQL_NOT_FOUND)
             if (report.status != ReportStatus.OPEN) throw XHereApiException("report_not_found", sqlState = XHereApiException.SQL_NOT_FOUND)
             store.reports[reportId] = report.copy(status = status)
+            val logged = if (status == ReportStatus.ACTIONED) ModerationActionType.ACTION_REPORT else ModerationActionType.DISMISS_REPORT
+            store.log(profile.id, "report", reportId, logged, note, clock())
         }
 
         override suspend fun suspendUser(userId: Uuid, until: Instant?, reason: String?) {
@@ -522,6 +716,62 @@ class InMemoryXHere(
             if (!profile.isModerator) throw XHereApiException("not_moderator", sqlState = XHereApiException.SQL_PERMISSION)
             if (userId == profile.id) throw XHereApiException("cannot_moderate_self", sqlState = XHereApiException.SQL_PERMISSION)
             if (until != null && until > clock()) store.suspendedUntil[userId] = until else store.suspendedUntil.remove(userId)
+            val logged = if (until == null) ModerationActionType.UNSUSPEND_USER else ModerationActionType.SUSPEND_USER
+            store.log(profile.id, "profile", userId, logged, reason, clock())
+        }
+
+        override suspend fun queue(limit: Int): List<ModerationQueueItem> {
+            val profile = requireViewer()
+            if (!profile.isModerator) throw XHereApiException("not_moderator", sqlState = XHereApiException.SQL_PERMISSION)
+            val open = store.reports.values.filter { it.status == ReportStatus.OPEN }
+            val drops = store.drops.values.filter { drop ->
+                val reports = open.filter { it.targetType == ReportTarget.DROP && it.targetId == drop.id }
+                drop.status in setOf(DropStatus.ACTIVE, DropStatus.CONFIRMED, DropStatus.PENDING_REVIEW, DropStatus.DISPUTED) &&
+                    (drop.status == DropStatus.PENDING_REVIEW || reports.isNotEmpty()) &&
+                    drop.authorId != profile.id &&
+                    drop.authorId !in store.deleted
+            }.map { drop ->
+                val reports = open.filter { it.targetType == ReportTarget.DROP && it.targetId == drop.id }.sortedBy { it.createdAt }
+                ModerationQueueItem(
+                    kind = QueueItemKind.DROP,
+                    targetId = drop.id,
+                    shortId = drop.shortId,
+                    title = drop.title,
+                    body = drop.body,
+                    categorySlug = drop.category.slug,
+                    status = drop.status,
+                    sensitive = drop.category.sensitive,
+                    subjectId = drop.authorId,
+                    subjectHandle = drop.authorHandle,
+                    subjectSuspendedUntil = store.suspendedUntil[drop.authorId],
+                    openReports = reports.map { it.reporterId }.distinct().size,
+                    reasons = reports.map { it.reason }.distinct(),
+                    latestDetails = reports.lastOrNull { it.details != null }?.details,
+                    reportIds = reports.map { it.id },
+                    queuedAt = reports.firstOrNull()?.createdAt ?: drop.createdAt,
+                )
+            }
+            val people = open.filter { it.targetType == ReportTarget.PROFILE && it.targetId != profile.id && it.targetId !in store.deleted }
+                .groupBy { it.targetId }
+                .map { (userId, reports) ->
+                    val sorted = reports.sortedBy { it.createdAt }
+                    ModerationQueueItem(
+                        kind = QueueItemKind.PROFILE,
+                        targetId = userId,
+                        subjectId = userId,
+                        subjectHandle = store.profiles[userId]?.handle
+                            ?: store.drops.values.firstOrNull { it.authorId == userId }?.authorHandle,
+                        subjectSuspendedUntil = store.suspendedUntil[userId],
+                        openReports = sorted.map { it.reporterId }.distinct().size,
+                        reasons = sorted.map { it.reason }.distinct(),
+                        latestDetails = sorted.lastOrNull { it.details != null }?.details,
+                        reportIds = sorted.map { it.id },
+                        queuedAt = sorted.first().createdAt,
+                    )
+                }
+            return (drops + people)
+                .sortedWith(compareByDescending<ModerationQueueItem> { it.sensitive }.thenByDescending { it.isPending }.thenBy { it.queuedAt })
+                .take(limit.coerceIn(1, 200))
         }
     }
 }
@@ -533,6 +783,13 @@ class MemoryStore(
     val confirmations: MutableMap<Pair<Uuid, Uuid>, Confirmation> = linkedMapOf()
     val reports: MutableMap<Uuid, Report> = linkedMapOf()
     val blocks: MutableSet<Pair<Uuid, Uuid>> = linkedSetOf()
+    val blockedAt: MutableMap<Pair<Uuid, Uuid>, Instant> = linkedMapOf()
+    /** (viewer, drop) → when it was hidden. */
+    val hidden: MutableMap<Pair<Uuid, Uuid>, Instant> = linkedMapOf()
+    /** Other accounts the fake knows about, for `public_profile` and the moderator queue. */
+    val profiles: MutableMap<Uuid, Profile> = linkedMapOf()
+    /** `moderation_actions`: append-only. */
+    val auditLog: MutableList<ModerationAction> = mutableListOf()
     val deleted: MutableSet<Uuid> = linkedSetOf()
     val suspendedUntil: MutableMap<Uuid, Instant> = linkedMapOf()
     val suggestionLogs: MutableList<StoredSuggestion> = mutableListOf()
@@ -558,10 +815,15 @@ class MemoryStore(
         if (!drop.category.active) return false
         if (drop.authorId in deleted) return false
         if (viewerId != null && blocked(viewerId, drop.authorId)) return false
+        if (viewerId != null && (viewerId to drop.id) in hidden) return false
         return true
     }
 
     fun blocked(a: Uuid, b: Uuid): Boolean = (a to b) in blocks || (b to a) in blocks
+
+    fun log(actorId: Uuid?, targetType: String, targetId: Uuid, action: ModerationActionType, reason: String?, now: Instant) {
+        auditLog += ModerationAction(auditLog.size + 1L, actorId, targetType, targetId, action, reason, now)
+    }
 }
 
 class StoredSuggestion(

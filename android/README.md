@@ -1,8 +1,8 @@
 # android/
 
-Kotlin / Jetpack Compose app for XHere. Application id `world.xhere.app`. Milestones **M3** (shell and sign-in), **M4** (map and discovery), and **M5** (quick drop). PLAN §2, §4.4, and §7.
+Kotlin / Jetpack Compose app for XHere. Application id `world.xhere.app`. Milestones **M3** (shell and sign-in), **M4** (map and discovery), **M5** (quick drop), **M6** (drop detail), and **M7** (safety and compliance). PLAN §2, §4.4, and §7.
 
-Reveal comes in M6. This module is the shell, the map, and the drop composer: theme, navigation, sign-in, onboarding, settings, MapLibre, category filters, teaser cards, and a photo-or-text post.
+This module is the shell, the map, the drop composer, the detail screen, and the safety tools: theme, navigation, sign-in, onboarding, settings, MapLibre, category filters, teaser cards, a photo-or-text post, reveal, report, block, hide, and the moderator queue.
 
 ## Dependency injection
 
@@ -37,13 +37,23 @@ Onboarding explains foreground location, then requests `ACCESS_FINE_LOCATION` an
 
 ## Settings
 
-Sign out, and delete account. Delete calls `AccountRepository.deleteMyAccount()`, which `SupabaseXHereClient` implements as the `delete_my_account` RPC (soft-delete now, hard-delete within 30 days via the M1 cron) and then signs out.
+Sign out, Community guidelines, Blocked and hidden, Download my data, and delete account. Moderators and admins also see Moderation queue. Delete calls `AccountRepository.deleteMyAccount()`, which `SupabaseXHereClient` implements as the `delete_my_account` RPC (soft-delete now, hard-delete within 30 days via the M1 cron) and then signs out.
 
 ## Quick drop
 
 The map has a drop button, and the Drop tab opens the same composer (PLAN §7 M5). A photo is CameraX or the photo picker; a line of text works too. ML Kit labels the picture on the device. The top three categories come from `SuggestionRepository`: the Supabase client calls the `suggest-category` Edge Function and, if that call fails, ranks locally with the same hash the database uses. With no project, the in-memory fake ranks locally and never uploads.
 
 Tapping a chip posts immediately when the category is not sensitive and its required fields are already filled (`occurred_at` is filled with now, so a hazard can post on the chip). An event still asks for start and end. `incident_report` and `safety_alert` always show the notice and a checkbox. The fields on the form are the category's `attributes_schema`. Posting calls `create_drop`. A photo is stored only after Exif/XMP is removed (`strip-exif` on the server, `ExifStrip` in the fake). Rate limits, a tier that is too low, and blocked descriptors come back as short sentences. Only `incident_report` blurs the pin, and the screen says so when `location_precision_m` is above 0. A matching title within 50 m shows a duplicate hint. The suggestion log is written after a successful post.
+
+## Safety and moderation (M7)
+
+See `docs/COMPLIANCE.md` for how each store rule maps to these screens.
+
+* **Drop screen.** Report drop (reason, details, optional "also hide for me"), Hide for me with Undo, Report author, and Block author. None of these show on your own drops. The report form is inline, not a dialog, because a text field inside a dialog window never goes idle under Robolectric. Safety drops show the tip line and 911 (`SafetyFooter`).
+* **Composer.** A Safety category opens a panel with the reminder, the disclaimer, "held for review" for New accounts, and the 100 m blur line for `incident_report`. The person, contact, and street-address filters run as you type and disable Post. `incident_report` is only offered where `SafetyDirectory` has a police tip line; the server enforces the same rule.
+* **Sign-in.** States that continuing means agreeing to the Terms and Community guidelines (zero tolerance), with links to both.
+* **Settings screens.** Community guidelines (the same rules as `web/src/pages/guidelines.astro`). Blocked and hidden, with Unblock and Show again. Moderation queue, shown only when `canModerate()` is true: approve, remove, restore, dismiss, action, and suspend for 7 days or lift it. Each action is one RPC, and the server writes the audit row.
+* **Download my data.** Calls `export_my_data`, writes `xhere-export-YYYY-MM-DD.json` to `cacheDir/exports/`, and opens the share sheet through a non-exported `FileProvider` (`${applicationId}.exports`) that maps only that folder.
 
 Tests bind a fake camera and a fake labeler, so Robolectric does not start CameraX. `assembleDebug` and `testDebugUnitTest` still pass with no Supabase keys.
 

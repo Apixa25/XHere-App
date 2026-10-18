@@ -32,10 +32,17 @@ const description =
     <li>Impersonation, spam, and ads that have nothing to do with the place.</li>
     <li>Naming or describing a suspect, a witness, or a neighbor so that someone could pick them out of a crowd.</li>
   </ul>
+  <h2>Report, block, and hide</h2>
   <p>
-    You can report a drop or a profile, and you can block someone. Blocked people’s drops are hidden from you.
-    Two reports hide an incident report automatically. Other categories hide after the number of reports set on that category, usually three.
+    Open any drop to report it, report its author, block its author, or hide just that drop for yourself.
+    In the app these are on the drop screen. Settings › Community guidelines has this page, and Settings › Blocked and hidden lets you undo a block or a hide.
   </p>
+  <ul>
+    <li><strong>Report.</strong> Pick a reason and add details if you like. Reports are private. The author is not told who reported.</li>
+    <li><strong>Block.</strong> Blocking works both ways: you won’t see their drops, and they won’t see yours. They are not told.</li>
+    <li><strong>Hide for me.</strong> Hides one drop from you only. Nobody else is affected, and the author is not told.</li>
+    <li><strong>Automatic hiding.</strong> Two reports hide a hazard, safety alert, or incident report until a moderator looks. Other categories hide after the number of reports set on that category, usually three.</li>
+  </ul>
 
   <h2>History and stories</h2>
   <p>
@@ -81,11 +88,12 @@ const description =
   </p>
   <ul>
     <li><strong>Who can post.</strong> Regular accounts and above. A new account cannot post one.</li>
+    <li><strong>Where.</strong> Only where a local police tip line is set up. For now that is the Jamestown area, where the app shows the Jamestown Police anonymous tip line.</li>
     <li><strong>Review.</strong> Posts are held for review first. Trusted accounts can go live, still marked unconfirmed.</li>
     <li><strong>Confirmation.</strong> It stays unconfirmed until two people nearby say it is still true. Two denials, or two reports, hide it.</li>
     <li><strong>Place.</strong> The map shows an approximate area of about 100 meters, not the exact spot and not a person’s home as a pin.</li>
     <li><strong>Time.</strong> It expires after 72 hours. You have to say when it happened.</li>
-    <li><strong>Words.</strong> Describe what happened, not who. Do not name or describe people. The filter blocks contact details and words for gender, age, race, clothing, build, and similar descriptors.</li>
+    <li><strong>Words.</strong> Describe what happened, not who. Do not name or describe people. The filter blocks contact details, house numbers with a street name, and words for gender, age, race, clothing, build, and similar descriptors.</li>
     <li><strong>Acknowledgement.</strong> The app asks you to accept these rules before the post goes through.</li>
     <li><strong>Emergency.</strong> In an emergency call 911. XHere is not a reporting channel to police.</li>
     <li><strong>The website.</strong> A share link shows the teaser only. It does not include the hidden text, the author’s handle, or an exact address.</li>
@@ -93,6 +101,11 @@ const description =
   <p>
     Where a city publishes an official incident feed, that layer is separate and labeled as open data.
     User reports are not a substitute for it.
+  </p>
+  <p>
+    Have information about a crime? Jamestown Police anonymous tip line
+    <a href="tel:+17164838477">(716) 483-8477</a> (<a href="https://www.jamestownny.gov/police-department/anonymous-tip-line/">jamestownny.gov</a>).
+    Non-emergency <a href="tel:+17164837536">(716) 483-7536</a>. Emergency 911.
   </p>
 
   <h2>Community, infrastructure, secrets, art, notes</h2>
@@ -104,9 +117,22 @@ const description =
     <li>A general note reveals within about 100 meters and lasts 7 days, unless two confirmations keep it. New accounts are reviewed first.</li>
   </ul>
 
+  <h2 id="child-safety">Child safety standards</h2>
+  <p>
+    XHere has zero tolerance for child sexual abuse and exploitation (CSAE), including child sexual abuse material,
+    grooming, sextortion, and trafficking. This applies to every drop, photo, comment, and profile.
+  </p>
+  <ul>
+    <li><strong>What we do.</strong> Content like this is removed and the account is suspended. We report apparent child sexual abuse material to the NCMEC CyberTipline, as US law requires, and we keep what the report needs.</li>
+    <li><strong>How to report it.</strong> In the app, open the drop or the author and pick Report. You can also write to <a href={`mailto:${SITE.contactEmail}`}>{SITE.contactEmail}</a>. If a child is in danger, call 911.</li>
+    <li><strong>Who is responsible.</strong> {SITE.owner} is the point of contact for child safety and can be reached at the same address.</li>
+    <li><strong>Age.</strong> XHere is not directed at children under 13.</li>
+  </ul>
+
   <h2>If we remove something</h2>
   <p>
-    Moderators can hide a drop, remove it, or suspend an account. The reason is kept in an audit log.
+    Moderators review reports, aiming for within 24 hours.
+    They can approve a held drop, hide or remove a drop, and suspend an account. Every action, and the reason, is kept in an audit log that cannot be edited or deleted.
     A formal appeals screen is not built yet. Write to <a href={`mailto:${SITE.contactEmail}`}>{SITE.contactEmail}</a> if you think a decision was wrong. {CONTACT_NOTE}
   </p>
 </Base>

@@ -49,6 +49,7 @@ import world.xhere.shared.data.AccountRepository
 import world.xhere.shared.data.AuthRepository
 import world.xhere.shared.data.BlockRepository
 import world.xhere.shared.data.DropRepository
+import world.xhere.shared.data.HiddenDropRepository
 import world.xhere.shared.data.IdentityProvider
 import world.xhere.shared.data.MediaRepository
 import world.xhere.shared.data.ModerationRepository
@@ -63,6 +64,9 @@ import world.xhere.shared.data.XHereServices
 import world.xhere.shared.data.remote.CategoryRow
 import world.xhere.shared.data.remote.ConfirmDropParams
 import world.xhere.shared.data.remote.DropDetailParams
+import world.xhere.shared.data.remote.DropIdParams
+import world.xhere.shared.data.remote.HandleParams
+import world.xhere.shared.data.remote.QueueParams
 import world.xhere.shared.data.remote.DropTeaserParams
 import world.xhere.shared.data.remote.DropsInViewParams
 import world.xhere.shared.data.remote.DropsNearbyParams
@@ -77,8 +81,13 @@ import world.xhere.shared.geo.BoundingBox
 import world.xhere.shared.geo.Geo
 import world.xhere.shared.geo.LatLng
 import world.xhere.shared.http.platformHttpEngine
+import world.xhere.shared.json.ExportJson
 import world.xhere.shared.json.XHereJson
+import world.xhere.shared.model.BlockedUser
 import world.xhere.shared.model.CategoryGroup
+import world.xhere.shared.model.HiddenDrop
+import world.xhere.shared.model.ModerationQueueItem
+import world.xhere.shared.model.PublicProfile
 import world.xhere.shared.model.ConfirmDropResult
 import world.xhere.shared.model.ConfirmationVerdict
 import world.xhere.shared.model.ContentFilter
@@ -135,6 +144,7 @@ class SupabaseXHereClient(
     override val media: MediaRepository = MediaRepo()
     override val reports: ReportRepository = ReportRepo()
     override val blocks: BlockRepository = BlockRepo()
+    override val hidden: HiddenDropRepository = HiddenRepo()
     override val account: AccountRepository = AccountRepo()
     override val moderation: ModerationRepository = ModerationRepo()
 
@@ -192,6 +202,12 @@ class SupabaseXHereClient(
             supabase.postgrest.from("profiles").select {
                 filter { eq("id", userId) }
             }.decodeSingle()
+        }
+
+        override suspend fun publicProfile(handle: String): PublicProfile? = call {
+            supabase.postgrest.rpc("public_profile", HandleParams(handle).rpcJson())
+                .decodeList<PublicProfile>()
+                .firstOrNull()
         }
     }
 
@@ -290,12 +306,37 @@ class SupabaseXHereClient(
             supabase.postgrest.rpc("unblock_user", UserIdParams(userId).rpcJson())
             Unit
         }
+
+        override suspend fun myBlocks(): List<BlockedUser> = call {
+            supabase.postgrest.rpc("my_blocks").decodeList<BlockedUser>()
+        }
+    }
+
+    private inner class HiddenRepo : HiddenDropRepository {
+        override suspend fun hideDrop(dropId: Uuid) = call {
+            supabase.postgrest.rpc("hide_drop", DropIdParams(dropId).rpcJson())
+            Unit
+        }
+
+        override suspend fun unhideDrop(dropId: Uuid) = call {
+            supabase.postgrest.rpc("unhide_drop", DropIdParams(dropId).rpcJson())
+            Unit
+        }
+
+        override suspend fun myHiddenDrops(): List<HiddenDrop> = call {
+            supabase.postgrest.rpc("my_hidden_drops").decodeList<HiddenDrop>()
+        }
     }
 
     private inner class AccountRepo : AccountRepository {
         override suspend fun deleteMyAccount() = call {
             supabase.postgrest.rpc("delete_my_account")
             supabase.auth.signOut()
+        }
+
+        override suspend fun exportMyData(): String = call {
+            val raw = supabase.postgrest.rpc("export_my_data").data
+            ExportJson.encodeToString(JsonElement.serializer(), XHereJson.parseToJsonElement(raw))
         }
     }
 
@@ -310,8 +351,14 @@ class SupabaseXHereClient(
         }
 
         override suspend fun suspendUser(userId: Uuid, until: Instant?, reason: String?) = call {
-            supabase.postgrest.rpc("suspend_user", SuspendUserParams(userId, until, reason).rpcJson())
+            // p_until has no SQL default, and XHereJson drops nulls, so lifting must send it explicitly.
+            val params = SuspendUserParams(userId, until, reason).rpcJson()
+            supabase.postgrest.rpc("suspend_user", JsonObject(params + ("p_until" to (params["p_until"] ?: JsonNull))))
             Unit
+        }
+
+        override suspend fun queue(limit: Int): List<ModerationQueueItem> = call {
+            supabase.postgrest.rpc("moderation_queue", QueueParams(limit).rpcJson()).decodeList<ModerationQueueItem>()
         }
     }
 

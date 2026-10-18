@@ -6,7 +6,11 @@ import kotlinx.coroutines.flow.Flow
 import world.xhere.shared.geo.BoundingBox
 import world.xhere.shared.geo.LatLng
 import world.xhere.shared.model.AppRole
+import world.xhere.shared.model.BlockedUser
 import world.xhere.shared.model.ConfirmDropResult
+import world.xhere.shared.model.HiddenDrop
+import world.xhere.shared.model.ModerationQueueItem
+import world.xhere.shared.model.PublicProfile
 import world.xhere.shared.model.ConfirmationVerdict
 import world.xhere.shared.model.CreateDropResult
 import world.xhere.shared.model.DropCard
@@ -55,6 +59,9 @@ interface AuthRepository {
 
 interface ProfileRepository {
     suspend fun currentProfile(): Profile
+
+    /** Null when no live account has that handle. Used to report or block the author shown on a drop. */
+    suspend fun publicProfile(handle: String): PublicProfile?
 }
 
 interface TaxonomyRepository {
@@ -105,11 +112,27 @@ interface BlockRepository {
     suspend fun blockUser(userId: Uuid)
 
     suspend fun unblockUser(userId: Uuid)
+
+    /** Newest first. Blocks hide drops in both directions. */
+    suspend fun myBlocks(): List<BlockedUser>
+}
+
+/** Hide one drop for yourself only. Nobody else is affected, and the author is not told. */
+interface HiddenDropRepository {
+    suspend fun hideDrop(dropId: Uuid)
+
+    suspend fun unhideDrop(dropId: Uuid)
+
+    /** Newest first. Expired and removed drops drop off the list. */
+    suspend fun myHiddenDrops(): List<HiddenDrop>
 }
 
 interface AccountRepository {
     /** Soft-deletes the profile. The nightly cron hard-deletes after 30 days. */
     suspend fun deleteMyAccount()
+
+    /** `export_my_data()`: one JSON document (`xhere-export-v1`), pretty-printed. */
+    suspend fun exportMyData(): String
 }
 
 interface ModerationRepository {
@@ -119,6 +142,9 @@ interface ModerationRepository {
 
     /** Pass a null [until] to lift a suspension. */
     suspend fun suspendUser(userId: Uuid, until: Instant?, reason: String? = null)
+
+    /** Pending drops and open reports: sensitive first, then oldest. Throws `not_moderator` otherwise. */
+    suspend fun queue(limit: Int = 50): List<ModerationQueueItem>
 }
 
 /**
@@ -149,6 +175,7 @@ interface XHereServices {
     val media: MediaRepository
     val reports: ReportRepository
     val blocks: BlockRepository
+    val hidden: HiddenDropRepository
     val account: AccountRepository
     val moderation: ModerationRepository
 }

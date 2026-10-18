@@ -126,7 +126,7 @@ select is(
               c.default_ttl, c.max_ttl, c.sensitive, c.confirmations_to_confirm, c.content_filters)::text
    from public.categories c where c.slug = 'incident_report'),
   row('regular'::public.user_tier, 'pre'::public.moderation_mode, 'trusted'::public.user_tier, 100,
-      interval '72 hours', interval '72 hours', true, 2, '{contact_info,person_descriptors}'::text[])::text,
+      interval '72 hours', interval '72 hours', true, 2, '{contact_info,person_descriptors,street_address}'::text[])::text,
   'incident_report carries the strict crime rules'
 );
 select ok(

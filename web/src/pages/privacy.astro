@@ -38,6 +38,7 @@ const description =
   <ul>
     <li><strong>Account.</strong> An email address if you sign in with a one-time code, or the basic profile Google shares if you use Google sign-in, plus a handle you pick.</li>
     <li><strong>What you post.</strong> The title, text, category, tags, and photos of drops you create, and confirmations or reports you submit.</li>
+    <li><strong>Safety choices.</strong> The people you block and the drops you hide for yourself. Only you can see these lists. A report is private: the author is not told who filed it, and only moderators read it.</li>
     <li><strong>Location, while the app is open, if you allow it.</strong> The app asks only for foreground location. It uses that position to show drops near you, to place a drop you create, and to measure whether you are close enough to reveal or confirm one. It does not ask for background location.</li>
   </ul>
   <p>
@@ -62,6 +63,12 @@ const description =
     Some drops expire on their own (a food truck lasts hours, an incident report lasts 72 hours, a note lasts 7 days unless people confirm it).
     If you delete your account, the app hides your profile immediately and a scheduled job permanently deletes the login within 30 days.
     See <a href="/delete-account">Delete account</a> for the steps and for what is removed.
+  </p>
+
+  <h2>A copy of your data</h2>
+  <p>
+    In the app, Profile › Settings › Download my data gives you one JSON file with your account data: email, profile, drops with their exact spots,
+    confirmations, reports you filed, blocks, and hidden drops. Only you can request it, for your own account.
   </p>
 
   <h2>Children</h2>

@@ -117,6 +117,114 @@
     <string name="settings_delete_failed">Couldn\'t delete the account. Try again.</string>
     <string name="settings_sign_out_failed">Couldn\'t sign out. Try again.</string>
 
+    <!-- M7: agreement before posting (Play UGC policy, App Review 1.2) -->
+    <string name="auth_agreement">By continuing you agree to the XHere Terms and Community guidelines. There is no tolerance for objectionable content or abusive users: you can report or block anyone, and moderators remove what breaks the rules.</string>
+    <string name="auth_terms">Terms</string>
+    <string name="drop_agreement">Posting means you follow the Community guidelines. Anyone can report a drop.</string>
+
+    <!-- M7: report, block, hide -->
+    <string name="safety_report_drop">Report drop</string>
+    <string name="safety_hide_drop">Hide for me</string>
+    <string name="safety_report_user">Report @%1$s</string>
+    <string name="safety_block_user">Block @%1$s</string>
+    <string name="safety_report_title">What\'s wrong with it?</string>
+    <string name="safety_report_user_title">What\'s wrong with @%1$s?</string>
+    <string name="safety_report_details">Anything a moderator should know (optional)</string>
+    <string name="safety_report_also_hide">Also hide it for me</string>
+    <string name="safety_report_send">Send report</string>
+    <string name="safety_cancel">Cancel</string>
+    <string name="safety_report_sent">Thanks. A moderator will look at it. Reports are private, and the author isn\'t told who sent one.</string>
+    <string name="safety_report_sent_hidden">Thanks. A moderator will look at it, and you won\'t see this drop again.</string>
+    <string name="safety_hidden">Hidden. You won\'t see this drop again. Undo it in Settings, Blocked and hidden.</string>
+    <string name="safety_undo">Undo</string>
+    <string name="safety_block_title">Block @%1$s?</string>
+    <string name="safety_block_body">You won\'t see each other\'s drops. They aren\'t told. You can unblock them in Settings.</string>
+    <string name="safety_block_confirm">Block</string>
+    <string name="safety_blocked">Blocked @%1$s. Their drops are hidden from you, and yours from them.</string>
+    <string name="safety_failed">That didn\'t go through. Try again.</string>
+    <string name="safety_reason_spam">Spam or an ad</string>
+    <string name="safety_reason_harassment">Harassment or bullying</string>
+    <string name="safety_reason_hate">Hate toward a group</string>
+    <string name="safety_reason_violence">Violence or threats</string>
+    <string name="safety_reason_sexual">Sexual content</string>
+    <string name="safety_reason_illegal">Illegal goods or activity</string>
+    <string name="safety_reason_personal_info">Names, describes, or locates a person</string>
+    <string name="safety_reason_misinformation">False or out of date</string>
+    <string name="safety_reason_dangerous">Dangerous</string>
+    <string name="safety_reason_other">Something else</string>
+
+    <!-- M7: Safety posting flow -->
+    <string name="safety_panel_title">Before you post a safety drop</string>
+    <string name="safety_panel_reminder">Describe what happened, not who. Don\'t name or describe people, and leave out house numbers.</string>
+    <string name="safety_panel_disclaimer">Safety posts are unverified community reports, not official records. XHere is not a way to contact the police.</string>
+    <string name="safety_panel_held">A moderator reviews this before anyone else sees it.</string>
+    <string name="safety_panel_fuzz">The map shows an area of about %1$d m, not the exact spot.</string>
+    <string name="safety_tip_call">Call the tip line</string>
+    <string name="safety_emergency_call">Call 911</string>
+    <string name="safety_no_tip_line">Incident reports are only available where a local police tip line is set up. For now that\'s the Jamestown area. In an emergency call 911.</string>
+    <string name="drop_held">Sent for review. It appears on the map once a moderator approves it.</string>
+
+    <!-- M7: settings additions -->
+    <string name="settings_safety_title">Safety and your data</string>
+    <string name="settings_guidelines">Community guidelines</string>
+    <string name="settings_blocked">Blocked and hidden</string>
+    <string name="settings_export">Download my data</string>
+    <string name="settings_export_body">A JSON file with your profile, drops (with their exact spots), confirmations, reports you sent, blocks, and hidden drops.</string>
+    <string name="settings_export_ready">Your data is ready. Choose where to save or send it.</string>
+    <string name="settings_export_failed">Couldn\'t prepare your data. Try again.</string>
+    <string name="settings_moderation">Moderation queue</string>
+    <string name="settings_delete_export_hint">Want a copy first? Use Download my data before you delete.</string>
+
+    <!-- M7: blocked and hidden -->
+    <string name="lists_title">Blocked and hidden</string>
+    <string name="lists_blocked">Blocked people</string>
+    <string name="lists_blocked_empty">You haven\'t blocked anyone.</string>
+    <string name="lists_unblock">Unblock</string>
+    <string name="lists_hidden">Hidden drops</string>
+    <string name="lists_hidden_empty">No hidden drops.</string>
+    <string name="lists_unhide">Show again</string>
+    <string name="lists_failed">Couldn\'t load these lists.</string>
+
+    <!-- M7: guidelines (same rules as xhere.world/guidelines) -->
+    <string name="guidelines_title">Community guidelines</string>
+    <string name="guidelines_intro">XHere is for information about places, not about hunting people. These rules match the category rules the app enforces.</string>
+    <string name="guidelines_short_title">The short version</string>
+    <string name="guidelines_short_1">Describe the place and what happened. Don\'t describe a person.</string>
+    <string name="guidelines_short_2">Be accurate. Say what you saw, and don\'t dress up a guess as a fact.</string>
+    <string name="guidelines_short_3">Keep phone numbers and email addresses out of the text.</string>
+    <string name="guidelines_short_4">In an emergency, call 911. XHere is not a reporting channel to police.</string>
+    <string name="guidelines_short_5">Don\'t sell or give away weapons, drugs, or other regulated items.</string>
+    <string name="guidelines_everyone_title">Not allowed anywhere</string>
+    <string name="guidelines_everyone_body">Harassment, threats, or hate toward a person or group. Sexual content involving anyone under 18. Private contact details or documents. Impersonation, spam, and ads unrelated to the place. Naming or describing a suspect, a witness, or a neighbor so someone could pick them out.</string>
+    <string name="guidelines_tools_title">Report, block, and hide</string>
+    <string name="guidelines_tools_body">Open a drop to report it, report its author, block its author, or hide just that drop for yourself. Blocking hides drops both ways: you won\'t see theirs and they won\'t see yours. Two reports hide a safety drop automatically until a moderator looks. Other categories hide after the number set on the category, usually three.</string>
+    <string name="guidelines_safety_title">Safety alerts and incident reports</string>
+    <string name="guidelines_safety_body">Safety alerts and incident reports last 72 hours. New accounts\' safety alerts are reviewed before anyone sees them. Incident reports need a Regular account, are reviewed unless you\'re Trusted, show an area of about 100 m instead of the exact spot, stay unconfirmed until two people nearby confirm them, and are only offered where a local police tip line is set up. The filter blocks contact details and words for gender, age, race, clothing, build, and similar descriptors. Incident reports also block house numbers with street names.</string>
+    <string name="guidelines_child_title">Child safety</string>
+    <string name="guidelines_child_body">Zero tolerance for child sexual abuse and exploitation. That content is removed, the account is suspended, and apparent abuse material is reported to the NCMEC CyberTipline. Report it from the drop, or write to hello@xhere.world. If a child is in danger, call 911.</string>
+    <string name="guidelines_moderation_title">If we remove something</string>
+    <string name="guidelines_moderation_body">Moderators review reports, aiming for within 24 hours. They can approve, hide, or remove a drop, and suspend an account. Every action is kept in an audit log that can\'t be edited. If you think a decision was wrong, write to hello@xhere.world.</string>
+
+    <!-- M7: moderation queue -->
+    <string name="mod_title">Moderation queue</string>
+    <string name="mod_empty">Nothing waiting. Pending drops and open reports show up here.</string>
+    <string name="mod_not_allowed">Only moderators can open the queue.</string>
+    <string name="mod_failed">Couldn\'t load the queue.</string>
+    <string name="mod_pending">Waiting for review</string>
+    <string name="mod_reported">%1$d reported it: %2$s</string>
+    <string name="mod_profile">Profile @%1$s</string>
+    <string name="mod_by">by @%1$s</string>
+    <string name="mod_approve">Approve</string>
+    <string name="mod_remove">Remove</string>
+    <string name="mod_restore">Restore</string>
+    <string name="mod_dismiss">Dismiss reports</string>
+    <string name="mod_action">Reports are right</string>
+    <string name="mod_suspend">Suspend 7 days</string>
+    <string name="mod_unsuspend">Lift suspension</string>
+    <string name="mod_suspended">Suspended</string>
+    <string name="mod_sensitive">Safety</string>
+    <string name="mod_done">Done. It\'s in the audit log.</string>
+
     <string name="loading">Loading</string>
     <string name="tier_new">New</string>
     <string name="tier_regular">Regular</string>

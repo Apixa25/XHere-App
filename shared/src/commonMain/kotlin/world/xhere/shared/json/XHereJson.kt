@@ -29,6 +29,12 @@ val XHereJson: Json = Json {
     }
 }
 
+/** Pretty-printed JSON for files a person saves, such as the data export. */
+val ExportJson: Json = Json {
+    prettyPrint = true
+    explicitNulls = true
+}
+
 object UuidSerializer : KSerializer<Uuid> {
     override val descriptor: SerialDescriptor =
         PrimitiveSerialDescriptor("Uuid", PrimitiveKind.STRING)

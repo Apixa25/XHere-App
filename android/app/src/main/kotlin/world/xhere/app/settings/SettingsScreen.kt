@@ -41,6 +41,9 @@ import world.xhere.app.ui.TestTags
 @Composable
 fun SettingsScreen(
     onBack: () -> Unit,
+    onGuidelines: () -> Unit = {},
+    onBlocked: () -> Unit = {},
+    onModeration: () -> Unit = {},
     viewModel: SettingsViewModel = koinViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -126,6 +129,39 @@ fun SettingsScreen(
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.primary,
             )
+            Text(stringResource(R.string.settings_safety_title), style = MaterialTheme.typography.titleMedium)
+            SettingsRow(R.string.settings_guidelines, TestTags.SETTINGS_GUIDELINES, onGuidelines)
+            SettingsRow(R.string.settings_blocked, TestTags.SETTINGS_BLOCKED, onBlocked)
+            if (state.isModerator) {
+                SettingsRow(R.string.settings_moderation, TestTags.SETTINGS_MODERATION, onModeration)
+            }
+            Text(stringResource(R.string.settings_export_body), style = MaterialTheme.typography.bodyMedium)
+            OutlinedButton(
+                onClick = viewModel::exportData,
+                enabled = state.export != ExportStatus.WORKING,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag(TestTags.SETTINGS_EXPORT),
+                shape = MaterialTheme.shapes.large,
+            ) {
+                Text(stringResource(R.string.settings_export))
+            }
+            when (state.export) {
+                ExportStatus.READY -> R.string.settings_export_ready
+                ExportStatus.FAILED -> R.string.settings_export_failed
+                else -> null
+            }?.let { message ->
+                Text(
+                    text = stringResource(message),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = if (state.export == ExportStatus.FAILED) {
+                        MaterialTheme.colorScheme.error
+                    } else {
+                        MaterialTheme.colorScheme.primary
+                    },
+                    modifier = Modifier.testTag(TestTags.SETTINGS_EXPORT_STATUS),
+                )
+            }
             state.error?.let { message ->
                 Text(message, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium)
             }
@@ -139,6 +175,11 @@ fun SettingsScreen(
             ) {
                 Text(stringResource(R.string.settings_sign_out))
             }
+            Text(
+                text = stringResource(R.string.settings_delete_export_hint),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
             TextButton(
                 onClick = viewModel::askDelete,
                 enabled = !state.busy,
@@ -152,5 +193,21 @@ fun SettingsScreen(
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun SettingsRow(label: Int, tag: String, onClick: () -> Unit) {
+    TextButton(
+        onClick = onClick,
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag(tag),
+    ) {
+        Text(
+            text = stringResource(label),
+            style = MaterialTheme.typography.bodyLarge,
+            modifier = Modifier.fillMaxWidth(),
+        )
     }
 }

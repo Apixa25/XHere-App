@@ -164,6 +164,13 @@ class FreshSessionRule : TestRule {
                     TestGraph.services.store.suggestionLogs.clear()
                     TestGraph.services.store.mediaBytes.clear()
                     TestGraph.services.store.confirmations.clear()
+                    TestGraph.services.store.reports.clear()
+                    TestGraph.services.store.blocks.clear()
+                    TestGraph.services.store.blockedAt.clear()
+                    TestGraph.services.store.hidden.clear()
+                    TestGraph.services.store.auditLog.clear()
+                    TestGraph.services.store.suspendedUntil.clear()
+                    TestGraph.services.viewer = TestGraph.profile
                     TestGraph.services.store.drops.values.forEach { drop ->
                         drop.confirmCount = 0
                         drop.denyCount = 0
@@ -177,6 +184,8 @@ class FreshSessionRule : TestRule {
             if (TestGraph.isReady()) {
                 TestGraph.location.reset()
                 TestGraph.sharer.last = null
+                TestGraph.exporter.fileName = null
+                TestGraph.exporter.json = null
                 TestGraph.links.consume()
             }
             base.evaluate()

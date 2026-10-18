@@ -4,7 +4,8 @@ create extension if not exists pgtap with schema extensions;
 select plan(19);
 
 select has_column('public', 'categories', 'suggestion_hints', 'categories carry suggestion hints');
-select is((select max(version) from public.categories), 1, 'filling hints does not bump category versions');
+-- M7 bumps incident_report to version 2 for the street address filter.
+select is((select max(version) from public.categories where slug <> 'incident_report'), 1, 'filling hints does not bump category versions');
 select is(
   (select count(*)::integer from public.categories where active and (embedding is null or suggestion_hints is null)),
   0,

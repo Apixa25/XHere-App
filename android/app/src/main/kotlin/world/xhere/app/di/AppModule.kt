@@ -26,8 +26,12 @@ import world.xhere.app.map.MapLibreMapCanvas
 import world.xhere.app.map.MapViewModel
 import world.xhere.app.onboarding.OnboardingStore
 import world.xhere.app.profile.ProfileViewModel
+import world.xhere.app.safety.ModerationViewModel
+import world.xhere.app.safety.SafetyListsViewModel
 import world.xhere.app.session.SessionViewModel
 import world.xhere.app.session.SignOutNotice
+import world.xhere.app.settings.AndroidDataExporter
+import world.xhere.app.settings.DataExporter
 import world.xhere.app.settings.SettingsViewModel
 import world.xhere.shared.data.XHereServices
 import world.xhere.shared.data.fake.InMemoryXHere
@@ -58,6 +62,7 @@ val appModule = module {
     single<DeviceLocation> { AndroidDeviceLocation(androidContext()) }
     single { IncomingLinks() }
     single<DropSharer> { AndroidDropSharer(androidContext()) }
+    single<DataExporter> { AndroidDataExporter(androidContext()) }
     single { FilterPresetStore(androidContext()) }
     single<MapCanvas> { MapLibreMapCanvas() }
     single<DropCapture> { CameraXDropCapture() }
@@ -68,6 +73,8 @@ val appModule = module {
     viewModel { (shortId: String) -> DropDetailViewModel(shortId, get(), get()) }
     viewModel { AuthViewModel(get(), get(), get(), get(), get()) }
     viewModel { ProfileViewModel(get()) }
+    viewModel { SafetyListsViewModel(get()) }
+    viewModel { ModerationViewModel(get()) }
     viewModel {
         val context = androidContext()
         SettingsViewModel(
@@ -76,6 +83,7 @@ val appModule = module {
             deletedMessage = context.getString(R.string.account_deleted_notice),
             deleteFailed = context.getString(R.string.settings_delete_failed),
             signOutFailed = context.getString(R.string.settings_sign_out_failed),
+            exporter = get(),
         )
     }
 }

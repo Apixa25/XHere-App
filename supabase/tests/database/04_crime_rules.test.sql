@@ -6,6 +6,11 @@ begin;
 create extension if not exists pgtap with schema extensions;
 select plan(38);
 
+-- Incident reports need a tip-line area (20261018001100_tip_lines.sql). These fixtures sit near 40, -100.
+insert into private.tip_lines (region_slug, name, phone, area) values
+  ('test-area', 'Test tip line', '555-0100',
+   extensions.st_geogfromtext('SRID=4326;POLYGON((-101 39, -99 39, -99 41, -101 41, -101 39))'));
+
 insert into auth.users (id, email) values
   ('22222222-2222-4222-8222-222222222222', 'bob@example.test'),
   ('33333333-3333-4333-8333-333333333333', 'carol@example.test'),

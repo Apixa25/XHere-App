@@ -105,6 +105,7 @@ enum class ModerationActionType {
     @SerialName("suspend_user") SUSPEND_USER,
     @SerialName("unsuspend_user") UNSUSPEND_USER,
     @SerialName("set_tier") SET_TIER,
+    @SerialName("set_role") SET_ROLE,
 }
 
 /** `moderate_drop` accepts these three actions. Reject is recorded when a pending drop is removed. */

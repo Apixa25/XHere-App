@@ -1,6 +1,9 @@
 package world.xhere.app.drop
 
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.junit4.AndroidComposeTestRule
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
@@ -9,6 +12,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.performTextReplacement
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.JsonObject
 import org.junit.Assert.assertEquals
@@ -27,6 +31,7 @@ import world.xhere.app.ui.TestTags
 import world.xhere.shared.data.XHereApiException
 import world.xhere.shared.demo.JamestownDemo
 import world.xhere.shared.media.ExifStrip
+import world.xhere.shared.model.DropStatus
 import world.xhere.shared.rules.CreateDropRequest
 
 @RunWith(RobolectricTestRunner::class)
@@ -76,12 +81,47 @@ class QuickDropTest {
         rule.waitForTag(TestTags.suggestion("incident_report"))
         rule.onNodeWithTag(TestTags.suggestion("incident_report")).performScrollTo().performClick()
         rule.waitForTag(TestTags.DROP_NOTICE)
-        rule.onNodeWithText("911", substring = true).assertIsDisplayed()
-        rule.onNodeWithText("Describe what happened, not who", substring = true).assertIsDisplayed()
+        rule.onNodeWithTag(TestTags.DROP_NOTICE).assertTextContains("911", substring = true)
+        rule.onNodeWithTag(TestTags.DROP_NOTICE).assertTextContains("Describe what happened, not who", substring = true)
         rule.onNodeWithTag(TestTags.DROP_GUIDELINES).performScrollTo().performClick()
         rule.onNodeWithTag(TestTags.DROP_POST).performScrollTo().performClick()
         rule.waitForTag(TestTags.DROP_ERROR)
-        rule.onNodeWithText("Regular account", substring = true).assertIsDisplayed()
+        rule.onNodeWithText("Regular account", substring = true).performScrollTo().assertIsDisplayed()
+    }
+
+    @Test
+    fun a_new_accounts_safety_alert_walks_the_safety_steps_and_is_held_for_review() {
+        rule.openDrop()
+        rule.chooseFromAll("safety alert caution danger nearby", "safety_alert")
+        rule.waitForTag(TestTags.DROP_SAFETY_PANEL)
+        rule.onNodeWithTag(TestTags.DROP_SAFETY_PANEL).performScrollTo()
+            .assertTextContains("not official records", substring = true)
+            .assertTextContains("A moderator reviews this", substring = true)
+        rule.onNodeWithTag(TestTags.SAFETY_FOOTER).performScrollTo().assertTextContains("483-8477", substring = true)
+        rule.onNodeWithTag(TestTags.DROP_GUIDELINES).performScrollTo().performClick()
+        rule.onNodeWithTag(TestTags.DROP_POST).performScrollTo().performClick()
+        rule.waitForTag(TestTags.DROP_SAFETY_HELD)
+        val posted = TestGraph.services.store.drops.values.single {
+            it.authorId == TestGraph.profile.id && it.category.slug == "safety_alert"
+        }
+        assertEquals(DropStatus.PENDING_REVIEW, posted.status)
+    }
+
+    @Test
+    fun describing_a_person_is_caught_before_posting_and_the_blur_is_explained() {
+        rule.openDrop()
+        rule.chooseFromAll("tall man broke a car window", "incident_report")
+        rule.waitForTag(TestTags.DROP_SAFETY_FILTER)
+        rule.onNodeWithTag(TestTags.DROP_SAFETY_FILTER).assertTextContains("Describe what happened, not who", substring = true)
+        rule.onNodeWithTag(TestTags.DROP_SAFETY_PANEL).assertTextContains("about 100 m", substring = true)
+        rule.onNodeWithTag(TestTags.DROP_POST).performScrollTo().assertIsNotEnabled()
+        rule.onNodeWithTag(TestTags.DROP_TEXT).performScrollTo().performTextReplacement("car window smashed overnight")
+        rule.onNodeWithTag(TestTags.DROP_SAFETY_FILTER).assertDoesNotExist()
+        rule.onNodeWithTag(TestTags.DROP_POST).performScrollTo().assertIsEnabled()
+        rule.onNodeWithTag(TestTags.DROP_TEXT).performTextReplacement("window smashed at 12 Main St")
+        rule.waitForTag(TestTags.DROP_SAFETY_FILTER)
+        rule.onNodeWithTag(TestTags.DROP_POST).assertIsNotEnabled()
+        assertTrue(TestGraph.services.store.drops.none { it.value.authorId == TestGraph.profile.id })
     }
 
     @Test
@@ -116,6 +156,15 @@ class QuickDropTest {
         waitForTag(TestTags.SCREEN_MAP)
         onNodeWithTag(TestTags.MAP_DROP_FAB).performClick()
         waitForTag(TestTags.SCREEN_DROP)
+    }
+
+    private fun AndroidComposeTestRule<*, *>.chooseFromAll(text: String, slug: String) {
+        onNodeWithTag(TestTags.DROP_TEXT).performTextInput(text)
+        onNodeWithTag(TestTags.DROP_TEXT_CONTINUE).performClick()
+        waitForTag(TestTags.DROP_MORE)
+        onNodeWithTag(TestTags.DROP_MORE).performScrollTo().performClick()
+        waitForTag(TestTags.category(slug))
+        onNodeWithTag(TestTags.category(slug)).performScrollTo().performClick()
     }
 
     private fun AndroidComposeTestRule<*, *>.postNote(title: String) {

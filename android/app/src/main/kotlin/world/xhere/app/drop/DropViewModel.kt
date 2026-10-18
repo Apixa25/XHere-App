@@ -21,8 +21,14 @@ import world.xhere.shared.form.AttributeFields
 import world.xhere.shared.form.FieldKind
 import world.xhere.shared.geo.LatLng
 import world.xhere.shared.model.Category
+import world.xhere.shared.model.ContentFilter
+import world.xhere.shared.model.DropStatus
 import world.xhere.shared.model.MediaUpload
+import world.xhere.shared.model.UserTier
 import world.xhere.shared.rules.CreateDropRequest
+import world.xhere.shared.safety.SafetyDirectory
+import world.xhere.shared.safety.SafetyFlow
+import world.xhere.shared.safety.SafetyResources
 import world.xhere.shared.suggest.CategorySuggestion
 import world.xhere.shared.suggest.SuggestionQuery
 
@@ -44,9 +50,15 @@ class DropViewModel(
     private var photo: MediaUpload? = null
     private var labels: List<String> = emptyList()
     private var lastQuery = SuggestionQuery()
+    private var filters: List<ContentFilter> = emptyList()
+    private var tier: UserTier = UserTier.NEW
+    private var lastHere: LatLng? = null
 
     fun onText(value: String) {
-        _state.update { it.copy(text = value.take(120)) }
+        _state.update {
+            val text = value.take(120)
+            it.copy(text = text, safety = it.safety?.copy(filterMessage = filterMessage(it.selectedSlug, it.categories, text)))
+        }
     }
 
     fun shutter(context: Context) {
@@ -107,9 +119,28 @@ class DropViewModel(
                 postingNotice = category.postingNotice,
                 guidelinesChecked = false,
                 error = null,
+                safety = safetyPanel(category, it.categories, it.text),
             )
         }
         if (ready) post()
+    }
+
+    private fun safetyPanel(category: Category, categories: List<Category>, text: String): SafetyPanel? {
+        if (!SafetyFlow.appliesTo(category)) return null
+        val resources = SafetyDirectory.forLocation(lastHere ?: JamestownDemo.center)
+        return SafetyPanel(
+            held = SafetyFlow.willBeHeld(category, tier),
+            fuzzM = category.locationPrecisionM,
+            available = SafetyFlow.availableAt(category, resources),
+            filterMessage = filterMessage(category.slug, categories, text),
+            resources = resources,
+        )
+    }
+
+    private fun filterMessage(slug: String?, categories: List<Category>, text: String): String? {
+        val category = categories.firstOrNull { it.slug == slug } ?: return null
+        if (!SafetyFlow.appliesTo(category)) return null
+        return SafetyFlow.filterHit(category, filters, listOf(text))?.message
     }
 
     fun onField(name: String, value: String) {
@@ -123,6 +154,7 @@ class DropViewModel(
     fun post() {
         val snapshot = _state.value
         val slug = snapshot.selectedSlug ?: return
+        if (snapshot.safety?.canPost == false) return
         viewModelScope.launch {
             _state.update { it.copy(busy = true, error = null) }
             try {
@@ -146,14 +178,16 @@ class DropViewModel(
                 )
                 remember(slug)
                 runCatching { services.suggestions.log(lastQuery, snapshot.suggestions.map { it.slug }, slug) }
+                val held = result.status == DropStatus.PENDING_REVIEW
                 _state.update {
                     it.copy(
                         phase = DropPhase.DONE,
                         busy = false,
-                        success = "Posted.",
+                        success = if (held) "Sent for review." else "Posted.",
                         duplicate = duplicateNotice(result.possibleDuplicates),
                         fuzz = fuzzNotice(result.locationPrecisionM),
                         error = null,
+                        held = held,
                     )
                 }
             } catch (e: CancellationException) {
@@ -182,7 +216,10 @@ class DropViewModel(
         _state.update { it.copy(busy = true, error = null) }
         try {
             val taxonomy = services.taxonomy.load()
+            filters = taxonomy.filters
+            runCatching { services.profiles.currentProfile().tier }.onSuccess { tier = it }
             val here = here()
+            lastHere = here
             val query = SuggestionQuery(
                 text = _state.value.text,
                 labels = labels,
@@ -275,4 +312,23 @@ data class DropUiState(
     val success: String? = null,
     val duplicate: String? = null,
     val fuzz: String? = null,
+    /** Set while a Safety category is chosen (PLAN §4.3, M7). */
+    val safety: SafetyPanel? = null,
+    /** The last post went to pre-moderation. */
+    val held: Boolean = false,
 )
+
+/**
+ * The Safety steps before posting: the reminder comes from the category's
+ * posting notice; this adds the disclaimer, whether a moderator sees it first,
+ * the location blur, a live filter check, and who to call.
+ */
+data class SafetyPanel(
+    val held: Boolean,
+    val fuzzM: Int,
+    val available: Boolean,
+    val filterMessage: String?,
+    val resources: SafetyResources,
+) {
+    val canPost: Boolean get() = available && filterMessage == null
+}

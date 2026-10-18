@@ -14,6 +14,14 @@ const description =
     This page is a draft. The steps match the app that exists today.
   </p>
 
+  <h2>Want a copy first?</h2>
+  <p>
+    In the app, go to Profile › Settings › Download my data. XHere builds one JSON file with your email, profile, any suspension,
+    the drops you posted (including their exact spots), your confirmations, the reports you filed, the people you blocked, and the drops you hid.
+    The share sheet lets you save it to Files or Drive, or send it to yourself.
+    Do this before you delete, because the copy is built from your live account.
+  </p>
+
   <h2>In the app</h2>
   <ol>
     <li>Open XHere and sign in.</li>
@@ -29,7 +37,7 @@ const description =
   <h2>If you cannot open the app</h2>
   <p>
     Email <a href={`mailto:${SITE.contactEmail}?subject=Delete%20my%20XHere%20account`}>{SITE.contactEmail}</a> from the address on the account.
-    Use the subject “Delete my XHere account” and include your handle.
+    Use the subject “Delete my XHere account” and include your handle. Say so if you also want a copy of your data first.
     {CONTACT_NOTE}
     There is no hosted account system on this website yet, so this page cannot delete a login by itself. The email is the web request Google Play asks for.
     {SITE.owner} deletes it with the same 30-day process once a hosted project exists.
@@ -51,6 +59,7 @@ const description =
     <li>Drops you authored, and the media records attached to them.</li>
     <li>Confirmations you made.</li>
     <li>Reports you filed.</li>
+    <li>Your list of drops you hid for yourself.</li>
   </ul>
   <p>
     Photo files in storage are removed when storage cleanup is connected. That cleanup is not running yet, because the storage bucket is not set up. The database records for those photos still go away with the account.
@@ -58,7 +67,8 @@ const description =
 
   <h2>What is kept</h2>
   <p>
-    Moderation audit rows stay, because they are the record of a moderation decision. If you were the actor, the link to your profile is cleared when the profile is deleted, so the row no longer names you.
+    Moderation audit rows stay, because they are the record of a moderation decision. The audit log is append-only. The one change ever made to a row is this:
+    if you were the actor, the link to your profile is cleared when the profile is deleted, so the row no longer names you.
     Reports that someone else filed about your content may remain until that content is gone. Resolved-by names are cleared the same way.
   </p>
   <p>

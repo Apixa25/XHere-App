@@ -46,6 +46,16 @@
                     android:pathPrefix="/d/" />
             </intent-filter>
         </activity>
+        <!-- Settings, Download my data (M7). Read access is granted per share, never exported. -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.exports"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/export_paths" />
+        </provider>
     </application>
 
 </manifest>

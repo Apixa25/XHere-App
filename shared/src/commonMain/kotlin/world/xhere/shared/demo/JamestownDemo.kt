@@ -74,11 +74,21 @@ object JamestownDemo {
         createdAt = createdAt,
     )
 
+    /** Author of every demo drop. */
+    val guide: Profile = Profile(
+        id = id(1),
+        handle = "demo_guide",
+        displayName = "Demo guide",
+        tier = UserTier.TRUSTED,
+        createdAt = createdAt,
+    )
+
     fun store(): MemoryStore {
         val groups = groups()
         val categories = categories(groups)
         val taxonomy = Taxonomy(groups, categories, filters(), limits())
         val store = MemoryStore(taxonomy)
+        store.profiles[guide.id] = guide
         fun put(
             shortId: String,
             categorySlug: String,
@@ -93,8 +103,8 @@ object JamestownDemo {
             store.drops[dropId] = StoredDrop(
                 id = dropId,
                 shortId = shortId,
-                authorId = id(1),
-                authorHandle = "demo_guide",
+                authorId = guide.id,
+                authorHandle = guide.handle,
                 groupSlug = groupSlug,
                 category = category,
                 title = title,
@@ -249,6 +259,7 @@ object JamestownDemo {
                 filters = listOf("contact_info"),
                 confirmations = 2,
                 denials = 2,
+                reports = 2,
                 confirmExtendsTtl = 24.hours,
             ),
             category(
@@ -262,6 +273,7 @@ object JamestownDemo {
                 maxTtl = 72.hours,
                 confirmations = 2,
                 denials = 2,
+                reports = 2,
             ),
             category(
                 39, safety, "incident_report", "Incident report", "🚓", 2000, 3,
@@ -271,12 +283,13 @@ object JamestownDemo {
                 premodExempt = UserTier.TRUSTED,
                 sensitive = true,
                 postingNotice = INCIDENT_NOTICE,
-                filters = listOf("contact_info", "person_descriptors"),
+                filters = listOf("contact_info", "person_descriptors", "street_address"),
                 precisionM = 100,
                 defaultTtl = 72.hours,
                 maxTtl = 72.hours,
                 confirmations = 2,
                 denials = 2,
+                reports = 2,
             ),
             category(40, community, "place_of_worship", "Place of worship", "🛐", 300, 1),
             category(41, community, "community_space", "Community space", "🏘️", 300, 2),
@@ -305,6 +318,12 @@ object JamestownDemo {
             description = "Words that describe people.",
             pattern = """\m(suspects?|perps?|perpetrators?|m[ae]n|wom[ae]n|guys?|gals?|males?|females?|boys?|girls?|teens?|teenagers?|kids?|juveniles?|thugs?|wearing|hoodies?|skin|skinned|complexion|ethnicity|race|racial|black|white|brown|asian|hispanic|latin[oax]|african|arab|middle[- ]eastern|mexican|caucasian|tall|heavyset|skinny|bearded|beard|tattoos?|dreads|dreadlocks|years? old|[0-9]{1,2} ?(yo|y/o))\M""",
             message = "Describe what happened, not who. Do not name or describe people.",
+        ),
+        ContentFilter(
+            slug = "street_address",
+            description = "A house number followed by a street name. Incident reports describe an area, not a home.",
+            pattern = """\m[0-9]{1,6}[a-z]? +([a-z0-9.'-]+ +){0,2}(street|st|avenue|ave|road|rd|boulevard|blvd|parkway|pkwy|highway|hwy)\M""",
+            message = "Leave out street addresses. The map already shows the approximate area.",
         ),
     )
 
@@ -346,6 +365,7 @@ object JamestownDemo {
         expiresAtAttribute: String? = null,
         confirmations: Int = 3,
         denials: Int = 3,
+        reports: Int = 3,
         permanentWhenConfirmed: Boolean = false,
         confirmExtendsTtl: Duration? = null,
     ) = Category(
@@ -371,6 +391,7 @@ object JamestownDemo {
         expiresAtAttribute = expiresAtAttribute,
         confirmationsToConfirm = confirmations,
         denialsToHide = denials,
+        reportsToHide = reports,
         permanentWhenConfirmed = permanentWhenConfirmed,
         confirmExtendsTtl = confirmExtendsTtl,
         sort = sort,

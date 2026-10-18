@@ -118,6 +118,22 @@ internal data class SuspendUserParams(
     @SerialName("p_reason") val reason: String? = null,
 )
 
+@Serializable
+internal data class DropIdParams(
+    @Serializable(with = UuidSerializer::class)
+    @SerialName("p_drop_id") val dropId: Uuid,
+)
+
+@Serializable
+internal data class HandleParams(
+    @SerialName("p_handle") val handle: String,
+)
+
+@Serializable
+internal data class QueueParams(
+    @SerialName("p_limit") val limit: Int,
+)
+
 internal fun CreateDropRequest.toParams(): CreateDropParams = CreateDropParams(
     category = categorySlug,
     lat = latitude,

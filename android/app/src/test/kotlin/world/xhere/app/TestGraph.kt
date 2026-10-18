@@ -25,8 +25,11 @@ import world.xhere.app.map.MapViewModel
 import world.xhere.app.map.PreviewMapCanvas
 import world.xhere.app.onboarding.OnboardingStore
 import world.xhere.app.profile.ProfileViewModel
+import world.xhere.app.safety.ModerationViewModel
+import world.xhere.app.safety.SafetyListsViewModel
 import world.xhere.app.session.SessionViewModel
 import world.xhere.app.session.SignOutNotice
+import world.xhere.app.settings.DataExporter
 import world.xhere.app.settings.SettingsViewModel
 import world.xhere.shared.SupabaseConfig
 import world.xhere.shared.data.XHereServices
@@ -56,6 +59,7 @@ object TestGraph {
     lateinit var google: FakeGoogleIdTokenSource
     lateinit var location: ScriptedDeviceLocation
     lateinit var sharer: RecordingDropSharer
+    lateinit var exporter: RecordingDataExporter
     lateinit var links: IncomingLinks
 
     fun isReady(): Boolean = ::services.isInitialized
@@ -69,11 +73,13 @@ fun testModule() = module {
     val google = FakeGoogleIdTokenSource()
     val location = ScriptedDeviceLocation()
     val sharer = RecordingDropSharer()
+    val exporter = RecordingDataExporter()
     val links = IncomingLinks()
     TestGraph.services = services
     TestGraph.google = google
     TestGraph.location = location
     TestGraph.sharer = sharer
+    TestGraph.exporter = exporter
     TestGraph.links = links
     single { services }
     single<XHereServices> { services }
@@ -102,6 +108,9 @@ fun testModule() = module {
     }
     single { links }
     single<DropSharer> { sharer }
+    single<DataExporter> { exporter }
+    viewModel { SafetyListsViewModel(get()) }
+    viewModel { ModerationViewModel(get()) }
     viewModel { (shortId: String) -> DropDetailViewModel(shortId, get(), get()) }
     viewModel { SessionViewModel(get(), get(), get()) }
     viewModel { AuthViewModel(get(), get(), get(), get(), get()) }
@@ -121,6 +130,7 @@ fun testModule() = module {
             deletedMessage = context.getString(R.string.account_deleted_notice),
             deleteFailed = context.getString(R.string.settings_delete_failed),
             signOutFailed = context.getString(R.string.settings_sign_out_failed),
+            exporter = get(),
         )
     }
 }
@@ -181,6 +191,15 @@ class RecordingDropSharer : DropSharer {
     var last: String? = null
     override fun share(url: String) {
         last = url
+    }
+}
+
+class RecordingDataExporter : DataExporter {
+    var fileName: String? = null
+    var json: String? = null
+    override fun export(fileName: String, json: String) {
+        this.fileName = fileName
+        this.json = json
     }
 }
 
