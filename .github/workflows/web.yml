@@ -1,0 +1,22 @@
+name: web
+
+on:
+  push:
+    paths:
+      - "web/**"
+      - ".github/workflows/web.yml"
+  pull_request:
+    paths:
+      - "web/**"
+      - ".github/workflows/web.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  placeholder:
+    name: placeholder
+    runs-on: ubuntu-latest
+    steps:
+      - name: Placeholder until the Astro build lands
+        run: echo "Web workflow placeholder. npm run build arrives with M8."

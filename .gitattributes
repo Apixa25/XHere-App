@@ -1,0 +1,15 @@
+# Keep text files LF in the repo and on checkout (Linux CI, Windows working copies).
+* text=auto eol=lf
+
+# Binaries
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.jar binary
+*.apk binary
+*.aab binary
+*.keystore binary
+*.jks binary
