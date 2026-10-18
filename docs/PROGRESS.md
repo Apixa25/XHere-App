@@ -177,7 +177,7 @@ Branch `m4/map-discovery` → [PR #9](https://github.com/Apixa25/XHere-App/pull/
 
 ## 2026-10-18 (Sun), ~3:10 AM ET: M5 quick drop
 
-Branch `m5/quick-drop`. Composer for PLAN §4.2–§4.4 and the §7 M5 row: a photo or a line of text, three category chips, schema fields, then `create_drop`. A photo of something obvious posts on the shutter and the chip.
+Branch `m5/quick-drop` → [PR #10](https://github.com/Apixa25/XHere-App/pull/10). Composer for PLAN §4.2–§4.4 and the §7 M5 row: a photo or a line of text, three category chips, schema fields, then `create_drop`. A photo of something obvious posts on the shutter and the chip.
 
 - The map has a drop button. The Drop tab is the same screen, and it still says a drop takes about three taps.
 - CameraX takes the photo. The photo picker and a text field are the other ways in. ML Kit image labeling runs on the device. Tests bind a fake shutter and a fake labeler, so the suite does not need a camera or a model download. Robolectric strips the CameraX/ML Kit startup provider.
