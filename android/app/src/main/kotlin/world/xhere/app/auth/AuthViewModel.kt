@@ -23,6 +23,8 @@ data class AuthUiState(
     val busy: Boolean = false,
     val error: String? = null,
     val showOfflineNotice: Boolean = false,
+    /** False until a real GOOGLE_WEB_CLIENT_ID is set, so testers never see a button that can only fail. */
+    val showGoogle: Boolean = true,
 )
 
 class AuthViewModel(
@@ -32,7 +34,7 @@ class AuthViewModel(
     private val notice: SignOutNotice,
     private val strings: AuthStrings,
 ) : ViewModel() {
-    private val _state = MutableStateFlow(AuthUiState(showOfflineNotice = !config.serverReady))
+    private val _state = MutableStateFlow(initialState())
     val state: StateFlow<AuthUiState> = _state.asStateFlow()
     val banner: StateFlow<String?> = notice.message
 
@@ -142,8 +144,13 @@ class AuthViewModel(
     }
 
     private fun resetForm() {
-        _state.value = AuthUiState(showOfflineNotice = !config.serverReady)
+        _state.value = initialState()
     }
+
+    private fun initialState() = AuthUiState(
+        showOfflineNotice = !config.serverReady,
+        showGoogle = config.googleReady,
+    )
 }
 
 /** Resolved string resources, so the ViewModel stays free of a Context. */
