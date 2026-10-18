@@ -60,6 +60,13 @@ internal fun TeaserCard(
                             color = MaterialTheme.colorScheme.tertiary,
                             modifier = Modifier.testTag(TestTags.TEASER_PUBLIC),
                         )
+                    } else {
+                        Text(
+                            text = stringResource(R.string.detail_impact, teaser.viewCount, teaser.confirmCount),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.testTag(TestTags.DETAIL_IMPACT),
+                        )
                     }
                 }
                 TextButton(onClick = onOpen, modifier = Modifier.testTag(TestTags.TEASER_OPEN)) {

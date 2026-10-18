@@ -69,6 +69,17 @@ internal data class CreateDropParams(
 )
 
 @Serializable
+internal data class ImpactNoticesParams(
+    @SerialName("p_limit") val limit: Int = 30,
+)
+
+@Serializable
+internal data class MarkImpactReadParams(
+    @Serializable(with = UuidSerializer::class)
+    @SerialName("p_notice_id") val noticeId: Uuid? = null,
+)
+
+@Serializable
 internal data class ConfirmDropParams(
     @Serializable(with = UuidSerializer::class)
     @SerialName("p_drop_id") val dropId: Uuid,

@@ -82,6 +82,8 @@ data class TeaserUi(
     val approximate: Boolean,
     val publicRecord: Boolean = false,
     val attribution: String? = null,
+    val viewCount: Long = 0,
+    val confirmCount: Int = 0,
 )
 
 enum class MapNotice {
@@ -149,6 +151,8 @@ internal fun DropCard.toTeaser(taxonomy: Taxonomy?, distanceM: Double?): TeaserU
         approximate = locationPrecisionM > 0,
         publicRecord = source == DropSource.OPEN_DATA,
         attribution = attribution,
+        viewCount = viewCount,
+        confirmCount = confirmCount,
     )
 }
 

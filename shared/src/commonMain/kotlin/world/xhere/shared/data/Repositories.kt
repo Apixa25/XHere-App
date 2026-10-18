@@ -9,6 +9,7 @@ import world.xhere.shared.model.AppRole
 import world.xhere.shared.model.BlockedUser
 import world.xhere.shared.model.ConfirmDropResult
 import world.xhere.shared.model.HiddenDrop
+import world.xhere.shared.model.ImpactNotice
 import world.xhere.shared.model.ModerationQueueItem
 import world.xhere.shared.model.PublicProfile
 import world.xhere.shared.model.ConfirmationVerdict
@@ -117,6 +118,18 @@ interface BlockRepository {
     suspend fun myBlocks(): List<BlockedUser>
 }
 
+/**
+ * In-app "your drop helped" notes. One row per drop per UTC day.
+ * Nothing here sends a push notification.
+ */
+interface ImpactRepository {
+    /** Newest unread notes first, then recent read ones. */
+    suspend fun myNotices(limit: Int = 30): List<ImpactNotice>
+
+    /** Marks one note read. A null id marks every unread note. */
+    suspend fun markRead(noticeId: Uuid? = null)
+}
+
 /** Hide one drop for yourself only. Nobody else is affected, and the author is not told. */
 interface HiddenDropRepository {
     suspend fun hideDrop(dropId: Uuid)
@@ -176,6 +189,7 @@ interface XHereServices {
     val reports: ReportRepository
     val blocks: BlockRepository
     val hidden: HiddenDropRepository
+    val impact: ImpactRepository
     val account: AccountRepository
     val moderation: ModerationRepository
 }

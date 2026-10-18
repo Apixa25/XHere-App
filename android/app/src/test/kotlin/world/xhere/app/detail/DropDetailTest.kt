@@ -19,6 +19,7 @@ import androidx.test.ext.junit.rules.ActivityScenarioRule
 import org.robolectric.Robolectric
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.hours
+import kotlin.uuid.Uuid
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Rule
@@ -33,7 +34,10 @@ import world.xhere.app.TestXHereApplication
 import world.xhere.app.ui.TestTags
 import world.xhere.shared.geo.Geo
 import world.xhere.shared.geo.LatLng
+import world.xhere.shared.model.Confirmation
+import world.xhere.shared.model.ConfirmationVerdict
 import world.xhere.shared.model.DropStatus
+import world.xhere.shared.model.ImpactNotice
 import world.xhere.shared.share.ShareLinks
 
 @RunWith(RobolectricTestRunner::class)
@@ -123,6 +127,64 @@ class DropDetailTest {
         rule.activityRule.scenario.moveToState(Lifecycle.State.RESUMED)
         rule.waitUntil(timeoutMillis = 5_000) { TestGraph.location.collectionCount == 1 }
         rule.onNodeWithText("public museum", substring = true).assertDoesNotExist()
+    }
+
+    @Test
+    fun seenAndConfirmedCountsStayOnTheDropAndConfirmIsOneTap() {
+        val lunch = TestGraph.services.store.drops.values.first { it.shortId == "lunch" }
+        // Counts are derived from rows on the next confirm, the same way the
+        // confirmations trigger recounts. Seed the earlier "still true" so
+        // this tap moves Confirmed by 1 to Confirmed by 2.
+        val earlier = Uuid.parse("00000000-0000-0000-0000-0000000000cc")
+        TestGraph.services.store.confirmations[lunch.id to earlier] = Confirmation(
+            dropId = lunch.id,
+            userId = earlier,
+            verdict = ConfirmationVerdict.STILL_TRUE,
+            note = null,
+            distanceM = 12,
+            createdAt = Clock.System.now(),
+        )
+        lunch.viewCount = 4
+        lunch.confirmCount = 1
+        rule.openMap()
+        TestGraph.location.setPermission(true)
+        rule.onNodeWithTag(TestTags.marker("lunch")).performClick()
+        rule.waitForTag(TestTags.TEASER_OPEN)
+        rule.onNodeWithTag(TestTags.DETAIL_IMPACT).assertTextContains("Seen by 4, Confirmed by 1")
+        rule.onNodeWithTag(TestTags.TEASER_OPEN).performClick()
+        rule.waitForTag(TestTags.DETAIL_IMPACT)
+        rule.onNodeWithTag(TestTags.DETAIL_IMPACT).assertTextContains("Seen by 5, Confirmed by 1")
+        rule.waitUntil(timeoutMillis = 5_000) { TestGraph.location.collectionCount >= 1 }
+        TestGraph.location.emit(lunch.displayLocation)
+        rule.waitForTag(TestTags.DETAIL_STILL_TRUE)
+        rule.onNodeWithTag(TestTags.DETAIL_STILL_TRUE).performScrollTo().assertTextContains("Confirm")
+        rule.onNodeWithTag(TestTags.DETAIL_STILL_TRUE).performClick()
+        rule.waitForTag(TestTags.DETAIL_YOU_CONFIRMED)
+        rule.onNodeWithTag(TestTags.DETAIL_STILL_TRUE).assertDoesNotExist()
+        rule.onNodeWithTag(TestTags.DETAIL_IMPACT).assertTextContains("Seen by 5, Confirmed by 2")
+    }
+
+    @Test
+    fun profileInboxShowsOneHelpedNoteAndOpensTheDrop() {
+        val lunch = TestGraph.services.store.drops.values.first { it.shortId == "lunch" }
+        TestGraph.services.store.impactNotices += ImpactNotice(
+            id = Uuid.parse("00000000-0000-0000-0000-0000000000bb"),
+            dropId = lunch.id,
+            shortId = lunch.shortId,
+            title = lunch.title,
+            noticeDay = "2026-10-18",
+            viewEvents = 3,
+            confirmEvents = 1,
+            createdAt = Clock.System.now(),
+            recipientId = TestGraph.profile.id,
+        )
+        rule.openMap()
+        rule.onNodeWithTag(TestTags.NAV_PROFILE).performClick()
+        rule.waitForTag(TestTags.IMPACT_INBOX)
+        rule.onNodeWithTag(TestTags.impactRow("lunch")).assertTextContains("Seen by 3, Confirmed by 1")
+        rule.onNodeWithTag(TestTags.impactRow("lunch")).performClick()
+        rule.waitForTag(TestTags.DETAIL_TITLE)
+        rule.onNodeWithTag(TestTags.DETAIL_TITLE).assertTextContains("West 3rd at lunch")
     }
 
     @Test

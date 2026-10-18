@@ -22,6 +22,10 @@ internal object TestTags {
     const val SCREEN_DROP = "screen_drop"
     const val SCREEN_PROFILE = "screen_profile"
     const val OPEN_SETTINGS = "open_settings"
+    const val IMPACT_INBOX = "impact_inbox"
+    const val IMPACT_EMPTY = "impact_empty"
+
+    fun impactRow(shortId: String): String = "impact_$shortId"
 
     const val SETTINGS_SIGN_OUT = "settings_sign_out"
     const val SETTINGS_DELETE = "settings_delete"
@@ -97,6 +101,8 @@ internal object TestTags {
     const val DETAIL_ATTRIBUTION = "detail_attribution"
     const val DETAIL_SOURCE = "detail_source"
     const val DETAIL_PROGRESS = "detail_progress"
+    const val DETAIL_IMPACT = "detail_impact"
+    const val DETAIL_YOU_CONFIRMED = "detail_you_confirmed"
     const val DETAIL_FRESHNESS = "detail_freshness"
     const val DETAIL_STILL_TRUE = "detail_still_true"
     const val DETAIL_NOT_TRUE = "detail_not_true"

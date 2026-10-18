@@ -58,6 +58,9 @@ data class DetailUiState(
     val isConfirmed: Boolean = false,
     val confirmCount: Int = 0,
     val denyCount: Int = 0,
+    val viewCount: Long = 0,
+    /** True after this person taps Confirm. One answer per drop. */
+    val youConfirmed: Boolean = false,
     val lastConfirmedAt: Instant? = null,
     val isMine: Boolean = false,
     val canAnswer: Boolean = false,
@@ -253,12 +256,9 @@ class DropDetailViewModel(
             place = teaser.displayLocation
             revealRadius = teaser.revealRadiusM
             mine = teaser.isMine
-            card = teaser
+            // drop_detail is what counts a unique view. The teaser does not.
+            card = services.drops.dropDetail(teaser.id, null)
             publish()
-            if (teaser.isMine) {
-                card = services.drops.dropDetail(teaser.id, null)
-                publish()
-            }
         } catch (e: CancellationException) {
             throw e
         } catch (e: XHereApiException) {
@@ -332,6 +332,8 @@ class DropDetailViewModel(
                 isConfirmed = current.isConfirmed,
                 confirmCount = current.confirmCount,
                 denyCount = current.denyCount,
+                viewCount = current.viewCount,
+                youConfirmed = current.myVerdict == ConfirmationVerdict.STILL_TRUE,
                 lastConfirmedAt = current.lastConfirmedAt,
                 isMine = current.isMine,
                 canAnswer = canAnswer,

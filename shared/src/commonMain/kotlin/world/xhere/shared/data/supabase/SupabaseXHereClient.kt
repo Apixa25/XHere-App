@@ -50,6 +50,7 @@ import world.xhere.shared.data.AuthRepository
 import world.xhere.shared.data.BlockRepository
 import world.xhere.shared.data.DropRepository
 import world.xhere.shared.data.HiddenDropRepository
+import world.xhere.shared.data.ImpactRepository
 import world.xhere.shared.data.IdentityProvider
 import world.xhere.shared.data.MediaRepository
 import world.xhere.shared.data.ModerationRepository
@@ -64,6 +65,8 @@ import world.xhere.shared.data.XHereServices
 import world.xhere.shared.data.remote.CategoryRow
 import world.xhere.shared.data.remote.ConfirmDropParams
 import world.xhere.shared.data.remote.DropDetailParams
+import world.xhere.shared.data.remote.ImpactNoticesParams
+import world.xhere.shared.data.remote.MarkImpactReadParams
 import world.xhere.shared.data.remote.DropIdParams
 import world.xhere.shared.data.remote.HandleParams
 import world.xhere.shared.data.remote.QueueParams
@@ -93,6 +96,7 @@ import world.xhere.shared.model.ConfirmationVerdict
 import world.xhere.shared.model.ContentFilter
 import world.xhere.shared.model.CreateDropResult
 import world.xhere.shared.model.DropCard
+import world.xhere.shared.model.ImpactNotice
 import world.xhere.shared.model.DropStatus
 import world.xhere.shared.model.MapFeature
 import world.xhere.shared.model.MediaKind
@@ -145,6 +149,7 @@ class SupabaseXHereClient(
     override val reports: ReportRepository = ReportRepo()
     override val blocks: BlockRepository = BlockRepo()
     override val hidden: HiddenDropRepository = HiddenRepo()
+    override val impact: ImpactRepository = ImpactRepo()
     override val account: AccountRepository = AccountRepo()
     override val moderation: ModerationRepository = ModerationRepo()
 
@@ -325,6 +330,20 @@ class SupabaseXHereClient(
 
         override suspend fun myHiddenDrops(): List<HiddenDrop> = call {
             supabase.postgrest.rpc("my_hidden_drops").decodeList<HiddenDrop>()
+        }
+    }
+
+    private inner class ImpactRepo : ImpactRepository {
+        override suspend fun myNotices(limit: Int): List<ImpactNotice> = call {
+            supabase.postgrest.rpc(
+                "my_impact_notices",
+                ImpactNoticesParams(limit.coerceIn(1, 50)).rpcJson(),
+            ).decodeList<ImpactNotice>()
+        }
+
+        override suspend fun markRead(noticeId: Uuid?) = call {
+            supabase.postgrest.rpc("mark_impact_notice_read", MarkImpactReadParams(noticeId).rpcJson())
+            Unit
         }
     }
 

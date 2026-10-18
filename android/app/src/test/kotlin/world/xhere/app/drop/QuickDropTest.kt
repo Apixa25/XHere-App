@@ -76,8 +76,8 @@ class QuickDropTest {
     @Test
     fun incident_report_explains_the_tier_and_the_911_notice() {
         rule.openDrop()
-        // The evening time prior can put food and events ahead of this chip.
-        // The full list is always there, and that is what this test is checking.
+        // Top-3 suggestions add a time-of-day prior. From 17:00 to 20:00 the
+        // nearby food categories outrank this phrase, so pick it from the full list.
         rule.chooseFromAll("theft break-in last night", "incident_report")
         rule.waitForTag(TestTags.DROP_NOTICE)
         rule.onNodeWithTag(TestTags.DROP_NOTICE).assertTextContains("911", substring = true)

@@ -35,6 +35,16 @@ supabase migration repair --status applied 20261018000000 20261018000100 2026101
 
 After that, `supabase db push` applies only migrations newer than `20261018001100`.
 
+### Apply impact feedback
+
+`20261018194500_impact_feedback.sql` is a normal migration. Do not paste it into the dashboard SQL editor, and do not change Auth, extensions, or other hosted settings for it. From a machine linked to project `jpeuldzegtbqfezijhuy`, after the history repair above if that has not been done yet:
+
+```bash
+supabase db push
+```
+
+That applies this file and any earlier repo migrations the host does not have yet (`20261018001200` through `20261018001500` if they are still pending). It does not load `seed.sql`. Local checks stay `supabase db reset` and `supabase test db`.
+
 ### Demo seed on the pilot
 
 `seed.sql` is still not part of `db push`. It was run once, unchanged, so the Jamestown pilot has the demo drops. The four accounts use reserved `@example.com` addresses (`guide.demo`, `trusted.demo`, `regular.demo`, `new.demo`), have no password, cannot sign in, and are marked `raw_user_meta_data = {"demo": true}`. `demo_trusted` is a moderator, which does nothing until someone can sign in as that account. Incident reports hit the 72-hour cap and events age out, so after about three days the expiry job leaves the evergreen drops.
@@ -87,6 +97,8 @@ Postgres listens on `127.0.0.1:54322` (user `postgres`, password `postgres`, loc
 | `20261018001400_foreign_key_indexes.sql` | Lint 0001: indexes for `category_suggestion_log.chosen_category_id`, `drop_media.owner_id`, `drops (category_id, category_version)`, `moderation_actions.actor_id`, `reports.resolved_by`, `user_moderation.updated_by` |
 | `20261018001500_tip_lines_rls.sql` | RLS enabled on `private.tip_lines`. No client policies. `create_drop` still reads it because that function is security definer |
 | `20261018001600_open_data.sql` | Open-data base layer: `open_data_sources`, `open_data_items`, provenance on `drop_card`, `drops_in_view.source`, `private.upsert_open_data_items`, and a trigger that rejects confirmations of `open_data` drops |
+| `20261018194500_impact_feedback.sql` | Unique signed-in views (`drop_views`, `drops.view_count`), `view_count` and `my_verdict` on `drop_card`, and a batched in-app inbox (`impact_notices`, at most one row per drop per UTC day). Anonymous opens are not counted. A public record can be viewed. Confirming one is rejected, so it is not a contribution |
+| `20261018210000_open_data_card.sql` | Puts provenance back on `to_drop_card` after impact feedback replaced that function. Public records stay revealed. `is_mine` is false when the author is null |
 
 The taxonomy lives in a migration rather than `seed.sql` so a hosted project gets it too. Categories are rows, so adding one doesn't need a new migration type. Every change bumps `categories.version`, and each drop records the version it was validated against (`category_versions`).
 
@@ -104,10 +116,12 @@ The taxonomy lives in a migration rather than `seed.sql` so a hosted project get
 |---|---|---|
 | `drops_in_view(min_lng, min_lat, max_lng, max_lat, categories, zoom)` | anon, user | Map viewport: teasers at zoom ≥ 15, grid clusters with per-category counts below that |
 | `drops_nearby(lat, lng, radius_m, categories, limit)` | user | Distance-ordered `drop_card`s. Body, attributes, and media are filled only inside the drop's reveal radius |
-| `drop_detail(drop_id, lat, lng)` | user | One `drop_card`; counts a view |
+| `drop_detail(drop_id, lat, lng)` | user | One `drop_card`. Counts one unique signed-in view (not the author, not anonymous, not a repeat). A public record includes attribution and stays readable |
 | `drop_teaser(short_id)` | anon, user | Share-page teaser. User drops stay locked. An `open_data` place keeps its short summary and attribution |
 | `create_drop(category, lat, lng, title, body, attributes, tags, reveal_radius_m, expires_at, display_anonymous, media, acknowledge_guidelines)` | user | Validates tier, guidelines, JSON-schema attributes, content filters, reveal radius, lifetime caps, media, and per-tier rate limits. Fuzzes the location, applies pre-moderation, and returns possible duplicates |
-| `confirm_drop(drop_id, verdict, lat, lng, note)` | user | "Still true?" vote: one per user per drop, must be on site, renews the lifetime where the category allows |
+| `confirm_drop(drop_id, verdict, lat, lng, note)` | user | "Still accurate?" vote: one per user per drop, must be on site, not your own drop, renews the lifetime where the category allows. A new `still_true` batches a "your drop helped" inbox row for the author |
+| `my_impact_notices(limit)` | user | Inbox: at most one note per drop per UTC day, with that day's seen and confirmed totals. No viewer ids |
+| `mark_impact_notice_read(notice_id)` | user | Marks one note read, or every unread note when `notice_id` is null |
 | `report(target_type, target_id, reason, details)` | user | Idempotent. Auto-hides a drop at the category's report threshold |
 | `block_user` / `unblock_user` | user | Blocks hide drops in both directions |
 | `delete_my_account()` | user | Scrubs the profile immediately; the nightly cron hard-deletes after 30 days |
@@ -149,7 +163,7 @@ supabase link --project-ref jpeuldzegtbqfezijhuy
 supabase db push
 ```
 
-`db push` applies `20261018001600_open_data.sql` when that version is not on the project yet. Then load the snapshot. `DATABASE_URL` is the Postgres connection string from the dashboard (Project Settings → Database). It is not in git. The SQL runs as the database owner and calls `private.upsert_open_data_items`. The anon key cannot run it.
+`db push` applies every migration that is not on the project yet. That includes `20261018001600_open_data.sql`, `20261018194500_impact_feedback.sql` when impact feedback is not already there, and `20261018210000_open_data_card.sql` (provenance on the card after impact feedback). Then load the snapshot. `DATABASE_URL` is the Postgres connection string from the dashboard (Project Settings → Database). It is not in git. The SQL runs as the database owner and calls `private.upsert_open_data_items`. The anon key cannot run it.
 
 ```bash
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/seed/open-data/jamestown-ny.sql
