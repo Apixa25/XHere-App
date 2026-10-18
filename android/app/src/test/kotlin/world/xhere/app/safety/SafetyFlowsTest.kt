@@ -167,6 +167,8 @@ class SafetyFlowsTest {
         rule.waitForTag(TestTags.SCREEN_GUIDELINES)
         rule.onNodeWithText("Describe the place and what happened", substring = true).assertIsDisplayed()
         rule.onNodeWithText("Blocking hides drops both ways", substring = true).performScrollTo().assertIsDisplayed()
+        rule.onNodeWithText("NCMEC CyberTipline", substring = true).performScrollTo().assertIsDisplayed()
+        rule.onNodeWithText("aiming for within 24 hours", substring = true).performScrollTo().assertIsDisplayed()
         rule.onNodeWithTag(TestTags.SAFETY_FOOTER).performScrollTo().assertIsDisplayed()
     }
 

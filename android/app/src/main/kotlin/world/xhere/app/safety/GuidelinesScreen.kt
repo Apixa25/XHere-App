@@ -47,6 +47,8 @@ fun GuidelinesScreen(onBack: () -> Unit) {
         Text(stringResource(R.string.guidelines_tools_body), style = MaterialTheme.typography.bodyLarge)
         Section(R.string.guidelines_safety_title)
         Text(stringResource(R.string.guidelines_safety_body), style = MaterialTheme.typography.bodyLarge)
+        Section(R.string.guidelines_child_title)
+        Text(stringResource(R.string.guidelines_child_body), style = MaterialTheme.typography.bodyLarge)
         Section(R.string.guidelines_moderation_title)
         Text(stringResource(R.string.guidelines_moderation_body), style = MaterialTheme.typography.bodyLarge)
         SafetyFooter(SafetyDirectory.chautauqua, Modifier.padding(top = 8.dp))

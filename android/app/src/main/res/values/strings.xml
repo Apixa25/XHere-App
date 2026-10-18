@@ -200,8 +200,10 @@
     <string name="guidelines_tools_body">Open a drop to report it, report its author, block its author, or hide just that drop for yourself. Blocking hides drops both ways: you won\'t see theirs and they won\'t see yours. Two reports hide a safety drop automatically until a moderator looks. Other categories hide after the number set on the category, usually three.</string>
     <string name="guidelines_safety_title">Safety alerts and incident reports</string>
     <string name="guidelines_safety_body">Safety alerts and incident reports last 72 hours. New accounts\' safety alerts are reviewed before anyone sees them. Incident reports need a Regular account, are reviewed unless you\'re Trusted, show an area of about 100 m instead of the exact spot, stay unconfirmed until two people nearby confirm them, and are only offered where a local police tip line is set up. The filter blocks contact details and words for gender, age, race, clothing, build, and similar descriptors. Incident reports also block house numbers with street names.</string>
+    <string name="guidelines_child_title">Child safety</string>
+    <string name="guidelines_child_body">Zero tolerance for child sexual abuse and exploitation. That content is removed, the account is suspended, and apparent abuse material is reported to the NCMEC CyberTipline. Report it from the drop, or write to hello@xhere.world. If a child is in danger, call 911.</string>
     <string name="guidelines_moderation_title">If we remove something</string>
-    <string name="guidelines_moderation_body">Moderators can approve, hide, or remove a drop, and suspend an account. Every action is kept in an audit log that can\'t be edited. If you think a decision was wrong, write to the contact address on xhere.world.</string>
+    <string name="guidelines_moderation_body">Moderators review reports, aiming for within 24 hours. They can approve, hide, or remove a drop, and suspend an account. Every action is kept in an audit log that can\'t be edited. If you think a decision was wrong, write to hello@xhere.world.</string>
 
     <!-- M7: moderation queue -->
     <string name="mod_title">Moderation queue</string>
