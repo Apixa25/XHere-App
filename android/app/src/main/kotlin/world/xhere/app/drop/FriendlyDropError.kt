@@ -16,8 +16,11 @@ fun friendlyDropError(error: XHereApiException, categorySlug: String?): String =
     "content_not_allowed" -> when (error.detail) {
         "person_descriptors" -> "Describe what happened, not who."
         "contact_info" -> "Keep phone numbers and email addresses out of the drop."
+        "street_address" -> "Leave out the street address. A street name is fine."
         else -> error.hint ?: "That text isn't allowed on this category."
     }
+    "incident_reports_unavailable" ->
+        "Incident reports are only available where a local police tip line is set up. In an emergency call 911."
     "guidelines_not_acknowledged" -> "Please acknowledge the notice before posting."
     "invalid_attributes" -> "Fill in the required details for this category."
     "photo_required" -> "This category needs a photo."

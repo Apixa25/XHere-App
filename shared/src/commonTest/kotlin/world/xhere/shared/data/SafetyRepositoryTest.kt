@@ -207,6 +207,18 @@ class SafetyFakeTest {
         val ok = regular.drops.createDrop(safetyAlert(body = "Window smashed on Main Street.").copy(categorySlug = "incident_report"))
         assertEquals(DropStatus.PENDING_REVIEW, ok.status)
     }
+
+    @Test
+    fun incidentReportsNeedATipLineWhereTheyArePosted() = runTest {
+        val store = JamestownDemo.store()
+        val regular = client(store, person(7, UserTier.REGULAR))
+        val buffalo = safetyAlert(body = "Window smashed on Main Street.")
+            .copy(categorySlug = "incident_report", latitude = 42.8864, longitude = -78.8784)
+        val error = assertFailsWith<XHereApiException> { regular.drops.createDrop(buffalo) }
+        assertEquals("incident_reports_unavailable", error.code)
+        assertEquals(XHereApiException.SQL_PERMISSION, error.sqlState)
+        assertEquals(DropStatus.ACTIVE, regular.drops.createDrop(safetyAlert().copy(latitude = 42.8864, longitude = -78.8784)).status, "safety alerts work anywhere")
+    }
 }
 
 class SafetyContractTest {

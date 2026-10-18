@@ -54,6 +54,8 @@ import world.xhere.shared.model.Taxonomy
 import world.xhere.shared.rules.CategoryRules
 import world.xhere.shared.rules.CreateDropRequest
 import world.xhere.shared.rules.PostingContext
+import world.xhere.shared.safety.SafetyDirectory
+import world.xhere.shared.safety.SafetyFlow
 import world.xhere.shared.suggest.CategoryRanker
 import world.xhere.shared.suggest.CategorySuggestion
 import world.xhere.shared.suggest.SuggestionQuery
@@ -262,6 +264,13 @@ class InMemoryXHere(
                 store.taxonomy.filters,
             )
             if (!checked.isValid) throw XHereApiException.fromViolation(checked.violations.first(), checked.violations)
+            if (!SafetyFlow.availableAt(category, SafetyDirectory.forLocation(LatLng(request.latitude, request.longitude)))) {
+                throw XHereApiException(
+                    "incident_reports_unavailable",
+                    sqlState = XHereApiException.SQL_PERMISSION,
+                    hint = "Incident reports are only available where a local police tip line is set up. In an emergency call 911.",
+                )
+            }
             val display = checkNotNull(checked.displayLocation)
             val duplicates = store.drops.values.filter { existing ->
                 existing.category.slug == category.slug &&
