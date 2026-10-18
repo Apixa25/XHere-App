@@ -53,6 +53,12 @@ internal fun TeaserCard(
                         style = MaterialTheme.typography.titleMedium,
                         modifier = Modifier.testTag(TestTags.TEASER_TITLE),
                     )
+                    Text(
+                        text = stringResource(R.string.detail_impact, teaser.viewCount, teaser.confirmCount),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.testTag(TestTags.DETAIL_IMPACT),
+                    )
                 }
                 TextButton(onClick = onOpen, modifier = Modifier.testTag(TestTags.TEASER_OPEN)) {
                     Text(stringResource(R.string.map_teaser_open))

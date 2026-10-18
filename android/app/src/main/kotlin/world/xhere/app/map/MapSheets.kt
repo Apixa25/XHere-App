@@ -88,6 +88,11 @@ internal fun NearMeSheet(
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
+                                Text(
+                                    stringResource(R.string.detail_impact, card.viewCount, card.confirmCount),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.primary,
+                                )
                             }
                             card.distanceM?.let { meters ->
                                 Text(formatMeters(meters), style = MaterialTheme.typography.labelLarge)

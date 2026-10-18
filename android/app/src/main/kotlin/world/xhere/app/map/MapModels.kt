@@ -79,6 +79,8 @@ data class TeaserUi(
     val revealed: Boolean,
     val body: String?,
     val approximate: Boolean,
+    val viewCount: Long = 0,
+    val confirmCount: Int = 0,
 )
 
 enum class MapNotice {
@@ -144,6 +146,8 @@ internal fun DropCard.toTeaser(taxonomy: Taxonomy?, distanceM: Double?): TeaserU
         revealed = revealed,
         body = if (revealed) body else null,
         approximate = locationPrecisionM > 0,
+        viewCount = viewCount,
+        confirmCount = confirmCount,
     )
 }
 

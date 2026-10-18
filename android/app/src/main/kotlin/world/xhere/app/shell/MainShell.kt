@@ -1,9 +1,15 @@
 package world.xhere.app.shell
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Person
@@ -17,6 +23,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -43,6 +50,7 @@ import world.xhere.app.detail.IncomingLinks
 import world.xhere.app.drop.DropScreen
 import world.xhere.app.map.MapScreen
 import world.xhere.app.profile.ProfileViewModel
+import world.xhere.shared.model.ImpactNotice
 import world.xhere.app.safety.GuidelinesScreen
 import world.xhere.app.safety.ModerationScreen
 import world.xhere.app.safety.SafetyListsScreen
@@ -130,7 +138,14 @@ fun MainShell() {
                 )
             }
             composable(Routes.DROP) { DropScreen() }
-            composable(Routes.PROFILE) { ProfilePage(onSettings = { nav.navigate(Routes.SETTINGS) }) }
+            composable(Routes.PROFILE) {
+                ProfilePage(
+                    onSettings = { nav.navigate(Routes.SETTINGS) },
+                    onOpenDrop = { shortId ->
+                        nav.navigate(Routes.detail(shortId)) { launchSingleTop = true }
+                    },
+                )
+            }
             composable(Routes.SETTINGS) {
                 SettingsScreen(
                     onBack = { nav.popBackStack() },
@@ -177,11 +192,16 @@ private fun PlaceholderPage(tag: String, title: Int, body: Int) {
 }
 
 @Composable
-private fun ProfilePage(onSettings: () -> Unit, viewModel: ProfileViewModel = koinViewModel()) {
+private fun ProfilePage(
+    onSettings: () -> Unit,
+    onOpenDrop: (String) -> Unit,
+    viewModel: ProfileViewModel = koinViewModel(),
+) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .verticalScroll(rememberScrollState())
             .padding(24.dp)
             .testTag(TestTags.SCREEN_PROFILE),
         verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -208,6 +228,68 @@ private fun ProfilePage(onSettings: () -> Unit, viewModel: ProfileViewModel = ko
         ) {
             Icon(Icons.Filled.Settings, contentDescription = null)
             Text(stringResource(R.string.profile_settings), modifier = Modifier.padding(start = 8.dp))
+        }
+        ImpactInbox(
+            notices = if (state.impactLoaded) state.notices else emptyList(),
+            showEmpty = state.impactLoaded && state.notices.isEmpty(),
+            onOpen = { notice -> viewModel.openNotice(notice, onOpenDrop) },
+        )
+    }
+}
+
+@Composable
+private fun ColumnScope.ImpactInbox(
+    notices: List<ImpactNotice>,
+    showEmpty: Boolean,
+    onOpen: (ImpactNotice) -> Unit,
+) {
+    Text(
+        text = stringResource(R.string.impact_title),
+        style = MaterialTheme.typography.titleLarge,
+        modifier = Modifier
+            .padding(top = 20.dp)
+            .testTag(TestTags.IMPACT_INBOX),
+    )
+    if (showEmpty) {
+        Text(
+            text = stringResource(R.string.impact_empty),
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.testTag(TestTags.IMPACT_EMPTY),
+        )
+        return
+    }
+    notices.forEach { notice ->
+        Surface(
+            shape = MaterialTheme.shapes.large,
+            color = if (notice.unread) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 8.dp)
+                .clickable { onOpen(notice) }
+                .testTag(TestTags.impactRow(notice.shortId)),
+        ) {
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+                    Text(notice.title, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+                    if (notice.unread) {
+                        Text(
+                            text = stringResource(R.string.impact_new),
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                    }
+                }
+                Text(
+                    text = stringResource(R.string.detail_impact, notice.viewEvents, notice.confirmEvents),
+                    style = MaterialTheme.typography.bodyLarge,
+                )
+                Text(
+                    text = notice.noticeDay,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
     }
 }
