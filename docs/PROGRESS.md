@@ -325,3 +325,7 @@ Branch `chore/hosted-supabase-followups` → [PR #17](https://github.com/Apixa25
 - **Dashboard, not this PR:** Auth site URL `https://xhere.world` and the Android redirect; the sign-in email must include `{{ .Token }}`; Google provider still needs the OAuth web client (PLAN §8); first admin SQL after you sign up. The built-in SMTP is only for team addresses. Custom SMTP (Resend free tier) needs your OK. The project pauses after about 7 days without activity.
 - **Demo data** is on the pilot on purpose. Delete it with the SQL above when you want a clean map. It ages itself down to the evergreen drops after about three days.
 - Unchanged: do not deploy the website until you approve Cloudflare and DNS. Do not touch `Apixa25/XHere-Web`. Background location stays off until M13.
+
+## 2026-10-18 (Sun), ~9:10 AM ET: Hide Google sign-in on tester builds
+
+- The Google button is hidden until GOOGLE_WEB_CLIENT_ID is set, for tester builds.
