@@ -204,14 +204,16 @@ object JamestownDemo {
             -78.87840,
         )
         // A public record inside downtown, so the map is not only user drops.
+        // It sits on the south edge, more than 500 m from the default camera,
+        // so it joins the downtown cluster without changing category suggestions.
         // It is not authored by demo_guide and does not count as their contribution.
         put(
             "records",
             "historical_fact",
             "Prendergast Library",
             "Public library building. Open the source for the register entry.",
-            42.09824,
-            -79.24382,
+            42.0905,
+            -79.24202,
             source = DropSource.OPEN_DATA,
             sourceName = "National Register of Historic Places",
             sourceUrl = "https://npgallery.nps.gov/AssetDetail/NRIS/85000628",
