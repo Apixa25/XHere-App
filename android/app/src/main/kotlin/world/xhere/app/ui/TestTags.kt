@@ -38,6 +38,7 @@ internal object TestTags {
     const val TEASER_CATEGORY = "teaser_category"
     const val TEASER_BODY = "teaser_body"
     const val TEASER_LOCKED = "teaser_locked"
+    const val TEASER_OPEN = "teaser_open"
     const val TEASER_CLOSE = "teaser_close"
     const val NEAR_ME = "near_me"
     const val NEAR_ME_LIST = "near_me_list"
@@ -82,4 +83,20 @@ internal object TestTags {
     fun category(slug: String): String = "category_$slug"
 
     fun field(name: String): String = "field_$name"
+
+    const val SCREEN_DETAIL = "screen_detail"
+    const val DETAIL_BACK = "detail_back"
+    const val DETAIL_TITLE = "detail_title"
+    const val DETAIL_CATEGORY = "detail_category"
+    const val DETAIL_BODY = "detail_body"
+    const val DETAIL_LOCKED = "detail_locked"
+    const val DETAIL_DISTANCE = "detail_distance"
+    const val DETAIL_BADGE = "detail_badge"
+    const val DETAIL_PROGRESS = "detail_progress"
+    const val DETAIL_FRESHNESS = "detail_freshness"
+    const val DETAIL_STILL_TRUE = "detail_still_true"
+    const val DETAIL_NOT_TRUE = "detail_not_true"
+    const val DETAIL_SHARE = "detail_share"
+    const val DETAIL_NOTICE = "detail_notice"
+    const val DETAIL_LOCATION = "detail_location"
 }

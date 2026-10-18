@@ -28,6 +28,7 @@ import org.robolectric.Shadows
 import org.robolectric.annotation.Config
 import world.xhere.app.onboarding.OnboardingStore
 import world.xhere.app.session.SignOutNotice
+import world.xhere.shared.model.DropStatus
 import world.xhere.app.ui.TestTags
 
 @RunWith(RobolectricTestRunner::class)
@@ -162,9 +163,22 @@ class FreshSessionRule : TestRule {
                     TestGraph.services.store.drops.entries.removeAll { it.value.shortId !in demoShortIds }
                     TestGraph.services.store.suggestionLogs.clear()
                     TestGraph.services.store.mediaBytes.clear()
+                    TestGraph.services.store.confirmations.clear()
+                    TestGraph.services.store.drops.values.forEach { drop ->
+                        drop.confirmCount = 0
+                        drop.denyCount = 0
+                        drop.lastConfirmedAt = null
+                        drop.status = DropStatus.ACTIVE
+                        drop.expiresAt = null
+                    }
                 }
             }
             runCatching { GlobalContext.get().get<SignOutNotice>().clear() }
+            if (TestGraph.isReady()) {
+                TestGraph.location.reset()
+                TestGraph.sharer.last = null
+                TestGraph.links.consume()
+            }
             base.evaluate()
         }
     }

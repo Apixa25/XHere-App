@@ -43,6 +43,7 @@
     <string name="map_near_empty">Nothing in this filter within 5 km.</string>
     <string name="map_near_failed">Couldn\'t load what\'s nearby.</string>
     <string name="map_teaser_close">Close</string>
+    <string name="map_teaser_open">Open</string>
     <string name="map_teaser_locked">Walk closer to read this.</string>
     <string name="map_teaser_approximate">The pin is approximate.</string>
     <string name="map_teaser_failed">Couldn\'t open that drop.</string>
@@ -68,6 +69,35 @@
     <string name="drop_guidelines">I read the notice</string>
     <string name="drop_post">Post</string>
     <string name="drop_another">Post another</string>
+
+    <string name="detail_back">Back</string>
+    <string name="detail_missing">This drop isn\'t here.</string>
+    <string name="detail_author">by @%1$s</string>
+    <string name="detail_confirmed">Confirmed</string>
+    <string name="detail_progress">%1$d of %2$d say it\'s still true</string>
+    <string name="detail_denies">%1$d said this isn\'t true.</string>
+    <string name="detail_fresh_never">Not confirmed yet</string>
+    <string name="detail_fresh_now">Confirmed just now</string>
+    <string name="detail_fresh_min">Confirmed %1$d min ago</string>
+    <string name="detail_fresh_hour_one">Confirmed 1 hour ago</string>
+    <string name="detail_fresh_hour">Confirmed %1$d hours ago</string>
+    <string name="detail_fresh_day_one">Confirmed 1 day ago</string>
+    <string name="detail_fresh_day">Confirmed %1$d days ago</string>
+    <string name="detail_away">%1$s away</string>
+    <string name="detail_walk_closer">Walk %1$d m closer to reveal</string>
+    <string name="detail_locked">Walk closer to reveal.</string>
+    <string name="detail_within">This opens within %1$d m.</string>
+    <string name="detail_location_off">Location is off, so this stays locked.</string>
+    <string name="detail_use_location">Use location</string>
+    <string name="detail_yours">You posted this.</string>
+    <string name="detail_still_prompt">Still true?</string>
+    <string name="detail_still_true">Still true</string>
+    <string name="detail_not_true">Not anymore</string>
+    <string name="detail_share">Share</string>
+    <string name="detail_too_far">You\'re too far away to answer.</string>
+    <string name="detail_rate_limited">You\'ve answered a lot this hour. Try again later.</string>
+    <string name="detail_unavailable">This drop isn\'t available.</string>
+    <string name="detail_confirm_failed">That answer didn\'t go through.</string>
 
     <string name="profile_settings">Settings</string>
     <string name="profile_signed_in">Signed in</string>

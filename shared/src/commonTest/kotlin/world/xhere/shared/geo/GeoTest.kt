@@ -52,6 +52,11 @@ class GeoTest {
         assertEquals(200, Geo.confirmationRangeM(200))
         assertTrue(Geo.isWithinConfirmationRange(50.0, revealRadiusM = 10))
         assertTrue(!Geo.isWithinConfirmationRange(50.1, revealRadiusM = 10))
+        val origin = LatLng(42.09122, -79.23920)
+        val metersPerDegree = Geo.distanceMeters(origin, LatLng(origin.latitude + 1.0, origin.longitude))
+        val north = LatLng(origin.latitude + 270.0 / metersPerDegree, origin.longitude)
+        assertEquals(120, Geo.revealGapMeters(Geo.distanceMeters(origin, north), 150))
+        assertEquals(0, Geo.revealGapMeters(10.0, 150))
     }
 
     @Test

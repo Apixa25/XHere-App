@@ -48,14 +48,20 @@ class InMemoryXHereTest {
         assertEquals(1, far.size)
         assertTrue(!far.first().revealed)
         assertNull(far.first().body)
+        assertNull(far.first().tags)
+        val farJson = XHereJson.encodeToString(world.xhere.shared.model.DropCard.serializer(), far.first())
+        assertTrue(!farJson.contains("Something worth knowing"), farJson)
+        assertTrue(!farJson.contains("local"), farJson)
 
         val near = stranger.drops.dropDetail(created.id, created.displayLocation)
         assertTrue(near.revealed)
         assertEquals("Something worth knowing.", near.body)
+        assertEquals(listOf("local"), near.tags)
 
         val teaser = stranger.drops.dropTeaser(created.shortId)
         assertTrue(!teaser.revealed)
         assertNull(teaser.body)
+        assertNull(teaser.tags)
     }
 
     @Test
@@ -237,7 +243,7 @@ class ReadModelTest {
               "body": null,
               "attributes": null,
               "media": null,
-              "tags": ["local"],
+              "tags": null,
               "status": "active",
               "is_confirmed": false,
               "confirm_count": 0,
@@ -250,6 +256,7 @@ class ReadModelTest {
         val card = XHereJson.decodeFromString(world.xhere.shared.model.DropCard.serializer(), raw)
         assertEquals(false, card.revealed)
         assertNull(card.body)
+        assertNull(card.tags)
         assertEquals(12.5, card.distanceM)
         val drop = card.toDrop(categoryId = Uuid.parse("00000000-0000-0000-0000-000000000099"), authorId = null)
         assertEquals("note", drop.categorySlug)

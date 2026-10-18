@@ -213,7 +213,13 @@ object JamestownDemo {
             category(31, nature, "trail_note", "Trail note", "🥾", 300, 2),
             category(32, nature, "wildlife", "Wildlife sighting", "🦉", 300, 3),
             category(33, nature, "water_source", "Water source", "💧", 300, 4),
-            category(24, food, "food_truck", "Food truck", "🚚", 500, 1, attributes = FOOD_SCHEMA),
+            category(
+                24, food, "food_truck", "Food truck", "🚚", 500, 1,
+                attributes = FOOD_SCHEMA,
+                confirmations = 2,
+                denials = 2,
+                confirmExtendsTtl = 6.hours,
+            ),
             category(25, food, "eatery_tip", "Eatery tip", "🍽️", 500, 2, attributes = FOOD_SCHEMA),
             category(34, food, "market", "Market", "🧺", 500, 3, attributes = FOOD_SCHEMA),
             category(
@@ -222,6 +228,7 @@ object JamestownDemo {
                 maxTtl = 365.days,
                 maxTtlNew = 30.days,
                 expiresAtAttribute = "ends_at",
+                confirmations = 2,
             ),
             category(
                 35, events, "popup", "Pop-up", "⛺", 1000, 2,
@@ -229,16 +236,20 @@ object JamestownDemo {
                 maxTtl = 365.days,
                 maxTtlNew = 30.days,
                 expiresAtAttribute = "ends_at",
+                confirmations = 2,
             ),
-            category(27, sales, "yard_sale", "Yard sale", "🏠", 1000, 1),
-            category(36, sales, "for_sale", "For sale", "💵", 1000, 2),
-            category(37, sales, "free_stuff", "Free stuff", "🎁", 1000, 3),
+            category(27, sales, "yard_sale", "Yard sale", "🏠", 1000, 1, confirmations = 2),
+            category(36, sales, "for_sale", "For sale", "💵", 1000, 2, confirmations = 2),
+            category(37, sales, "free_stuff", "Free stuff", "🎁", 1000, 3, confirmations = 2),
             category(
                 28, safety, "hazard", "Hazard", "⚠️", 2000, 1,
                 attributes = HAZARD_SCHEMA,
                 defaultTtl = 24.hours,
                 maxTtl = 72.hours,
                 filters = listOf("contact_info"),
+                confirmations = 2,
+                denials = 2,
+                confirmExtendsTtl = 24.hours,
             ),
             category(
                 38, safety, "safety_alert", "Safety alert", "📢", 2000, 2,
@@ -249,6 +260,8 @@ object JamestownDemo {
                 moderation = ModerationMode.PRE_FOR_NEW,
                 defaultTtl = 72.hours,
                 maxTtl = 72.hours,
+                confirmations = 2,
+                denials = 2,
             ),
             category(
                 39, safety, "incident_report", "Incident report", "🚓", 2000, 3,
@@ -262,6 +275,8 @@ object JamestownDemo {
                 precisionM = 100,
                 defaultTtl = 72.hours,
                 maxTtl = 72.hours,
+                confirmations = 2,
+                denials = 2,
             ),
             category(40, community, "place_of_worship", "Place of worship", "🛐", 300, 1),
             category(41, community, "community_space", "Community space", "🏘️", 300, 2),
@@ -269,12 +284,12 @@ object JamestownDemo {
             category(43, works, "infrastructure", "Infrastructure", "🌉", 200, 1),
             category(44, works, "construction", "Construction", "🚧", 200, 2),
             category(45, works, "underground", "Underground", "🚇", 200, 3),
-            category(46, secrets, "hidden_gem", "Hidden gem", "💎", 150, 1),
-            category(47, secrets, "tip", "Local tip", "💡", 150, 2),
+            category(46, secrets, "hidden_gem", "Hidden gem", "💎", 50, 1, confirmations = 2),
+            category(47, secrets, "tip", "Local tip", "💡", 50, 2, confirmations = 2),
             category(48, art, "street_art", "Street art", "🎨", 150, 1),
             category(49, art, "public_art", "Public art", "🗿", 150, 2),
             category(50, art, "music_spot", "Music spot", "🎸", 150, 3),
-            category(29, notes, "note", "Note", "📍", 100, 1),
+            category(29, notes, "note", "Note", "📍", 100, 1, confirmations = 2, permanentWhenConfirmed = true),
         )
     }
 
@@ -329,6 +344,10 @@ object JamestownDemo {
         maxTtl: Duration? = null,
         maxTtlNew: Duration? = null,
         expiresAtAttribute: String? = null,
+        confirmations: Int = 3,
+        denials: Int = 3,
+        permanentWhenConfirmed: Boolean = false,
+        confirmExtendsTtl: Duration? = null,
     ) = Category(
         id = id(n),
         groupId = group.id,
@@ -350,6 +369,10 @@ object JamestownDemo {
         maxTtl = maxTtl,
         maxTtlNew = maxTtlNew,
         expiresAtAttribute = expiresAtAttribute,
+        confirmationsToConfirm = confirmations,
+        denialsToHide = denials,
+        permanentWhenConfirmed = permanentWhenConfirmed,
+        confirmExtendsTtl = confirmExtendsTtl,
         sort = sort,
     )
 

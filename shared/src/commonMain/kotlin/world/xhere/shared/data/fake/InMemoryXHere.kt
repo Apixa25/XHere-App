@@ -190,7 +190,9 @@ class InMemoryXHere(
                 throw XHereApiException("drop_not_found", sqlState = XHereApiException.SQL_NOT_FOUND)
             }
             val card = drop.toCard(viewer?.id, distance = null)
-            return if (card.isMine) card else card.copy(revealed = false, body = null, attributes = null, media = null)
+            // Share teasers never include the body, even for the author.
+            // drop_detail is what reveals it.
+            return card.copy(revealed = false, body = null, attributes = null, media = null, tags = null)
         }
 
         override suspend fun createDrop(request: CreateDropRequest): CreateDropResult {
@@ -302,6 +304,20 @@ class InMemoryXHere(
             val distance = Geo.distanceMeters(location, drop.displayLocation)
             val problems = CategoryRules.checkConfirmation(distance, drop.revealRadiusM, note, drop.authorId == profile.id)
             if (problems.isNotEmpty()) throw XHereApiException.fromViolation(problems.first(), problems)
+            val cap = store.taxonomy.limits(profile.tier)?.confirmationsPerHour
+            if (cap != null) {
+                val since = clock() - 1.hours
+                val recentOthers = store.confirmations.values.count { row ->
+                    row.userId == profile.id && row.dropId != drop.id && row.createdAt > since
+                }
+                if (recentOthers >= cap) {
+                    throw XHereApiException(
+                        "rate_limited",
+                        sqlState = XHereApiException.SQL_RATE_LIMITED,
+                        detail = "tier ${profile.tier.name.lowercase()} allows $cap confirmations per hour",
+                    )
+                }
+            }
             store.confirmations[dropId to profile.id] = Confirmation(
                 dropId = dropId,
                 userId = profile.id,
@@ -609,7 +625,7 @@ private fun StoredDrop.toCard(viewerId: Uuid?, distance: Double?): DropCard {
         body = if (revealed) body else null,
         attributes = if (revealed) attributes else null,
         media = if (revealed) media else null,
-        tags = tags,
+        tags = if (revealed) tags else null,
         status = status,
         isConfirmed = status == DropStatus.CONFIRMED,
         confirmCount = confirmCount,

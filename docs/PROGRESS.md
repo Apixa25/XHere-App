@@ -224,3 +224,21 @@ Branch `m5/quick-drop` → [PR #10](https://github.com/Apixa25/XHere-App/pull/10
 - **Do not deploy the website** until you approve a free Cloudflare account and the DNS change (`web/CLOUDFLARE.md`). Replace the assetlinks placeholder with the Play App Signing SHA-256, and give `hello@xhere.world` a mailbox (or pick another address). Read the draft privacy, terms, and guidelines before treating them as in effect.
 - Background location stays off until M13.
 - Unchanged from M0–M4: license, secret scanning / push protection, a free Google Cloud OAuth web client id before Google sign-in works, first admin SQL once a project exists, crime-rule review, a Mac before iOS (M15), PLAN §8 and §9. The demo city is Jamestown (PR #4). The Jamestown FOIL request is sent; the code-enforcement email to dod@jamestownny.gov is not.
+
+## 2026-10-18 (Sun), ~4:00 AM ET: M6 drop detail, proximity reveal, "Still true?"
+
+Branch `m6/drop-detail` → [PR #12](https://github.com/Apixa25/XHere-App/pull/12). Detail screen for PLAN §4 (reveal radius and the confirmation bar) and the §7 M6 row.
+
+- A map teaser (M4) and a Near me row open the drop. The screen stays locked until the phone is inside that category's reveal radius. The locked line is "Walk 120 m closer to reveal" when the gap is 120 m, using `Geo.revealGapMeters` and the category default (`eatery_tip` 500 m, `historical_fact` 150 m, `hidden_gem` / `tip` 50 m, and the rest of the §4.2 table).
+- Distance updates only while the app is in the foreground. Leaving the foreground cancels the `LocationManager` updates. Nothing is written down. Background location is still not in the manifest.
+- Inside `max(50 m, reveal_radius_m)`, Still true / Not anymore calls `confirm_drop`. The Confirmed badge appears when the count reaches that category's `confirmations_to_confirm`. Freshness is "Not confirmed yet" or how long ago the last confirmation was.
+- Share sends `https://xhere.world/d/{short_id}`, the same link as the M8 page. `MainActivity` is `singleTask` and routes that App Link to the detail screen, including a cold start that finishes sign-in first.
+- Two gaps in the M1 RPCs: `to_drop_card` and `drop_teaser` were still returning tags outside the reveal radius, and `confirm_drop` counted an update of your own verdict toward the hourly cap. `20261018000800_reveal_payload.sql` closes both. `08_reveal_payload.test.sql` (19 assertions) and `RevealPayloadTest` cover a hidden body (and tags, attributes, media) outside the radius, a server-side reject when the confirm is out of range, and the per-category confirm / deny / expiry transitions. The in-memory fake matches.
+- Compose tests cover the locked teaser, the 120 m line, the revealed body, confirm and deny, the badge, foreground-only updates, Near me, and the https link.
+- No money spent, no accounts created, no secrets committed. `Apixa25/XHere-Web` was not touched.
+
+### Steven still needs to
+
+- **Apply `20261018000800_reveal_payload.sql`** on the Supabase project when one exists, with the earlier migrations. Until then Preview Jamestown still hides the body in the app.
+- **Branch protection:** keep **android / app**, **android / shared**, **ci / gitleaks**, **supabase / pgtap**, and **supabase / functions** on `main`. Add **web / build** if it is not on the ruleset yet. This milestone does not change the site.
+- Unchanged from M5: do not deploy the website until you approve Cloudflare and DNS; replace the assetlinks placeholder with the Play App Signing SHA-256 before App Links verify; a mailbox for `hello@xhere.world`; read the draft privacy, terms, and guidelines. A free Supabase project and a free Google OAuth web client id are still required before live sign-in. Background location stays off until M13. The Jamestown FOIL request is sent; the code-enforcement email to dod@jamestownny.gov is not.

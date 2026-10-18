@@ -11,6 +11,9 @@ import world.xhere.app.auth.AuthViewModel
 import world.xhere.app.auth.GoogleIdTokenSource
 import world.xhere.app.auth.GoogleSignInAttempt
 import world.xhere.app.config.ClientConfig
+import world.xhere.app.detail.DropDetailViewModel
+import world.xhere.app.detail.DropSharer
+import world.xhere.app.detail.IncomingLinks
 import world.xhere.app.drop.CapturedPhoto
 import world.xhere.app.drop.DropCapture
 import world.xhere.app.drop.DropViewModel
@@ -31,8 +34,11 @@ import world.xhere.shared.data.fake.InMemoryXHere
 import world.xhere.shared.demo.JamestownDemo
 import world.xhere.shared.geo.LatLng
 import world.xhere.shared.model.Profile
+import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.launch
 
 class FakeGoogleIdTokenSource : GoogleIdTokenSource {
     var next: GoogleSignInAttempt = GoogleSignInAttempt.Success("test-id-token", "test-nonce")
@@ -48,6 +54,9 @@ object TestGraph {
     )
     lateinit var services: InMemoryXHere
     lateinit var google: FakeGoogleIdTokenSource
+    lateinit var location: ScriptedDeviceLocation
+    lateinit var sharer: RecordingDropSharer
+    lateinit var links: IncomingLinks
 
     fun isReady(): Boolean = ::services.isInitialized
 }
@@ -58,8 +67,14 @@ fun testModule() = module {
         viewer = TestGraph.profile,
     )
     val google = FakeGoogleIdTokenSource()
+    val location = ScriptedDeviceLocation()
+    val sharer = RecordingDropSharer()
+    val links = IncomingLinks()
     TestGraph.services = services
     TestGraph.google = google
+    TestGraph.location = location
+    TestGraph.sharer = sharer
+    TestGraph.links = links
     single { services }
     single<XHereServices> { services }
     single<GoogleIdTokenSource> { google }
@@ -85,9 +100,12 @@ fun testModule() = module {
             notConnected = context.getString(R.string.auth_not_connected),
         )
     }
+    single { links }
+    single<DropSharer> { sharer }
+    viewModel { (shortId: String) -> DropDetailViewModel(shortId, get(), get()) }
     viewModel { SessionViewModel(get(), get(), get()) }
     viewModel { AuthViewModel(get(), get(), get(), get(), get()) }
-    single<DeviceLocation> { NoDeviceLocation() }
+    single<DeviceLocation> { location }
     single { FilterPresetStore(androidContext()) }
     single<MapCanvas> { PreviewMapCanvas() }
     single<DropCapture> { FakeDropCapture() }
@@ -125,9 +143,45 @@ private fun jpegWithExif(): ByteArray {
         byteArrayOf(0xFF.toByte(), 0xDA.toByte(), 0x00, 0x02, 0x00, 0xFF.toByte(), 0xD9.toByte())
 }
 
-class NoDeviceLocation : DeviceLocation {
-    override fun hasPermission(): Boolean = false
-    override fun fixes(): Flow<LatLng> = emptyFlow()
+/** Foreground fixes the detail tests can push. Permission stays off until a test allows it. */
+class ScriptedDeviceLocation : DeviceLocation {
+    private val permitted = java.util.concurrent.atomic.AtomicBoolean(false)
+    private val updates = MutableSharedFlow<LatLng>(extraBufferCapacity = 16)
+    private val collectors = java.util.concurrent.atomic.AtomicInteger(0)
+
+    val collectionCount: Int get() = collectors.get()
+
+    override fun hasPermission(): Boolean = permitted.get()
+
+    fun setPermission(granted: Boolean) {
+        permitted.set(granted)
+    }
+
+    fun reset() {
+        permitted.set(false)
+    }
+
+    fun emit(point: LatLng) {
+        updates.tryEmit(point)
+    }
+
+    override fun fixes(): Flow<LatLng> = callbackFlow {
+        collectors.incrementAndGet()
+        val job = launch {
+            updates.collect { send(it) }
+        }
+        awaitClose {
+            job.cancel()
+            collectors.decrementAndGet()
+        }
+    }
+}
+
+class RecordingDropSharer : DropSharer {
+    var last: String? = null
+    override fun share(url: String) {
+        last = url
+    }
 }
 
 class TestXHereApplication : Application() {

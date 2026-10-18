@@ -78,7 +78,7 @@ interface DropRepository {
 
     suspend fun dropDetail(dropId: Uuid, location: LatLng? = null): DropCard
 
-    /** Share-page teaser. Never reveals the body for someone else's drop. */
+    /** Share-page teaser. Never reveals the body, attributes, media, or tags. */
     suspend fun dropTeaser(shortId: String): DropCard
 
     suspend fun createDrop(request: CreateDropRequest): CreateDropResult
