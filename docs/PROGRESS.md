@@ -266,7 +266,7 @@ Branch `m7/safety` → [PR #13](https://github.com/Apixa25/XHere-App/pull/13). R
 
 ## 2026-10-18 (Sun), ~6:10 AM ET: M9 Play closed-test prep
 
-Branch `m9/release-prep`. Release prep for PLAN §7 M9 and the Play cost row in PLAN §8. The closed test is ready to upload once Steven does the steps in [PLAY-RELEASE.md](PLAY-RELEASE.md). No Play account was created and the $25 was not spent.
+Branch `m9/release-prep` → [PR #14](https://github.com/Apixa25/XHere-App/pull/14). Release prep for PLAN §7 M9 and the Play cost row in PLAN §8. The closed test is ready to upload once Steven does the steps in [PLAY-RELEASE.md](PLAY-RELEASE.md). No Play account was created and the $25 was not spent.
 
 - **Signing.** Gradle reads `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, and `ANDROID_KEY_PASSWORD`. Those names are the GitHub Actions secrets. The keystore is decoded into `android/keystore/release.jks` (gitignored) and is never committed. If any secret is missing, the release AAB is debug-signed so the job still passes. That artifact is not the one to upload.
 - **Version.** `0.9.0` / versionCode `900` (`major * 10000 + minor * 100 + patch`). The next upload has to be a higher code.
