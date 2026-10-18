@@ -131,3 +131,25 @@ Branch `m2/shared-core` → [PR #7](https://github.com/Apixa25/XHere-App/pull/7)
 - **A free Supabase project** before the client can talk to a real API (PLAN §8). Until then the placeholder URL is intentional. Local Postgres from M1 does not serve the PostgREST the app calls.
 - **A Mac** before the iOS framework is actually compiled (M15). The targets are configured now.
 - Unchanged from M0/M1: license, secret scanning / push protection, first admin SQL, crime-rule review, PLAN §8–§10. The demo city is Jamestown (PR #4).
+
+## 2026-10-18 (Sun), ~1:40 AM ET: M3 Android shell + auth
+
+Branch `m3/android-shell` → [PR #8](https://github.com/Apixa25/XHere-App/pull/8). Compose app `world.xhere.app` on the M2 shared core (PLAN §2, §7).
+
+- Material 3 theme with a fixed lagoon-and-amber palette (no dynamic color). Bottom navigation: Map, Drop, and Profile are placeholders for M4–M5. Settings sits on the profile tab.
+- **Koin**, not Hilt. `XHereServices` is a plain Kotlin interface, so the app binds `SupabaseXHereClient` and Robolectric binds `InMemoryXHere` without kapt/ksp. AGP 9 already compiles Kotlin.
+- Sign-in: Credential Manager Google ID token, and email OTP, both through `supabase-kt` (`signInWithIdToken`, `signInWithEmailOtp`, `verifyEmailOtp`). The Google nonce is SHA-256 to Google and raw to Supabase.
+- Onboarding is the foreground-location rationale. Continue requests `ACCESS_FINE_LOCATION` and `ACCESS_COARSE_LOCATION` only. "Not now" skips the request. `ACCESS_BACKGROUND_LOCATION` is not in the manifest (that is M13).
+- Settings: sign out, and delete account. Delete calls `AccountRepository.deleteMyAccount()`, which the Supabase client implements as the `delete_my_account` RPC and then signs out.
+- Config is `SupabaseConfig.PLACEHOLDER` unless `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and `GOOGLE_WEB_CLIENT_ID` are set in gitignored `local.properties` or `.env`. The service-role key is not a BuildConfig field. The app builds and its tests run with no Supabase project.
+- CI: `.github/workflows/android.yml` keeps the `shared` job and adds `app` (`assembleDebug` and `testDebugUnitTest`). `ci / gitleaks` and `supabase / pgtap` are unchanged.
+- `docs/IDEAS.md` notes the Jamestown FOIL request was sent 2026-10-18 1:09 AM ET.
+- No money spent, no accounts created, no secrets committed. `Apixa25/XHere-Web` was not touched.
+
+### Steven still needs to
+
+- **Branch protection:** add **android / app** next to **android / shared**, **ci / gitleaks**, and **supabase / pgtap**.
+- **A free Supabase project** before sign-in works against a server (PLAN §8). Put the project URL and the anon key in `local.properties`. Turn on Email (OTP) and Google. Do not put the service-role key in the app.
+- **A free Google Cloud OAuth web client id** (same OK as any new account, PLAN §8) in `GOOGLE_WEB_CLIENT_ID`, and the same id as the Google provider client id in Supabase. The SHA-256 nonce above has to match that provider's check.
+- Background location stays off until M13. Do not add it to the manifest for the closed test.
+- Unchanged from M0–M2: license, secret scanning / push protection, first admin SQL once a project exists, crime-rule review, a Mac before iOS (M15), PLAN §8 and §9. The demo city is Jamestown (PR #4). The Jamestown FOIL request is sent; the code-enforcement email to dod@jamestownny.gov is not.

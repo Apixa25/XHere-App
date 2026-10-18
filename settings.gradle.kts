@@ -16,5 +16,5 @@ dependencyResolutionManagement {
 
 rootProject.name = "XHere"
 
-// The Compose app module (:android:app) arrives in M3. M2 is the shared core only.
 include(":shared")
+include(":android:app")
