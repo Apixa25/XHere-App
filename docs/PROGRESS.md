@@ -55,3 +55,29 @@ Started from `main` after the planning docs merged ([PR #1](https://github.com/A
 - **Secret scanning + push protection** (free on this public personal repo): **Settings → Code security** → enable **Secret scanning** and **Push protection**. Do not buy GitHub Advanced Security; gitleaks in CI is the scanner if those toggles are missing.
 - **Branch protection on `main`:** **Settings → Rules → Rulesets** (or Branches → classic protection) requiring the **ci / gitleaks** check before merge. Add the android, supabase, and web checks once they run real builds. Today only `ci` runs on every push and PR.
 - Still open from the plan, unchanged by M0: [§8 costs](PLAN.md), [§9 old-repo cleanup](SECURITY-FIXES.md), [§10 questions](PLAN.md). Supabase and Cloudflare accounts were not created.
+
+## 2026-10-18 (Sun), ~12:35 AM ET: M1 database schema + taxonomy
+
+Branch `m1/database` → [PR #3](https://github.com/Apixa25/XHere-App/pull/3). Built and tested entirely on the free local Supabase stack (Supabase CLI 2.121.0 + Docker), with no Supabase account.
+
+- `supabase/config.toml` from `supabase init` (`project_id = "xhere"`, no secrets).
+- 7 migrations:
+  - PostGIS, pg_jsonschema, pg_trgm, pgvector, pg_cron.
+  - Core tables per PLAN §5: profiles, blocks, user moderation, categories/groups/versions, drops with `geography(Point)`, drop media refs, confirmations, reports, moderation audit log, tier limits, content filters.
+  - GiST/trigram indexes; RLS on every table.
+  - RPCs: `drops_in_view`, `drops_nearby`, `drop_detail`, `drop_teaser`, `create_drop`, `confirm_drop`, `report`, `block_user`/`unblock_user`, `delete_my_account`, plus moderator `moderate_drop`/`resolve_report`/`suspend_user`.
+  - pg_cron jobs: expiry, 30-day account purge, nightly tier recompute.
+- Categories are data: JSON-schema fields plus rules (reveal radius, lifetime caps, confirmation/denial/report thresholds, moderation mode, location blur, content filters, minimum tier) and are versioned. The full PLAN §4 taxonomy (11 groups, 30 categories) ships in a migration.
+- Crime (`incident_report`): regular tier or above, pre-moderated (trusted exempt), ~100 m blur, hard 72 h expiry, no describing people or contact info, guidelines acknowledgement, auto-hidden at 2 reports.
+- The true location is never returned to other users. Reveal and distance use the blurred point.
+- `supabase/seed.sql`: local-only demo data for Lower Manhattan, a placeholder until §10 question 3 picks the demo city.
+- 255 pgTAP assertions in `supabase/tests/database/`. `.github/workflows/supabase.yml` runs `supabase db reset`, `db lint`, and `test db` on the GitHub runner.
+- No money spent, no accounts created, no secrets committed. `Apixa25/XHere-Web` was not touched.
+
+### Steven still needs to
+
+- **Pick the demo city** (PLAN §10 question 3). The seed uses Lower Manhattan until then.
+- **Branch protection:** add the **supabase / pgtap** check to the `main` ruleset next to **ci / gitleaks**.
+- **First admin/moderator**, once a hosted Supabase project exists: one SQL line in the dashboard, `update public.profiles set role = 'admin' where handle = '<your handle>';` (see `supabase/README.md`).
+- Review the crime rules and the `person_descriptors` word list in `supabase/migrations/20261018000600_taxonomy.sql`. Tuning means a new migration that updates the row; no code change is needed.
+- Still open from M0: license, secret scanning/push protection toggles, and PLAN §8–§10.
