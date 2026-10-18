@@ -8,5 +8,9 @@
         <provider
             android:name="androidx.startup.InitializationProvider"
             tools:node="remove" />
+        <!-- Sentry's provider is a no-op in production (auto-init is false). Unit tests remove it. -->
+        <provider
+            android:name="io.sentry.android.core.SentryInitProvider"
+            tools:node="remove" />
     </application>
 </manifest>

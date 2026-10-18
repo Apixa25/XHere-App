@@ -22,9 +22,10 @@ uploads/
 .env*
 !.env.example
 
-# Signing keys and Firebase client config
+# Signing keys and Firebase client config. Never commit these.
 *.keystore
 *.jks
+android/keystore/
 google-services.json
 
 # Supabase CLI scratch
