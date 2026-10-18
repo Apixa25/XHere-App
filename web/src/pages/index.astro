@@ -1,0 +1,88 @@
+---
+import Base from "../layouts/Base.astro";
+import { GROUPS } from "../lib/categories.mjs";
+import { SITE } from "../lib/site.mjs";
+
+const description =
+  "XHere attaches any data to any real-world place, and helps you find what others left. The pilot city is Jamestown, New York. The app is global.";
+---
+
+<Base title="XHere" description={description}>
+  <section class="hero">
+    <p class="kicker">Pilot city · Jamestown, New York</p>
+    <h1>Attach anything to a real place.</h1>
+    <p class="lede">
+      XHere is how you leave a note, a story, a tip, or a warning on the spot itself, and how you find what other people left there.
+      The first city is Jamestown. The app works anywhere.
+    </p>
+    <div class="actions">
+      <a class="button" href="/d/JmtwnHist01a">See a place link</a>
+      <a class="text-link" href="/support">Get the Android app</a>
+    </div>
+  </section>
+
+  <section class="steps" aria-label="How XHere works">
+    <article class="card">
+      <p class="step-no">1</p>
+      <h2>Leave it on the spot</h2>
+      <p>A drop is a small piece of data pinned to a place: history, food, a hazard, a yard sale, a note.</p>
+    </article>
+    <article class="card">
+      <p class="step-no">2</p>
+      <h2>Walk closer to read it</h2>
+      <p>From far away you see a teaser. The rest opens when you are close enough. The website always stays on the teaser.</p>
+    </article>
+    <article class="card">
+      <p class="step-no">3</p>
+      <h2>Say if it is still true</h2>
+      <p>People nearby can confirm or deny a drop. Some drops expire. Confirmed ones earn a badge.</p>
+    </article>
+  </section>
+
+  <section class="split">
+    <div>
+      <h2>Jamestown first. Everywhere after.</h2>
+      <p>
+        The demo map is downtown Jamestown, the Chadakoin River, the National Comedy Center, Lucille Ball sites, and the Chautauqua Lake shore.
+        A drop is not limited to that city. If you can stand there, you can leave one.
+      </p>
+      <p>
+        Share links look like <a href="/d/JmtwnHist01a">xhere.world/d/…</a>.
+        They show the title, the category, and a static map. Sensitive drops, including incident reports, show even less.
+      </p>
+      <p>
+        <a href="/d/JmtwnInc03cd">Example of a locked safety teaser</a>
+      </p>
+    </div>
+    <form class="card" action={`mailto:${SITE.contactEmail}`} method="post" enctype="text/plain">
+      <h2>Ask for a tester invite</h2>
+      <p>The Play listing is not open yet. This form starts an email. It does not save your address on a server.</p>
+      <div class="field">
+        <label for="tester-email">Email</label>
+        <input id="tester-email" name="email" type="email" autocomplete="email" inputmode="email" required />
+      </div>
+      <div class="field">
+        <label for="tester-city">City</label>
+        <input id="tester-city" name="city" type="text" autocomplete="address-level2" value="Jamestown, NY" />
+      </div>
+      <button type="submit">Email a tester request</button>
+      <p class="note">{SITE.contactEmail} is a placeholder mailbox. {`It may not receive mail until ${SITE.owner} sets it up.`}</p>
+    </form>
+  </section>
+
+  <h2>What you can attach</h2>
+  <div class="groups">
+    {
+      GROUPS.map(([icon, label, blurb]) => (
+        <article class="card">
+          <h3>
+            <span class="group-icon" aria-hidden="true">{icon}</span>
+            {label}
+          </h3>
+          <p>{blurb}</p>
+        </article>
+      ))
+    }
+  </div>
+  <p><a href="/guidelines">Read the community guidelines</a> before you post, especially in Safety.</p>
+</Base>

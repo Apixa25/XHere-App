@@ -1,0 +1,71 @@
+---
+import Base from "../layouts/Base.astro";
+import { CONTACT_NOTE, SITE } from "../lib/site.mjs";
+
+const description =
+  "Draft terms for XHere, a project by Steven Sills II. Plain-language rules for using the app and the website.";
+---
+
+<Base title="Terms" description={description} draft>
+  <h1>Terms</h1>
+  <p>
+    These are draft terms for XHere, a project by {SITE.owner}.
+    They are not a contract yet, because he has not approved them.
+    They do not name a company, a street address, or a court. He can add those later if he wants them.
+  </p>
+
+  <h2>The service</h2>
+  <p>
+    XHere lets people attach drops to real-world places and find drops other people left.
+    The pilot city is Jamestown, New York. The app is global.
+    The website at xhere.world is a landing page, share links, and these documents. The map itself is the Android app.
+  </p>
+
+  <h2>Not an emergency service</h2>
+  <p>
+    XHere is not a way to reach police, fire, or medical help.
+    If you need help now, call 911. Do not wait for someone nearby to confirm a drop.
+  </p>
+
+  <h2>Your drops</h2>
+  <p>
+    You keep responsibility for what you post. You give XHere permission to store the drop and to show the teaser, and the rest of it to people who are close enough, under the category rules.
+    That permission ends when the drop expires, is removed, or your account is deleted, except for the moderation log described on the <a href="/delete-account">delete account</a> page.
+  </p>
+  <p>
+    Do not post anything you do not have the right to post. Follow the <a href="/guidelines">community guidelines</a>.
+    Those rules are part of using XHere. Incident reports have extra limits: no naming or describing people, an approximate location, and a short life.
+  </p>
+
+  <h2>Other people’s drops</h2>
+  <p>
+    A drop is one person’s note about a place. It can be wrong, expired, or unkind even after the filters.
+    Confirmations mean nearby people agreed, not that XHere checked the facts.
+    Official open-data layers, when they exist, are labeled separately from user drops.
+  </p>
+
+  <h2>Accounts</h2>
+  <p>
+    You need an account to post. You can delete it in the app, or ask by email if you cannot open the app.
+    {SITE.owner} can remove a drop or suspend an account that breaks the guidelines.
+    A formal appeals screen is not built yet. You can write to <a href={`mailto:${SITE.contactEmail}`}>{SITE.contactEmail}</a>. {CONTACT_NOTE}
+  </p>
+
+  <h2>The website and the store</h2>
+  <p>
+    Share pages show teasers on purpose. Do not treat a share page as the full drop.
+    The Android app is not on the Play Store yet. A link that says “Open in XHere” opens the app only if it is installed and the link verification is finished.
+  </p>
+
+  <h2>No warranty</h2>
+  <p>
+    XHere is offered as a work in progress. Places, hours, hazards, and incidents change.
+    {SITE.owner} does not promise that a drop is accurate, that the service will stay up, or that a blurred location is precise enough for navigation.
+    Do not use it as your only source for safety.
+  </p>
+
+  <h2>Contact</h2>
+  <p>
+    {SITE.owner} · <a href={`mailto:${SITE.contactEmail}`}>{SITE.contactEmail}</a>. {CONTACT_NOTE}
+  </p>
+</Base>

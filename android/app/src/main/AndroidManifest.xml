@@ -28,6 +28,18 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <!-- App Links for https://xhere.world/d/* (M8). autoVerify stays
+                 unverified until the placeholder SHA-256 in
+                 /.well-known/assetlinks.json is the Play App Signing fingerprint. -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="https"
+                    android:host="xhere.world"
+                    android:pathPrefix="/d/" />
+            </intent-filter>
         </activity>
     </application>
 

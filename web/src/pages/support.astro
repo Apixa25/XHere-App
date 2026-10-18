@@ -1,0 +1,43 @@
+---
+import Base from "../layouts/Base.astro";
+import { CONTACT_NOTE, SITE } from "../lib/site.mjs";
+
+const description =
+  "Support for XHere: how to get the Android app, report a problem, and reach Steven Sills II.";
+---
+
+<Base title="Support" description={description}>
+  <h1>Support</h1>
+  <p>
+    XHere is a project by {SITE.owner}. The Android app is in development. It is not on the Play Store yet, so there is no store listing to open.
+  </p>
+
+  <h2>Get the app</h2>
+  <p>
+    Closed testing is not open. Use the form on the <a href="/">home page</a> to email a tester request, or write to
+    <a href={`mailto:${SITE.contactEmail}`}>{SITE.contactEmail}</a>. {CONTACT_NOTE}
+  </p>
+  <p>
+    A place link such as <a href="/d/JmtwnHist01a">xhere.world/d/…</a> opens the app only after the app is installed and
+    {SITE.owner} has put the real signing fingerprint in the app-link file. Until then, the link stays on this website as a teaser.
+  </p>
+
+  <h2>A problem with a drop</h2>
+  <p>
+    In the app, report the drop or the profile, or block the person. Read the <a href="/guidelines">guidelines</a> for what belongs on the map.
+    If you cannot use the app, email the contact address with the place link.
+  </p>
+  <p><strong>If someone is in danger, call 911.</strong> Do not use XHere as the report to police.</p>
+
+  <h2>Your account</h2>
+  <p>
+    To sign out or delete the account, open Profile, then Settings.
+    The web steps and the 30-day deletion are on <a href="/delete-account">Delete account</a>.
+  </p>
+
+  <h2>Privacy and terms</h2>
+  <p>
+    <a href="/privacy">Privacy</a> and <a href="/terms">Terms</a> are drafts waiting for {SITE.owner}.
+    They are written in plain language and they do not invent a company.
+  </p>
+</Base>

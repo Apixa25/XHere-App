@@ -1,0 +1,74 @@
+---
+import Base from "../layouts/Base.astro";
+import { CONTACT_NOTE, SITE } from "../lib/site.mjs";
+
+const description =
+  "How to delete an XHere account from the Android app or by email, and what data is removed within 30 days.";
+---
+
+<Base title="Delete your account" description={description} draft>
+  <h1>Delete your account</h1>
+  <p>
+    You can delete your XHere account in the app, or ask {SITE.owner} to delete it if you cannot open the app.
+    You do not have to reinstall the app to make the request.
+    This page is a draft. The steps match the app that exists today.
+  </p>
+
+  <h2>In the app</h2>
+  <ol>
+    <li>Open XHere and sign in.</li>
+    <li>Go to the Profile tab.</li>
+    <li>Tap Settings.</li>
+    <li>Tap Delete account.</li>
+    <li>Read the confirmation, then tap Delete account again. Tap Keep account if you change your mind.</li>
+  </ol>
+  <p>
+    That calls the account-deletion action. The app signs you out. The confirmation in the app says your profile is hidden and the account is permanently removed within 30 days.
+  </p>
+
+  <h2>If you cannot open the app</h2>
+  <p>
+    Email <a href={`mailto:${SITE.contactEmail}?subject=Delete%20my%20XHere%20account`}>{SITE.contactEmail}</a> from the address on the account.
+    Use the subject “Delete my XHere account” and include your handle.
+    {CONTACT_NOTE}
+    There is no hosted account system on this website yet, so this page cannot delete a login by itself. The email is the web request Google Play asks for.
+    {SITE.owner} deletes it with the same 30-day process once a hosted project exists.
+  </p>
+
+  <h2>What is removed right away</h2>
+  <ul>
+    <li>Your profile is hidden. The handle is replaced, and the display name, avatar, and home area are cleared.</li>
+    <li>Blocks you created are removed.</li>
+    <li>You are signed out.</li>
+  </ul>
+
+  <h2>What is removed within 30 days</h2>
+  <p>
+    A scheduled job permanently deletes the login after 30 days. Deleting that login also deletes, through the database:
+  </p>
+  <ul>
+    <li>The profile row.</li>
+    <li>Drops you authored, and the media records attached to them.</li>
+    <li>Confirmations you made.</li>
+    <li>Reports you filed.</li>
+  </ul>
+  <p>
+    Photo files in storage are removed when storage cleanup is connected. That cleanup is not running yet, because the storage bucket is not set up. The database records for those photos still go away with the account.
+  </p>
+
+  <h2>What is kept</h2>
+  <p>
+    Moderation audit rows stay, because they are the record of a moderation decision. If you were the actor, the link to your profile is cleared when the profile is deleted, so the row no longer names you.
+    Reports that someone else filed about your content may remain until that content is gone. Resolved-by names are cleared the same way.
+  </p>
+  <p>
+    Drops you created stay hidden with the rest of your profile during the 30 days, then they are deleted with the login.
+    Other people’s drops that you only looked at were never stored as a location history.
+  </p>
+
+  <h2>Questions</h2>
+  <p>
+    {SITE.owner} · <a href={`mailto:${SITE.contactEmail}`}>{SITE.contactEmail}</a>.
+    Also see <a href="/privacy">Privacy</a>.
+  </p>
+</Base>

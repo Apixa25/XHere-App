@@ -14,9 +14,34 @@ permissions:
   contents: read
 
 jobs:
-  placeholder:
-    name: placeholder
+  build:
+    name: build
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
     steps:
-      - name: Placeholder until the Astro build lands
-        run: echo "Web workflow placeholder. npm run build arrives with M8."
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Check fixture share pages
+        run: npm run verify
+
+      - name: Set up Chrome
+        uses: browser-actions/setup-chrome@v1
+
+      - name: Lighthouse
+        run: npm run lighthouse

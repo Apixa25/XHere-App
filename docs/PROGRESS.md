@@ -174,3 +174,30 @@ Branch `m4/map-discovery` → [PR #9](https://github.com/Apixa25/XHere-App/pull/
 - **A network** when you want the OpenFreeMap tiles. There is no tile key to buy or to paste. The demo drops still show if the tiles do not load.
 - Background location stays off until M13.
 - Unchanged from M0–M3: license, secret scanning / push protection, a free Google Cloud OAuth web client id before Google sign-in works, first admin SQL once a project exists, crime-rule review, a Mac before iOS (M15), PLAN §8 and §9. The demo city is Jamestown (PR #4). The Jamestown FOIL request is sent; the code-enforcement email to dod@jamestownny.gov is not.
+
+## 2026-10-18 (Sun), ~3:30 AM ET: M8 website for xhere.world
+
+Branch `m8/website`. Astro site in `web/` for PLAN §1.5 and §7 M8. Not deployed.
+
+- Landing page: attach any data to any real-world place, and find what others left. Pilot city is Jamestown, NY. The app is global. Category groups match the M1 taxonomy.
+- `/d/{short_id}` is a teaser share page. Open Graph and Twitter tags point at a static SVG map drawn from OpenFreeMap planet vector tiles (the same free tiles as the Android MapLibre styles). No MapLibre GL in the page, so the Lighthouse run stays a static document. Sensitive drops (`safety_alert`, `incident_report`) and any drop with a precision blur draw a dashed area, not a pin. The hidden body, attributes, media, and tags are not on the page type and are not rendered. The author handle is omitted on sensitive teasers.
+- With no Supabase env, or with the `.env.example` placeholders, build and the share pages use three Jamestown fixtures (`JmtwnHist01a`, `JmtwnNote02b`, `JmtwnInc03cd`). `npm run verify` fails the build if a fixture's secret body or the sensitive author handle appears in `dist/`. Live reads, once `PUBLIC_SUPABASE_URL` and `PUBLIC_SUPABASE_ANON_KEY` are real, call `drop_teaser` only. Cloudflare Pages Functions under `web/functions/` serve unknown short ids the same way. The anon key is the only key those functions read. Static files win for the fixture ids.
+- `/privacy`, `/terms`, and `/guidelines` are plain-English drafts. Each page says Steven Sills II has not approved the text. Guidelines include the incident-report rules: Regular tier and above, pre-moderation (trusted accounts exempt), about 100 m blur, 72-hour lifetime, unconfirmed until two nearby confirmations, auto-hide at two reports, no contact info and no person descriptors, and the notice to describe what happened rather than who, to call 911, and that XHere is not a channel to the police.
+- `/delete-account` is the web deletion page Google Play asks for. In the app: Profile → Settings → Delete account → confirm. That is the `delete_my_account` soft-delete (handle replaced, display name, avatar, and home area cleared, blocks removed, signed out). `private.purge_deleted_accounts` hard-deletes the login after 30 days. Photo files in storage wait on the storage cleanup that is not running yet. Email from the account address is the fallback, because this site has no hosted login.
+- `/support` is a mailto tester note. It stores nothing.
+- `/.well-known/assetlinks.json` names package `world.xhere.app` and the fingerprint string `PLACEHOLDER_NOT_A_REAL_CERT__REPLACE_WITH_PLAY_APP_SIGNING_SHA256`. That string is not a certificate hash. `MainActivity` has an `autoVerify` VIEW filter for `https://xhere.world/d/*`. Verification cannot succeed until the placeholder is the Play App Signing SHA-256.
+- Cloudflare: `web/wrangler.toml` (`pages_build_output_dir = dist`, no `account_id`) and `web/CLOUDFLARE.md`. Nothing was deployed and no Cloudflare account was created. DNS for `xhere.world` stays where it is.
+- Owner on the pages is Steven Sills II. Contact is `hello@xhere.world`, labeled as a placeholder mailbox that may not exist. No company, address, phone, or court was invented.
+- CI: `.github/workflows/web.yml` job `build` (check name **web / build**) runs `npm ci`, `npm run build`, `npm run verify`, and Lighthouse CI (`@lhci/cli`) against the static `dist`. The assert floor is 0.90 on performance, accessibility, best-practices, and SEO. Local run on 2026-10-18, one pass each, all four categories **100** on `/`, `/d/JmtwnHist01a/`, `/privacy/`, `/terms/`, `/guidelines/`, `/delete-account/`, and `/support/`.
+- Android unit test `AppLinksManifestTest` checks that the two fixture https drop links resolve to `MainActivity` and that other hosts and paths do not. It runs in the existing **android / app** job.
+- No money spent, no accounts created, no secrets committed. `Apixa25/XHere-Web` was not touched.
+
+### Steven still needs to
+
+- **Do not deploy.** Approve a free Cloudflare account and the DNS change before anyone runs a Pages deploy. Steps are in `web/CLOUDFLARE.md`. `xhere.world` still points at the old Render services. GoDaddy registration runs through Dec 2026.
+- **Replace the assetlinks placeholder** with the Play App Signing SHA-256 before App Links can verify. The string in the repo is not a fingerprint.
+- **A mailbox for `hello@xhere.world`**, or a different address, before the contact link can receive mail. The address on the site is a placeholder.
+- **Read the draft privacy, terms, and guidelines** and say what to change. They are not in effect.
+- **A free Supabase project** before a share link can load a live drop (PLAN §8). Set `PUBLIC_SUPABASE_URL` and `PUBLIC_SUPABASE_ANON_KEY` on Pages. Do not set the service-role key.
+- **Branch protection:** add **web / build** next to **android / app**, **android / shared**, **ci / gitleaks**, and **supabase / pgtap**.
+- Unchanged from M0–M4: license, secret scanning / push protection, a free Google Cloud OAuth web client id before Google sign-in works, first admin SQL once a project exists, crime-rule review, a Mac before iOS (M15), PLAN §8 and §9. Background location stays off until M13. The demo city is Jamestown (PR #4). The Jamestown FOIL request is sent; the code-enforcement email to dod@jamestownny.gov is not.
