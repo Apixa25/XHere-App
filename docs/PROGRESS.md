@@ -156,7 +156,7 @@ Branch `m3/android-shell` → [PR #8](https://github.com/Apixa25/XHere-App/pull/
 
 ## 2026-10-18 (Sun), ~2:25 AM ET: M4 map, discovery, and category filters
 
-Branch `m4/map-discovery`. Map screen for PLAN §4.4 and §7 M4, on the M3 shell.
+Branch `m4/map-discovery` → [PR #9](https://github.com/Apixa25/XHere-App/pull/9). Map screen for PLAN §4.4 and §7 M4, on the M3 shell.
 
 - MapLibre Native Android 13.7.1, OpenGL build, no API key. Style is OpenFreeMap Liberty, or Dark when the phone is in dark mode (`https://tiles.openfreemap.org/styles/liberty` and `.../dark`). The map shows "© OpenStreetMap contributors · © OpenMapTiles · OpenFreeMap", and MapLibre's own attribution control stays on.
 - Default camera is downtown Jamestown, NY (West 3rd Street). The my-location control uses `ACCESS_FINE_LOCATION` and `ACCESS_COARSE_LOCATION` only, through `LocationManager`. No background permission, no Play Services, no tile key.
