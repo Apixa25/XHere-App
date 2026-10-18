@@ -11,6 +11,7 @@ import world.xhere.shared.data.AuthRepository
 import world.xhere.shared.data.BlockRepository
 import world.xhere.shared.data.DropRepository
 import world.xhere.shared.data.HiddenDropRepository
+import world.xhere.shared.data.ImpactRepository
 import world.xhere.shared.data.IdentityProvider
 import world.xhere.shared.data.MediaRepository
 import world.xhere.shared.data.ModerationRepository
@@ -29,6 +30,7 @@ import world.xhere.shared.model.AppRole
 import world.xhere.shared.model.BlockedUser
 import world.xhere.shared.model.ConfirmDropResult
 import world.xhere.shared.model.HiddenDrop
+import world.xhere.shared.model.ImpactNotice
 import world.xhere.shared.model.ModerationAction
 import world.xhere.shared.model.ModerationActionType
 import world.xhere.shared.model.ModerationQueueItem
@@ -60,6 +62,8 @@ import world.xhere.shared.suggest.CategoryRanker
 import world.xhere.shared.suggest.CategorySuggestion
 import world.xhere.shared.suggest.SuggestionQuery
 import kotlin.math.floor
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
@@ -95,6 +99,7 @@ class InMemoryXHere(
     override val reports: ReportRepository = ReportRepo()
     override val blocks: BlockRepository = BlockRepo()
     override val hidden: HiddenDropRepository = HiddenRepo()
+    override val impact: ImpactRepository = ImpactRepo()
     override val account: AccountRepository = AccountRepo()
     override val moderation: ModerationRepository = ModerationRepo()
 
@@ -107,6 +112,18 @@ class InMemoryXHere(
 
     init {
         if (viewer != null && viewer.id !in store.profiles) store.profiles[viewer.id] = viewer
+    }
+
+    /**
+     * One signed-in viewer per drop. The author and a signed-out caller do not count.
+     * A repeat open does not count again. Matches `private.record_drop_view`.
+     */
+    private fun recordView(drop: StoredDrop) {
+        val viewerId = viewer?.id ?: return
+        if (drop.authorId == viewerId) return
+        if (!store.views.add(drop.id to viewerId)) return
+        drop.viewCount += 1
+        store.noteHelped(drop, "view", clock())
     }
 
     private fun requireViewer(): Profile {
@@ -202,7 +219,7 @@ class InMemoryXHere(
                 .filter { it.second <= radiusM }
                 .sortedWith(compareBy({ it.second }, { -it.first.createdAt.toEpochMilliseconds() }))
                 .take(capped)
-                .map { (drop, distance) -> drop.toCard(viewer?.id, distance) }
+                .map { (drop, distance) -> drop.toCard(viewer?.id, distance, store.verdict(drop.id, viewer?.id)) }
         }
 
         override suspend fun dropDetail(dropId: Uuid, location: LatLng?): DropCard {
@@ -214,7 +231,8 @@ class InMemoryXHere(
                 throw XHereApiException("drop_not_found", sqlState = XHereApiException.SQL_NOT_FOUND)
             }
             val distance = location?.let { Geo.distanceMeters(it, drop.displayLocation) }
-            return drop.toCard(viewer?.id, distance)
+            recordView(drop)
+            return drop.toCard(viewer?.id, distance, store.verdict(drop.id, viewer?.id))
         }
 
         override suspend fun dropTeaser(shortId: String): DropCard {
@@ -223,7 +241,8 @@ class InMemoryXHere(
             if (!store.canView(drop, viewer?.id, clock())) {
                 throw XHereApiException("drop_not_found", sqlState = XHereApiException.SQL_NOT_FOUND)
             }
-            val card = drop.toCard(viewer?.id, distance = null)
+            // Share teasers do not count a view. Anonymous refreshes must not inflate "seen by".
+            val card = drop.toCard(viewer?.id, distance = null, store.verdict(drop.id, viewer?.id))
             // Share teasers never include the body, even for the author.
             // drop_detail is what reveals it.
             return card.copy(revealed = false, body = null, attributes = null, media = null, tags = null)
@@ -344,6 +363,7 @@ class InMemoryXHere(
             }
             val distance = Geo.distanceMeters(location, drop.displayLocation)
             val problems = CategoryRules.checkConfirmation(distance, drop.revealRadiusM, note, drop.authorId == profile.id)
+            val previous = store.confirmations[dropId to profile.id]?.verdict
             if (problems.isNotEmpty()) throw XHereApiException.fromViolation(problems.first(), problems)
             val cap = store.taxonomy.limits(profile.tier)?.confirmationsPerHour
             if (cap != null) {
@@ -374,6 +394,9 @@ class InMemoryXHere(
             drop.denyCount = denies
             drop.status = CategoryRules.statusAfterConfirmations(drop.status, confirms, denies, drop.category)
             drop.expiresAt = CategoryRules.expiryAfterConfirmations(drop.status, drop.expiresAt, confirms, denies, drop.category)
+            if (verdict == ConfirmationVerdict.STILL_TRUE && previous != ConfirmationVerdict.STILL_TRUE) {
+                store.noteHelped(drop, "confirm", clock())
+            }
             if (verdict == ConfirmationVerdict.STILL_TRUE) {
                 drop.lastConfirmedAt = clock()
                 val extend = drop.category.confirmExtendsTtl
@@ -549,6 +572,31 @@ class InMemoryXHere(
                 if (!live || (drop.expiresAt != null && drop.expiresAt!! <= now)) return@mapNotNull null
                 HiddenDrop(drop.id, drop.shortId, drop.title, drop.category.slug, at)
             }.sortedByDescending { it.hiddenAt }
+        }
+    }
+
+    private inner class ImpactRepo : ImpactRepository {
+        override suspend fun myNotices(limit: Int): List<ImpactNotice> {
+            val profile = requireViewer()
+            return store.impactNotices
+                .filter { it.recipientId == profile.id }
+                .sortedWith(
+                    compareByDescending<ImpactNotice> { it.readAt == null }
+                        .thenByDescending { it.updatedAt ?: it.createdAt },
+                )
+                .take(limit.coerceIn(1, 50))
+        }
+
+        override suspend fun markRead(noticeId: Uuid?) {
+            val profile = requireViewer()
+            val now = clock()
+            store.impactNotices.replaceAll { notice ->
+                if (notice.recipientId == profile.id && notice.readAt == null && (noticeId == null || notice.id == noticeId)) {
+                    notice.copy(readAt = now, updatedAt = now)
+                } else {
+                    notice
+                }
+            }
         }
     }
 
@@ -793,9 +841,45 @@ class MemoryStore(
     val deleted: MutableSet<Uuid> = linkedSetOf()
     val suspendedUntil: MutableMap<Uuid, Instant> = linkedMapOf()
     val suggestionLogs: MutableList<StoredSuggestion> = mutableListOf()
+    /** (drop, viewer) pairs that already counted toward "seen by". */
+    val views: MutableSet<Pair<Uuid, Uuid>> = linkedSetOf()
+    val impactNotices: MutableList<ImpactNotice> = mutableListOf()
     val mediaBytes: MutableMap<String, ByteArray> = linkedMapOf()
     var pendingEmail: String? = null
     private var shortIds: Int = 0
+
+    fun verdict(dropId: Uuid, viewerId: Uuid?): ConfirmationVerdict? =
+        viewerId?.let { confirmations[dropId to it]?.verdict }
+
+    /** One inbox row per author, drop, and UTC day. Imported drops still notify when they have an author. */
+    fun noteHelped(drop: StoredDrop, kind: String, at: Instant) {
+        val day = at.toLocalDateTime(TimeZone.UTC).date.toString()
+        val index = impactNotices.indexOfFirst {
+            it.recipientId == drop.authorId && it.dropId == drop.id && it.noticeDay == day
+        }
+        if (index < 0) {
+            impactNotices += ImpactNotice(
+                id = Uuid.random(),
+                dropId = drop.id,
+                shortId = drop.shortId,
+                title = drop.title,
+                noticeDay = day,
+                viewEvents = if (kind == "view") 1 else 0,
+                confirmEvents = if (kind == "confirm") 1 else 0,
+                readAt = null,
+                createdAt = at,
+                updatedAt = at,
+                recipientId = drop.authorId,
+            )
+            return
+        }
+        val current = impactNotices[index]
+        impactNotices[index] = current.copy(
+            viewEvents = current.viewEvents + if (kind == "view") 1 else 0,
+            confirmEvents = current.confirmEvents + if (kind == "confirm") 1 else 0,
+            updatedAt = at,
+        )
+    }
 
     fun nextShortId(): String {
         shortIds += 1
@@ -854,6 +938,7 @@ class StoredDrop(
     var expiresAt: Instant?,
     var confirmCount: Int = 0,
     var denyCount: Int = 0,
+    var viewCount: Long = 0,
     var lastConfirmedAt: Instant? = null,
     val createdAt: Instant,
     val media: List<DropMedia>,
@@ -869,7 +954,11 @@ private fun StoredDrop.passes(categories: List<String>?): Boolean {
     return category.slug in categories || groupSlug in categories
 }
 
-private fun StoredDrop.toCard(viewerId: Uuid?, distance: Double?): DropCard {
+private fun StoredDrop.toCard(
+    viewerId: Uuid?,
+    distance: Double?,
+    myVerdict: ConfirmationVerdict?,
+): DropCard {
     val mine = viewerId != null && authorId == viewerId
     val revealed = Geo.isRevealed(distance ?: Double.POSITIVE_INFINITY, revealRadiusM, mine)
     return DropCard(
@@ -897,6 +986,8 @@ private fun StoredDrop.toCard(viewerId: Uuid?, distance: Double?): DropCard {
         createdAt = createdAt,
         authorHandle = if (displayAnonymous && category.allowAnonymousDisplay && !mine) null else authorHandle,
         isMine = mine,
+        viewCount = viewCount,
+        myVerdict = myVerdict,
     )
 }
 

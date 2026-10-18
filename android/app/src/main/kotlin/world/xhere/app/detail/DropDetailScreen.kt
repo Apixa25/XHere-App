@@ -261,6 +261,12 @@ private fun DetailBody(
         style = MaterialTheme.typography.headlineSmall,
         modifier = Modifier.testTag(TestTags.DETAIL_TITLE),
     )
+    Text(
+        text = stringResource(R.string.detail_impact, state.viewCount, state.confirmCount),
+        style = MaterialTheme.typography.titleMedium,
+        color = MaterialTheme.colorScheme.primary,
+        modifier = Modifier.testTag(TestTags.DETAIL_IMPACT),
+    )
     state.authorHandle?.let { handle ->
         Text(
             text = stringResource(R.string.detail_author, handle),
@@ -331,27 +337,34 @@ private fun DetailBody(
     }
     if (state.isMine) {
         Text(stringResource(R.string.detail_yours), style = MaterialTheme.typography.bodyLarge)
-    } else if (state.canAnswer) {
-        Text(
-            text = stringResource(R.string.detail_still_prompt),
-            style = MaterialTheme.typography.titleMedium,
-        )
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+    } else {
+        if (state.youConfirmed) {
+            Text(
+                text = stringResource(R.string.detail_you_confirmed),
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.testTag(TestTags.DETAIL_YOU_CONFIRMED),
+            )
+        } else if (state.canAnswer) {
+            Text(
+                text = stringResource(R.string.detail_still_prompt),
+                style = MaterialTheme.typography.titleMedium,
+            )
             Button(
                 onClick = onStillTrue,
                 enabled = !state.answering,
                 modifier = Modifier
-                    .weight(1f)
+                    .fillMaxWidth()
                     .testTag(TestTags.DETAIL_STILL_TRUE),
             ) {
                 Text(stringResource(R.string.detail_still_true))
             }
-            OutlinedButton(
+        }
+        if (state.canAnswer) {
+            TextButton(
                 onClick = onNotTrue,
                 enabled = !state.answering,
-                modifier = Modifier
-                    .weight(1f)
-                    .testTag(TestTags.DETAIL_NOT_TRUE),
+                modifier = Modifier.testTag(TestTags.DETAIL_NOT_TRUE),
             ) {
                 Text(stringResource(R.string.detail_not_true))
             }

@@ -187,7 +187,7 @@ select ok(
   'drop_detail inside the radius returns the body'
 );
 reset role;
-select is((select view_count from public.drops where id = current_setting('t.hist')::uuid), 2::bigint, 'drop_detail counts views');
+select is((select view_count from public.drops where id = current_setting('t.hist')::uuid), 1::bigint, 'drop_detail counts each signed-in viewer once');
 set local role authenticated;
 
 -- Map viewport and share teasers

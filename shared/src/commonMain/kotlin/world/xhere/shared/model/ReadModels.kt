@@ -44,6 +44,10 @@ data class DropCard(
     @SerialName("created_at") val createdAt: Instant,
     @SerialName("author_handle") val authorHandle: String? = null,
     @SerialName("is_mine") val isMine: Boolean,
+    /** Unique signed-in viewers, not counting the author. Anonymous opens are not included. */
+    @SerialName("view_count") val viewCount: Long = 0,
+    /** This caller's answer, when they have confirmed or denied. */
+    @SerialName("my_verdict") val myVerdict: ConfirmationVerdict? = null,
 ) {
     val displayLocation: LatLng get() = LatLng(latitude, longitude)
 
@@ -132,3 +136,32 @@ data class ConfirmDropResult(
     @SerialName("expires_at") val expiresAt: Instant? = null,
     @SerialName("distance_m") val distanceM: Int,
 )
+
+/**
+ * One "your drop helped" inbox row (`my_impact_notices`).
+ * At most one per drop per UTC day. [viewEvents] and [confirmEvents] are that day's totals.
+ */
+@Serializable
+data class ImpactNotice(
+    @Serializable(with = UuidSerializer::class)
+    val id: Uuid,
+    @Serializable(with = UuidSerializer::class)
+    @SerialName("drop_id") val dropId: Uuid,
+    @SerialName("short_id") val shortId: String,
+    val title: String,
+    @SerialName("notice_day") val noticeDay: String,
+    @SerialName("view_events") val viewEvents: Int,
+    @SerialName("confirm_events") val confirmEvents: Int,
+    @Serializable(with = InstantSerializer::class)
+    @SerialName("read_at") val readAt: Instant? = null,
+    @Serializable(with = InstantSerializer::class)
+    @SerialName("created_at") val createdAt: Instant,
+    /** Not on the wire. The in-memory inbox uses it to keep each person's notes apart. */
+    @Serializable(with = UuidSerializer::class)
+    @SerialName("recipient_id") val recipientId: Uuid? = null,
+    /** Not on the wire. The server orders the list; the in-memory inbox sorts on this. */
+    @Serializable(with = InstantSerializer::class)
+    @SerialName("updated_at") val updatedAt: Instant? = null,
+) {
+    val unread: Boolean get() = readAt == null
+}
