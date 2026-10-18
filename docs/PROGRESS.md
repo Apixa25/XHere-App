@@ -84,7 +84,7 @@ Branch `m1/database` → [PR #3](https://github.com/Apixa25/XHere-App/pull/3). B
 
 ## 2026-10-18 (Sun), ~1:00 AM ET: Demo city is Jamestown
 
-Steven picked **Jamestown, New York** as the demo/test city (PLAN §10 question 3). Branch `seed/jamestown`.
+Steven picked **Jamestown, New York** as the demo/test city (PLAN §10 question 3). Branch `seed/jamestown` → [PR #4](https://github.com/Apixa25/XHere-App/pull/4).
 
 - `supabase/seed.sql` still loads 4 demo accounts and 15 drops, in the same categories as the Lower Manhattan placeholder: `historical_fact` twice, and one each of `viewpoint`, `water_source`, `public_art`, `eatery_tip`, `underground`, `hidden_gem`, `food_truck`, `event`, `hazard`, `yard_sale`, and `note`, plus `incident_report` twice (one from the trusted moderator, one from the regular user waiting on review).
 - Coordinates are real public spots: Fenton History Center (67 Washington Street), the Lucille Ball Desi Arnaz Museum (2 West 3rd), Lucille Ball Memorial Park on the Chautauqua Lake shore in Celoron (the lake view and Carolyn Palmer's 2016 statue), McCrea Point, West 3rd Street, the North Main Street tunnel under the old Erie grade, the I Love Lucy mural by the Chadakoin, Rosa Alley beside the National Comedy Center, Tracy Plaza, the Greater Jamestown Riverwalk at Brooklyn Square, the James Prendergast Library, Allen Park, and West 3rd Street Lot #1.
