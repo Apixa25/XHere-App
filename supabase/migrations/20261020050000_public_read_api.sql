@@ -351,8 +351,8 @@ declare
   v_drop_id uuid;
   v_drop public.drops;
   v_item jsonb;
-  v_licenses text[] := '{}';
-  v_attributions text[] := '{}';
+  v_licenses text[] := '{}'::text[];
+  v_attributions text[] := '{}'::text[];
   v_share boolean := false;
   v_license text;
 begin
