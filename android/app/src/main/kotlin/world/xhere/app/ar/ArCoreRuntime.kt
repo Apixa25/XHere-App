@@ -77,23 +77,23 @@ class ArCoreRuntime(
     @Volatile private var glView: GLSurfaceView? = null
     private var lastPublishMs = 0L
 
-    override suspend fun refreshSupport(latitude: Double, longitude: Double) {
-        withContext(Dispatchers.Default) {
-            if (!gate.tryLock()) return@withContext
+    override suspend fun refreshSupport(latitude: Double, longitude: Double): Boolean {
+        return withContext(Dispatchers.Default) {
+            if (!gate.tryLock()) return@withContext false
             try {
-                if (wantsRunning || session != null) return@withContext
+                if (wantsRunning || session != null) return@withContext false
                 if (!installed()) {
                     _support.value = ArSupport.UNSUPPORTED
-                    return@withContext
+                    return@withContext true
                 }
                 val probe = openProbe() ?: run {
                     _support.value = ArSupport.UNSUPPORTED
-                    return@withContext
+                    return@withContext true
                 }
                 try {
                     if (!probe.isGeospatialModeSupported(Config.GeospatialMode.ENABLED)) {
                         _support.value = ArSupport.UNSUPPORTED
-                        return@withContext
+                        return@withContext true
                     }
                     configure(probe)
                     val availability = withTimeoutOrNull(PROBE_TIMEOUT_MS) {
@@ -109,8 +109,10 @@ class ArCoreRuntime(
                     } else {
                         ArSupport.UNAVAILABLE
                     }
+                    true
                 } catch (_: Throwable) {
                     _support.value = ArSupport.UNSUPPORTED
+                    true
                 } finally {
                     runCatching { probe.close() }
                 }

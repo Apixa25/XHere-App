@@ -215,9 +215,10 @@ class ScriptedArRuntime : ArRuntime {
     var scriptedAnchors: List<ResolvedAnchor> = emptyList()
     var started: Boolean = false
 
-    override suspend fun refreshSupport(latitude: Double, longitude: Double) {
+    override suspend fun refreshSupport(latitude: Double, longitude: Double): Boolean {
         checksAtomic.incrementAndGet()
         _support.value = nextSupport
+        return true
     }
 
     override fun setTargets(targets: List<ArTarget>) = Unit

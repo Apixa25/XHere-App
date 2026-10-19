@@ -33,12 +33,16 @@ class AuthViewModel(
     private val config: ClientConfig,
     private val notice: SignOutNotice,
     private val strings: AuthStrings,
+    private val draft: AuthDraft = MemoryAuthDraft(),
 ) : ViewModel() {
     private val _state = MutableStateFlow(initialState())
     val state: StateFlow<AuthUiState> = _state.asStateFlow()
     val banner: StateFlow<String?> = notice.message
 
     init {
+        viewModelScope.launch {
+            _state.collect { current -> draft.write(current.email, current.codeSent) }
+        }
         if (config.serverReady) {
             viewModelScope.launch {
                 services.auth.sessionChanges().drop(1).collect { session ->
@@ -144,13 +148,19 @@ class AuthViewModel(
     }
 
     private fun resetForm() {
+        draft.write("", false)
         _state.value = initialState()
     }
 
-    private fun initialState() = AuthUiState(
-        showOfflineNotice = !config.serverReady,
-        showGoogle = config.googleReady,
-    )
+    private fun initialState(): AuthUiState {
+        val saved = draft.read()
+        return AuthUiState(
+            email = saved.email,
+            codeSent = saved.codeSent && saved.email.isNotBlank(),
+            showOfflineNotice = !config.serverReady,
+            showGoogle = config.googleReady,
+        )
+    }
 }
 
 /** Resolved string resources, so the ViewModel stays free of a Context. */

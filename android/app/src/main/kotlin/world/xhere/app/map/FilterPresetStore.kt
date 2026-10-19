@@ -17,6 +17,36 @@ class FilterPresetStore(context: Context) {
 
     fun all(): List<FilterPreset> = listOf(WEEKEND) + custom()
 
+    /** Last chip selection. Survives process death. Tests clear [PREFS] between runs. */
+    fun rememberedSelection(): FilterSelection {
+        val raw = prefs.getString(SELECTION, null) ?: return FilterSelection()
+        val parts = raw.split("|")
+        val slugPart = parts.getOrNull(0).orEmpty()
+        val slugs = if (slugPart.isBlank() || slugPart == "*") {
+            null
+        } else {
+            slugPart.split(",").map { it.trim() }.filter { it.isNotEmpty() }.ifEmpty { null }
+        }
+        return FilterSelection(
+            slugs = slugs,
+            activeGroup = parts.getOrNull(1)?.ifBlank { null },
+            activePreset = parts.getOrNull(2)?.ifBlank { null },
+        )
+    }
+
+    fun rememberSelection(selection: FilterSelection) {
+        val slugs = selection.slugs?.joinToString(",")?.ifBlank { null } ?: "*"
+        val raw = "$slugs|${selection.activeGroup.orEmpty()}|${selection.activePreset.orEmpty()}"
+        prefs.edit().putString(SELECTION, raw).apply()
+    }
+
+    fun dismissedAlerts(): Set<String> =
+        prefs.getStringSet(DISMISSED, emptySet()).orEmpty()
+
+    fun rememberDismissedAlerts(ids: Set<String>) {
+        prefs.edit().putStringSet(DISMISSED, ids).apply()
+    }
+
     fun save(name: String, slugs: List<String>): Boolean {
         val clean = name.trim().replace("|", "").take(MAX_NAME)
         if (clean.isEmpty() || clean.equals(WEEKEND.name, ignoreCase = true)) return false
@@ -33,6 +63,8 @@ class FilterPresetStore(context: Context) {
     companion object {
         const val PREFS = "xhere_filter_presets"
         private const val KEY = "custom"
+        private const val SELECTION = "selection"
+        private const val DISMISSED = "dismissed_alerts"
         private const val MAX_NAME = 24
 
         /** PLAN §4.4: "Weekend" is Events + Food + Sales. The RPC accepts these group slugs. */

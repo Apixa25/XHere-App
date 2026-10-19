@@ -81,9 +81,13 @@ class DropViewModel(
         }
     }
 
+    fun noteCameraDenied() {
+        _state.update { it.copy(cameraDenied = true) }
+    }
+
     fun shutter(context: Context) {
         viewModelScope.launch {
-            _state.update { it.copy(busy = true, error = null) }
+            _state.update { it.copy(busy = true, error = null, cameraDenied = false) }
             try {
                 val shot = capture.takePhoto(context)
                 onPhoto(shot.bytes, shot.mimeType)
@@ -356,6 +360,7 @@ data class DropUiState(
     val sensitive: Boolean = false,
     val postingNotice: String? = null,
     val busy: Boolean = false,
+    val cameraDenied: Boolean = false,
     val error: String? = null,
     val success: String? = null,
     val duplicate: String? = null,

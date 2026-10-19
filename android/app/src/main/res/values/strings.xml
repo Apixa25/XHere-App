@@ -63,6 +63,7 @@
     <string name="map_teaser_failed">Couldn\'t open that drop.</string>
     <string name="map_load_failed">Couldn\'t load this part of the map.</string>
     <string name="map_location_off">Location stays off until you allow it. XHere only uses it while the app is open.</string>
+    <string name="map_location_settings">Open Settings</string>
     <string name="map_my_location">My location</string>
     <string name="map_subcategory_body">Choose the kinds of drops to show. Hold a group chip to open this again.</string>
     <string name="map_subcategory_apply">Show these</string>
@@ -102,6 +103,8 @@
     <string name="drop_fab">Drop something here</string>
     <string name="drop_pinned">Dropping at %1$s</string>
     <string name="drop_shutter">Take photo</string>
+    <string name="drop_camera_denied">The camera stays off until you allow it. You can still type a drop, or open Settings.</string>
+    <string name="drop_camera_settings">Open Settings</string>
     <string name="drop_pick">Choose photo</string>
     <string name="drop_text_label">Or a few words</string>
     <string name="drop_continue">Suggest a category</string>
@@ -316,7 +319,9 @@
     <string name="ar_unauthorized">This build is not authorized for Geospatial yet. A release build needs its signing certificate added in Google Cloud.</string>
     <string name="ar_unavailable">Street-level AR is not available at this spot.</string>
     <string name="ar_failed">The camera view stopped. Close it and try again.</string>
-    <string name="ar_camera_denied">The camera permission is needed to show the street.</string>
+    <string name="ar_camera_denied">Look around needs the camera and precise location. Allow both, or open Settings if you already said no.</string>
+    <string name="ar_camera_retry">Try again</string>
+    <string name="ar_camera_settings">Open Settings</string>
     <string name="ar_walk_closer">Walk closer to read this.</string>
     <string name="ar_distance">%1$d m</string>
 </resources>

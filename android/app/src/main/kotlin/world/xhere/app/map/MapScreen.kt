@@ -44,6 +44,7 @@ import org.koin.compose.koinInject
 import world.xhere.app.R
 import world.xhere.app.location.ForegroundLocation
 import world.xhere.app.ui.TestTags
+import world.xhere.app.ui.openAppSettings
 import world.xhere.shared.model.Taxonomy
 import world.xhere.shared.walks.WalkGuide
 
@@ -94,7 +95,7 @@ fun MapScreen(
         onDispose { lifecycle.removeObserver(observer) }
     }
     val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { granted ->
-        if (granted.values.any { it }) viewModel.goToMyLocation()
+        if (granted.values.any { it }) viewModel.goToMyLocation() else viewModel.locationDenied()
     }
     val walk = state.walk?.takeIf { walk -> walk.stops.any { it.available } }
     val quest = state.quests.firstOrNull()
@@ -171,11 +172,20 @@ fun MapScreen(
                         .clickable { viewModel.dismissNotice() }
                         .testTag(TestTags.MAP_NOTICE),
                 ) {
-                    Text(
-                        text = noticeText(notice),
-                        modifier = Modifier.padding(12.dp),
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
+                    Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
+                        Text(
+                            text = noticeText(notice),
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                        if (notice == MapNotice.LOCATION_OFF) {
+                            TextButton(
+                                onClick = { openAppSettings(context) },
+                                modifier = Modifier.testTag(TestTags.MAP_LOCATION_SETTINGS),
+                            ) {
+                                Text(stringResource(R.string.map_location_settings))
+                            }
+                        }
+                    }
                 }
             }
             state.teaser?.let { teaser ->

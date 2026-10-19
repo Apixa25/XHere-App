@@ -3,7 +3,9 @@ package world.xhere.app.ar
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlin.time.Clock
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -107,11 +109,22 @@ class ArViewModel(
         val previous = lastQuery
         if (previous != null && Geo.distanceMeters(previous, viewer) < ArView.REFRESH_M) return
         if (loadJob?.isActive == true) return
-        lastQuery = viewer
         loadJob = viewModelScope.launch {
-            cards = runCatching {
+            val loaded = try {
                 services.drops.dropsNearby(viewer, ArView.RANGE_M, null, 40)
-            }.getOrDefault(emptyList())
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                null
+            }
+            if (loaded == null) {
+                // Keep the labels already placed. Retry after a pause instead of
+                // clearing them or asking again on every frame.
+                delay(OFFLINE_RETRY_MS)
+                return@launch
+            }
+            lastQuery = viewer
+            cards = loaded
             val selected = ArView.select(cards, viewer, signal, now, colors)
             runtime.setTargets(selected.map { ArTarget(it.shortId, it.latitude, it.longitude) })
             publish(latest)
@@ -149,6 +162,8 @@ data class PlacedLabel(
     val x: Float,
     val y: Float,
 )
+
+private const val OFFLINE_RETRY_MS = 8_000L
 
 data class ArDropRequest(
     val spot: LatLng,

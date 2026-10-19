@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlin.uuid.Uuid
 import world.xhere.app.ar.ArRuntime
@@ -51,12 +52,22 @@ class MapViewModel(
     private val debounceMs: Long = 320,
     private val conditions: LiveConditions = QuietConditions,
 ) : ViewModel() {
-    private val _state = MutableStateFlow(MapUiState(presets = presetStore.all()))
+    private val _state = MutableStateFlow(
+        MapUiState(
+            presets = presetStore.all(),
+            selection = presetStore.rememberedSelection(),
+            dismissedAlertIds = presetStore.dismissedAlerts(),
+        ),
+    )
     val state: StateFlow<MapUiState> = _state.asStateFlow()
 
     private val locationKick = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     private var cameraJob: Job? = null
     private var hereJob: Job? = null
+    private var teaserJob: Job? = null
+    private var nearJob: Job? = null
+    private var arJob: Job? = null
+    private var arPending: LatLng? = null
     private var checkJob: Job? = null
     private var lastFrame: CameraFrame? = null
     private var lastCheckIn: LatLng? = null
@@ -178,10 +189,13 @@ class MapViewModel(
 
     fun openTeaser(shortId: String, distanceM: Double?) {
         hereJob?.cancel()
-        viewModelScope.launch {
+        nearJob?.cancel()
+        teaserJob?.cancel()
+        teaserJob = viewModelScope.launch {
             _state.update { it.copy(teaserLoading = true, nearMe = null, here = null) }
             try {
                 val card = services.drops.dropTeaser(shortId)
+                if (!isActive) return@launch
                 val distance = distanceM ?: _state.value.myLocation?.let { here ->
                     Geo.distanceMeters(here, card.displayLocation)
                 }
@@ -191,6 +205,7 @@ class MapViewModel(
             } catch (e: CancellationException) {
                 throw e
             } catch (_: Exception) {
+                if (!isActive) return@launch
                 _state.update { it.copy(teaserLoading = false, notice = MapNotice.TEASER_FAILED) }
             }
         }
@@ -202,23 +217,33 @@ class MapViewModel(
 
     fun openNearMe() {
         hereJob?.cancel()
-        _state.update { it.copy(here = null) }
-        viewModelScope.launch {
+        teaserJob?.cancel()
+        nearJob?.cancel()
+        _state.update { it.copy(here = null, teaser = null, teaserLoading = false) }
+        nearJob = viewModelScope.launch {
             val origin = _state.value.myLocation ?: JamestownDemo.center
             val slugs = _state.value.selection.slugs
             try {
                 val cards = services.drops.dropsNearby(origin, radiusM = NEAR_RADIUS_M, categories = slugs)
+                if (!isActive) return@launch
                 _state.update { it.copy(nearMe = cards, notice = null) }
             } catch (e: CancellationException) {
                 throw e
             } catch (_: Exception) {
+                if (!isActive) return@launch
                 _state.update { it.copy(notice = MapNotice.NEAR_FAILED) }
             }
         }
     }
 
     fun closeNearMe() {
+        nearJob?.cancel()
         _state.update { it.copy(nearMe = null) }
+    }
+
+    /** The permission dialog came back denied. The notice explains how to turn it on. */
+    fun locationDenied() {
+        _state.update { it.copy(notice = MapNotice.LOCATION_OFF) }
     }
 
     fun goToMyLocation() {
@@ -282,9 +307,11 @@ class MapViewModel(
     }
 
     fun dismissAlert(id: String) {
+        val ids = _state.value.dismissedAlertIds + id
+        presetStore.rememberDismissedAlerts(ids)
         _state.update {
             it.copy(
-                dismissedAlertIds = it.dismissedAlertIds + id,
+                dismissedAlertIds = ids,
                 alerts = it.alerts.filter { alert -> alert.id != id },
             )
         }
@@ -292,6 +319,8 @@ class MapViewModel(
 
     private fun openHere(spot: LatLng) {
         if (!Geo.isValid(spot)) return
+        teaserJob?.cancel()
+        nearJob?.cancel()
         hereJob?.cancel()
         hereJob = viewModelScope.launch {
             _state.update {
@@ -332,6 +361,7 @@ class MapViewModel(
     }
 
     private fun applySelection(selection: FilterSelection) {
+        presetStore.rememberSelection(selection)
         _state.update { it.copy(selection = selection, teaser = null) }
         val frame = lastFrame ?: return
         cameraJob?.cancel()
@@ -365,7 +395,8 @@ class MapViewModel(
             throw e
         } catch (_: Exception) {
             if (lastFrame != frame) return
-            _state.update { it.copy(loading = false, features = emptyList(), notice = MapNotice.LOAD_FAILED) }
+            // Keep the pins already on screen. A failed refresh should not blank the map.
+            _state.update { it.copy(loading = false, notice = MapNotice.LOAD_FAILED) }
         }
         if (lastFrame == frame) refreshAlerts(frame)
     }
@@ -410,18 +441,38 @@ class MapViewModel(
     private fun refreshAr(point: LatLng) {
         if (!Geo.isValid(point)) return
         val previous = arCheckedAt
+        if (arJob?.isActive == true) {
+            arPending = point
+            return
+        }
         if (previous != null && Geo.distanceMeters(previous, point) < AR_RECHECK_M) return
         arCheckedAt = point
-        viewModelScope.launch {
-            val ready = try {
-                ar.refreshSupport(point.latitude, point.longitude)
-                ar.support.value == ArSupport.READY
-            } catch (e: CancellationException) {
-                throw e
-            } catch (_: Exception) {
-                false
-            }
-            _state.update { it.copy(arReady = ready) }
+        arJob = viewModelScope.launch { runArCheck(point) }
+    }
+
+    /**
+     * A probe that returns false was skipped because another check holds the
+     * session. Leaving [MapUiState.arReady] alone stops a later skip from
+     * hiding a button a finished probe already earned.
+     */
+    private suspend fun runArCheck(point: LatLng) {
+        val updated = try {
+            ar.refreshSupport(point.latitude, point.longitude)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            _state.update { it.copy(arReady = false) }
+            false
+        }
+        if (updated) {
+            _state.update { it.copy(arReady = ar.support.value == ArSupport.READY) }
+        }
+        val next = arPending
+        arPending = null
+        val checked = arCheckedAt
+        if (next != null && (checked == null || Geo.distanceMeters(checked, next) >= AR_RECHECK_M)) {
+            arCheckedAt = next
+            runArCheck(next)
         }
     }
 

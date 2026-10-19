@@ -158,6 +158,7 @@ class FreshSessionRule : TestRule {
             val app = ApplicationProvider.getApplicationContext<Application>()
             app.getSharedPreferences(OnboardingStore.PREFS, Context.MODE_PRIVATE).edit().clear().commit()
             app.getSharedPreferences(world.xhere.app.map.FilterPresetStore.PREFS, Context.MODE_PRIVATE).edit().clear().commit()
+            app.getSharedPreferences(world.xhere.app.auth.PrefsAuthDraft.PREFS, Context.MODE_PRIVATE).edit().clear().commit()
             if (TestGraph.isReady()) {
                 runBlocking {
                     TestGraph.services.auth.signOut()
