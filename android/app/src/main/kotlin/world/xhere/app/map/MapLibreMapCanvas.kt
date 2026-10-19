@@ -33,6 +33,8 @@ import org.maplibre.android.style.sources.ImageSource
 import world.xhere.shared.access.AccessRollup
 import world.xhere.shared.access.AccessStatus
 import world.xhere.shared.access.AccessSummary
+import world.xhere.shared.civic.Civic
+import world.xhere.shared.civic.CivicItem
 import world.xhere.shared.geo.BoundingBox
 import world.xhere.shared.geo.Geo
 import world.xhere.shared.geo.LatLng
@@ -92,6 +94,7 @@ private class MapHolder {
     var scene: Int = Int.MIN_VALUE
     var history: HistoryMapLayer? = null
     var access: List<AccessSummary> = emptyList()
+    var civic: List<CivicItem> = emptyList()
 }
 
 @Composable
@@ -158,9 +161,11 @@ private fun NativeMap(
                         val screen = map.projection.toScreenLocation(latLng)
                         val slop = 28f * context.resources.displayMetrics.density
                         val rect = RectF(screen.x - slop, screen.y - slop, screen.x + slop, screen.y + slop)
+                        val civicHit = map.style?.getLayer(CIVIC_LAYER) != null &&
+                            map.queryRenderedFeatures(rect, CIVIC_LAYER).isNotEmpty()
                         val accessHit = map.style?.getLayer(ACCESS_LAYER) != null &&
                             map.queryRenderedFeatures(rect, ACCESS_LAYER).isNotEmpty()
-                        if (accessHit) {
+                        if (civicHit || accessHit) {
                             onMapClick(LatLng(latLng.latitude, latLng.longitude))
                             return@addOnMapClickListener true
                         }
@@ -194,6 +199,7 @@ private fun NativeMap(
             holder.location = state.myLocation
             holder.taxonomy = state.taxonomy
             holder.access = if (state.accessibilityLayer) state.accessPins else emptyList()
+            holder.civic = if (state.townHallLayer) state.civicPins else emptyList()
             val map = holder.map ?: return@AndroidView
             if (state.camera.token != holder.appliedToken && state.camera.token > 0) {
                 holder.appliedToken = state.camera.token
@@ -208,17 +214,17 @@ private fun NativeMap(
             val route = state.walk?.let { world.xhere.shared.walks.WalkGuide.route(it) }.orEmpty()
             val guide = guideLine(state)
             holder.history = historyLayer(state)
-            val scene = sceneKey(state.features, state.myLocation, state.taxonomy, route, guide, holder.history, holder.access)
+            val scene = sceneKey(state.features, state.myLocation, state.taxonomy, route, guide, holder.history, holder.access, holder.civic)
             if (loaded != null && holder.styleUrl == styleUrl) {
                 if (scene != holder.scene) {
                     holder.scene = scene
-                    render(loaded, state.features, state.myLocation, state.taxonomy, route, guide, holder.history, holder.access)
+                    render(loaded, state.features, state.myLocation, state.taxonomy, route, guide, holder.history, holder.access, holder.civic)
                 }
             } else if (holder.styleUrl != null && holder.styleUrl != styleUrl) {
                 map.setStyle(styleUrl) { style ->
                     holder.style = style
                     holder.styleUrl = styleUrl
-                    render(style, state.features, state.myLocation, state.taxonomy, route, guide, holder.history, holder.access)
+                    render(style, state.features, state.myLocation, state.taxonomy, route, guide, holder.history, holder.access, holder.civic)
                     holder.scene = scene
                 }
             }
@@ -243,6 +249,7 @@ private fun sceneKey(
     guide: List<LatLng>,
     history: HistoryMapLayer?,
     access: List<AccessSummary> = emptyList(),
+    civic: List<CivicItem> = emptyList(),
 ): Int {
     var hash = 1
     hash = 31 * hash + features.hashCode()
@@ -252,6 +259,7 @@ private fun sceneKey(
     hash = 31 * hash + guide.hashCode()
     hash = 31 * hash + (history?.hashCode() ?: 0)
     hash = 31 * hash + access.hashCode()
+    hash = 31 * hash + civic.hashCode()
     return hash
 }
 
@@ -264,9 +272,11 @@ private fun render(
     guide: List<LatLng>,
     history: HistoryMapLayer?,
     access: List<AccessSummary> = emptyList(),
+    civic: List<CivicItem> = emptyList(),
 ) {
     drawHistory(style, history)
     drawAccess(style, access)
+    drawCivic(style, civic)
     drawLine(style, ROUTE_SOURCE, ROUTE_LAYER, route, Color.parseColor("#1B6B4A"), width = 4.5f, dashed = false)
     drawLine(style, GUIDE_SOURCE, GUIDE_LAYER, guide, Color.parseColor("#C47B0A"), width = 3f, dashed = true)
     features.map { iconKey(it, taxonomy) }.distinct().forEach { key ->
@@ -429,6 +439,8 @@ private const val HISTORY_SOURCE = "xhere-history"
 private const val HISTORY_LAYER = "xhere-history-raster"
 private const val ACCESS_SOURCE = "xhere-access"
 private const val ACCESS_LAYER = "xhere-access-symbols"
+private const val CIVIC_SOURCE = "xhere-civic"
+private const val CIVIC_LAYER = "xhere-civic-symbols"
 private const val EMPTY = """{"type":"FeatureCollection","features":[]}"""
 
 private fun drawAccess(style: Style, pins: List<AccessSummary>) {
@@ -455,6 +467,44 @@ private fun drawAccess(style: Style, pins: List<AccessSummary>) {
     } else {
         existing.setGeoJson(json)
     }
+}
+
+private fun drawCivic(style: Style, pins: List<CivicItem>) {
+    pins.map { it.itemType }.distinct().forEach { type ->
+        val id = civicIconId(type)
+        if (style.getImage(id) == null) {
+            val color = MarkerIcons.parseHex(Civic.colorHex(type)) ?: Color.GRAY
+            style.addImage(id, MarkerIcons.bitmap(Civic.icon(type), color))
+        }
+    }
+    val json = civicCollection(pins)
+    val existing = style.getSource(CIVIC_SOURCE) as? GeoJsonSource
+    if (existing == null) {
+        style.addSource(GeoJsonSource(CIVIC_SOURCE, json))
+        style.addLayer(
+            SymbolLayer(CIVIC_LAYER, CIVIC_SOURCE).withProperties(
+                PropertyFactory.iconImage(Expression.get("icon")),
+                PropertyFactory.iconAllowOverlap(true),
+                PropertyFactory.iconIgnorePlacement(true),
+                PropertyFactory.iconAnchor(Property.ICON_ANCHOR_CENTER),
+                PropertyFactory.iconSize(0.85f),
+            ),
+        )
+    } else {
+        existing.setGeoJson(json)
+    }
+}
+
+private fun civicIconId(type: world.xhere.shared.civic.CivicType): String = "xhere-civic-${type.name}"
+
+private fun civicCollection(pins: List<CivicItem>): String {
+    val body = pins.mapNotNull { pin ->
+        val lat = pin.latitude ?: return@mapNotNull null
+        val lng = pin.longitude ?: return@mapNotNull null
+        val icon = civicIconId(pin.itemType)
+        """{"type":"Feature","properties":{"icon":"$icon"},"geometry":{"type":"Point","coordinates":[$lng,$lat]}}"""
+    }.joinToString(",")
+    return """{"type":"FeatureCollection","features":[$body]}"""
 }
 
 private fun accessIconId(status: AccessStatus): String = "xhere-access-${status.name}"

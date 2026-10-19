@@ -473,6 +473,12 @@
     <string name="explore_section_time">Time Machine</string>
     <string name="explore_section_things">Things</string>
     <string name="explore_section_capsules">Time capsules</string>
+    <string name="explore_section_town_hall">Town Hall</string>
+    <string name="explore_town_hall_empty">No meetings are published for this area yet.</string>
+    <string name="here_civic_title">Coming up near here</string>
+    <string name="here_civic_follow">Follow this address</string>
+    <string name="map_town_hall">Town Hall</string>
+    <string name="civic_inbox_title">Town Hall</string>
     <string name="explore_live_empty">No live alerts in this area.</string>
     <string name="explore_distance">%1$s away</string>
     <string name="explore_duration">about %1$d min</string>

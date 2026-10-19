@@ -1,5 +1,6 @@
 package world.xhere.shared.suggest
 
+import world.xhere.shared.civic.Civic
 import world.xhere.shared.model.Category
 
 /**
@@ -22,7 +23,7 @@ internal object CategoryRanker {
         query: SuggestionQuery,
         nearbyCounts: Map<String, Int> = emptyMap(),
     ): List<CategorySuggestion> {
-        val active = categories.filter { it.active }
+        val active = categories.filter { it.active && it.slug !in Civic.RESERVED_SLUGS }
         val documents = active.map { category ->
             RankDocument(
                 slug = category.slug,

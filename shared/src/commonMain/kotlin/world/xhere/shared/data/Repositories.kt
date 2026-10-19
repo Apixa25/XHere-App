@@ -482,6 +482,27 @@ interface ThingRepository {
     suspend fun report(thingId: Uuid, reason: ReportReason, details: String? = null): Uuid
 }
 
+/**
+ * Town Hall records. These are public agendas, hearings, permits, and notices,
+ * not drops. [near] is about 300 m. [upcoming] is the town, about 25 km,
+ * and includes a row with no pin when that town is the one under the camera.
+ */
+interface CivicRepository {
+    suspend fun near(point: LatLng, radiusM: Int = world.xhere.shared.civic.Civic.NEAR_M): List<world.xhere.shared.civic.CivicItem>
+
+    suspend fun inView(box: BoundingBox): List<world.xhere.shared.civic.CivicItem>
+
+    suspend fun upcoming(point: LatLng, radiusM: Int = world.xhere.shared.civic.Civic.REGION_M): List<world.xhere.shared.civic.CivicItem>
+
+    suspend fun follow(regionId: String, address: String)
+
+    suspend fun unfollow(regionId: String, address: String)
+
+    suspend fun notices(): List<world.xhere.shared.civic.CivicNotice>
+
+    suspend fun markRead(id: Uuid)
+}
+
 /** The surface the app injects. Both the Supabase client and the in-memory fake implement it. */
 interface XHereServices {
     val auth: AuthRepository
@@ -504,6 +525,7 @@ interface XHereServices {
     val account: AccountRepository
     val moderation: ModerationRepository
     val desk: PlaceDeskRepository
+    val civic: CivicRepository
 }
 
 /** Placeholder role check used by screens that should hide moderator tools. The RPC still enforces it. */

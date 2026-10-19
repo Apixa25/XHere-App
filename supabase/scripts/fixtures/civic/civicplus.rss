@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>AgendaCenter</title>
+    <item>
+      <title>City Council Agenda November 2, 2026</title>
+      <link>https://example.com/AgendaCenter/ViewFile/Agenda/11022026</link>
+      <description>Agenda packet</description>
+    </item>
+  </channel>
+</rss>

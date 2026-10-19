@@ -1,0 +1,24 @@
+{
+  "events": [
+    {
+      "EventId": 1,
+      "EventBodyName": "Planning Board",
+      "EventDate": "2026-11-02T19:00:00",
+      "EventAgendaFile": "https://example.com/agenda.pdf",
+      "EventItems": [
+        {
+          "EventItemId": 10,
+          "EventItemTitle": "Public hearing for 10 Oak Street variance",
+          "EventItemMatterType": "Public Hearing",
+          "EventItemAgendaNote": "Variance request"
+        },
+        {
+          "EventItemId": 11,
+          "EventItemTitle": "Minutes of the last meeting",
+          "EventItemMatterType": "Minutes",
+          "EventItemAgendaNote": "Approve the minutes"
+        }
+      ]
+    }
+  ]
+}

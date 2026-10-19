@@ -22,6 +22,7 @@ import kotlin.math.roundToInt
 import world.xhere.app.R
 import world.xhere.app.ui.TestTags
 import world.xhere.shared.access.AccessRollup
+import world.xhere.shared.civic.Civic
 import world.xhere.shared.demo.JamestownDemo
 import world.xhere.shared.geo.Geo
 import world.xhere.shared.geo.LatLng
@@ -96,6 +97,19 @@ internal fun ProgrammaticMap(
                     .clickable { onFeatureClick(feature) },
                 style = MaterialTheme.typography.titleMedium,
             )
+        }
+        if (state.townHallLayer) {
+            state.civicPins.forEach { item ->
+                val point = item.location ?: return@forEach
+                Text(
+                    text = "${Civic.icon(item.itemType)}  ${item.title}",
+                    modifier = Modifier
+                        .padding(horizontal = 16.dp)
+                        .testTag(TestTags.civicPin(item.id.toString()))
+                        .clickable { onMapClick(point) },
+                    style = MaterialTheme.typography.titleMedium,
+                )
+            }
         }
         if (state.accessibilityLayer) {
             state.accessPins.forEach { pin ->

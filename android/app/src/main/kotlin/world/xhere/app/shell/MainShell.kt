@@ -1,5 +1,7 @@
 package world.xhere.app.shell
 
+import android.content.Intent
+import android.net.Uri
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -43,6 +45,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -484,11 +487,53 @@ private fun ProfilePage(
             avatarUrl = state.avatarUrl,
             onOpen = { notice -> viewModel.openNotice(notice, onOpenDrop) },
         )
+        if (state.civicNotices.isNotEmpty()) {
+            CivicInbox(
+                notices = state.civicNotices,
+                onOpen = { notice -> viewModel.markCivicRead(notice.id) },
+            )
+        }
     }
     }
     val standing = state.standing
     if (showLevelUp && standing != null) {
         LevelUpSheet(standing = standing, onDismiss = { showLevelUp = false })
+    }
+}
+
+@Composable
+private fun ColumnScope.CivicInbox(
+    notices: List<world.xhere.shared.civic.CivicNotice>,
+    onOpen: (world.xhere.shared.civic.CivicNotice) -> Unit,
+) {
+    val context = LocalContext.current
+    Text(
+        text = stringResource(R.string.civic_inbox_title),
+        style = MaterialTheme.typography.titleLarge,
+        modifier = Modifier
+            .padding(top = 20.dp)
+            .testTag(TestTags.CIVIC_INBOX),
+    )
+    notices.forEach { notice ->
+        Surface(
+            shape = MaterialTheme.shapes.large,
+            color = if (notice.unread) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 8.dp)
+                .clickable {
+                    onOpen(notice)
+                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(notice.sourceUrl)))
+                }
+                .testTag(TestTags.civicNotice(notice.id.toString())),
+        ) {
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(notice.title, style = MaterialTheme.typography.titleMedium)
+                notice.addressText?.let { address ->
+                    Text(address, style = MaterialTheme.typography.bodyMedium)
+                }
+            }
+        }
     }
 }
 

@@ -60,6 +60,10 @@ import world.xhere.shared.data.IdentityProvider
 import world.xhere.shared.data.MediaRepository
 import world.xhere.shared.data.ModerationRepository
 import world.xhere.shared.data.LiveRepository
+import world.xhere.shared.civic.CivicItem
+import world.xhere.shared.civic.CivicNotice
+import world.xhere.shared.civic.CivicType
+import world.xhere.shared.data.CivicRepository
 import world.xhere.shared.data.PlaceDeskRepository
 import world.xhere.shared.data.PlaceRepository
 import world.xhere.shared.data.ProfileDraft
@@ -116,6 +120,7 @@ import world.xhere.shared.data.remote.UserIdParams
 import world.xhere.shared.data.remote.taxonomyOf
 import world.xhere.shared.data.remote.toParams
 import world.xhere.shared.geo.BoundingBox
+import world.xhere.shared.json.UuidSerializer
 import world.xhere.shared.integrity.LocationIntegrityFlag
 import world.xhere.shared.integrity.LocationSignal
 import io.ktor.client.request.put
@@ -253,6 +258,7 @@ class SupabaseXHereClient(
     override val account: AccountRepository = AccountRepo()
     override val moderation: ModerationRepository = ModerationRepo()
     override val desk: PlaceDeskRepository = PlaceDeskRepo()
+    override val civic: CivicRepository = CivicRepo()
 
     private inner class AuthRepo : AuthRepository {
         override suspend fun currentSession(): SessionInfo? = call {
@@ -1080,6 +1086,65 @@ class SupabaseXHereClient(
             ).decodeAs<OpenedCount>().opened
         }
     }
+
+    private inner class CivicRepo : CivicRepository {
+        override suspend fun near(point: LatLng, radiusM: Int): List<CivicItem> = call {
+            if (!Geo.isValid(point)) return@call emptyList()
+            decodeListOrEmpty<CivicItemWire>(
+                supabase.postgrest.rpc(
+                    "civic_items_near",
+                    CivicNearParams(point.latitude, point.longitude, radiusM).rpcJson(),
+                ).data,
+            ).map { it.toItem() }
+        }
+
+        override suspend fun inView(box: BoundingBox): List<CivicItem> = call {
+            if (!Geo.isValidBoundingBox(box)) return@call emptyList()
+            decodeListOrEmpty<CivicItemWire>(
+                supabase.postgrest.rpc(
+                    "civic_items_in_view",
+                    CivicBoxParams(box.minLongitude, box.minLatitude, box.maxLongitude, box.maxLatitude).rpcJson(),
+                ).data,
+            ).map { it.toItem() }
+        }
+
+        override suspend fun upcoming(point: LatLng, radiusM: Int): List<CivicItem> = call {
+            if (!Geo.isValid(point)) return@call emptyList()
+            decodeListOrEmpty<CivicItemWire>(
+                supabase.postgrest.rpc(
+                    "civic_upcoming",
+                    CivicNearParams(point.latitude, point.longitude, radiusM).rpcJson(),
+                ).data,
+            ).map { it.toItem() }
+        }
+
+        override suspend fun follow(regionId: String, address: String) {
+            call {
+                supabase.postgrest.rpc("follow_civic_address", CivicFollowParams(regionId, address).rpcJson())
+                Unit
+            }
+        }
+
+        override suspend fun unfollow(regionId: String, address: String) {
+            call {
+                supabase.postgrest.rpc("unfollow_civic_address", CivicFollowParams(regionId, address).rpcJson())
+                Unit
+            }
+        }
+
+        override suspend fun notices(): List<CivicNotice> = call {
+            decodeListOrEmpty<CivicNoticeWire>(
+                supabase.postgrest.rpc("my_civic_notices", CivicLimitParams(40).rpcJson()).data,
+            ).map { it.toNotice() }
+        }
+
+        override suspend fun markRead(id: Uuid) {
+            call {
+                supabase.postgrest.rpc("mark_civic_notice_read", CivicIdParams(id).rpcJson())
+                Unit
+            }
+        }
+    }
 }
 
 private const val CATEGORY_COLUMNS =
@@ -1198,4 +1263,94 @@ private fun JsonElement?.asDetail(): String? = when (this) {
     null, is JsonNull -> null
     is JsonPrimitive -> content
     else -> toString()
+}
+
+@Serializable
+private data class CivicNearParams(
+    @kotlinx.serialization.SerialName("p_lat") val lat: Double,
+    @kotlinx.serialization.SerialName("p_lng") val lng: Double,
+    @kotlinx.serialization.SerialName("p_radius_m") val radiusM: Int,
+)
+
+@Serializable
+private data class CivicBoxParams(
+    @kotlinx.serialization.SerialName("p_min_lng") val minLng: Double,
+    @kotlinx.serialization.SerialName("p_min_lat") val minLat: Double,
+    @kotlinx.serialization.SerialName("p_max_lng") val maxLng: Double,
+    @kotlinx.serialization.SerialName("p_max_lat") val maxLat: Double,
+)
+
+@Serializable
+private data class CivicFollowParams(
+    @kotlinx.serialization.SerialName("p_region_id") val regionId: String,
+    @kotlinx.serialization.SerialName("p_address") val address: String,
+)
+
+@Serializable
+private data class CivicLimitParams(
+    @kotlinx.serialization.SerialName("p_limit") val limit: Int,
+)
+
+@Serializable
+private data class CivicIdParams(
+    @Serializable(with = UuidSerializer::class)
+    @kotlinx.serialization.SerialName("p_id") val id: Uuid,
+)
+
+@Serializable
+private data class CivicItemWire(
+    @Serializable(with = UuidSerializer::class) val id: Uuid,
+    @kotlinx.serialization.SerialName("region_id") val regionId: String,
+    @kotlinx.serialization.SerialName("item_type") val itemType: String,
+    val title: String,
+    val summary: String? = null,
+    @kotlinx.serialization.SerialName("occurs_on") val occursOn: String? = null,
+    @kotlinx.serialization.SerialName("body_name") val bodyName: String? = null,
+    @kotlinx.serialization.SerialName("source_url") val sourceUrl: String,
+    @kotlinx.serialization.SerialName("address_text") val addressText: String? = null,
+    val lat: Double? = null,
+    val lng: Double? = null,
+    val attribution: String = "",
+    val license: String = "",
+    @kotlinx.serialization.SerialName("expires_at") val expiresAt: String? = null,
+    @kotlinx.serialization.SerialName("source_slug") val sourceSlug: String = "",
+    @kotlinx.serialization.SerialName("distance_m") val distanceM: Int? = null,
+) {
+    fun toItem(): CivicItem = CivicItem(
+        id = id,
+        regionId = regionId,
+        itemType = CivicType.fromWire(itemType) ?: CivicType.NOTICE,
+        title = title,
+        summary = summary,
+        occursOn = occursOn,
+        bodyName = bodyName,
+        sourceUrl = sourceUrl,
+        addressText = addressText,
+        latitude = lat,
+        longitude = lng,
+        attribution = attribution,
+        license = license,
+        expiresAt = expiresAt?.let { runCatching { Instant.parse(it) }.getOrNull() },
+        sourceSlug = sourceSlug,
+        distanceM = distanceM,
+    )
+}
+
+@Serializable
+private data class CivicNoticeWire(
+    @Serializable(with = UuidSerializer::class) val id: Uuid,
+    val title: String,
+    @kotlinx.serialization.SerialName("address_text") val addressText: String? = null,
+    @kotlinx.serialization.SerialName("source_url") val sourceUrl: String,
+    @kotlinx.serialization.SerialName("read_at") val readAt: String? = null,
+    @kotlinx.serialization.SerialName("created_at") val createdAt: String,
+) {
+    fun toNotice(): CivicNotice = CivicNotice(
+        id = id,
+        title = title,
+        addressText = addressText,
+        sourceUrl = sourceUrl,
+        readAt = readAt?.let { runCatching { Instant.parse(it) }.getOrNull() },
+        createdAt = runCatching { Instant.parse(createdAt) }.getOrElse { Instant.parse("1970-01-01T00:00:00Z") },
+    )
 }

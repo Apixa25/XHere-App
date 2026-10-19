@@ -16,7 +16,11 @@ import world.xhere.shared.access.AccessVote
 import world.xhere.shared.access.OsmAccess
 import world.xhere.shared.data.AccessRepository
 import world.xhere.shared.data.AccountRepository
+import world.xhere.shared.civic.Civic
+import world.xhere.shared.civic.CivicItem
+import world.xhere.shared.civic.CivicNotice
 import world.xhere.shared.data.CampaignRepository
+import world.xhere.shared.data.CivicRepository
 import world.xhere.shared.data.AuthRepository
 import world.xhere.shared.data.BlockRepository
 import world.xhere.shared.data.DropRepository
@@ -180,6 +184,7 @@ class InMemoryXHere(
     }
 
     override val desk: PlaceDeskRepository get() = placeDesk
+    override val civic: CivicRepository = CivicRepo()
 
     /** Who is signed in. Tests may swap it, for example to act as a moderator. */
     var viewer: Profile? = viewer
@@ -551,6 +556,13 @@ class InMemoryXHere(
 
         override suspend fun createDrop(request: CreateDropRequest): CreateDropResult {
             val profile = requireViewer()
+            if (request.categorySlug in Civic.RESERVED_SLUGS) {
+                throw XHereApiException(
+                    "civic_not_a_user_drop",
+                    sqlState = XHereApiException.SQL_PERMISSION,
+                    detail = "Town Hall records come from a public source, not a person.",
+                )
+            }
             val category = store.taxonomy.category(request.categorySlug)
                 ?: throw XHereApiException("category_not_found", sqlState = XHereApiException.SQL_VALIDATION, detail = request.categorySlug)
             val draft = world.xhere.shared.rules.DropDraft(
@@ -1675,6 +1687,78 @@ class InMemoryXHere(
             }
         }
     }
+
+    private inner class CivicRepo : CivicRepository {
+        override suspend fun near(point: LatLng, radiusM: Int): List<CivicItem> =
+            Civic.near(store.civicItems, point, clock(), radiusM)
+
+        override suspend fun inView(box: BoundingBox): List<CivicItem> =
+            Civic.inBox(store.civicItems, box, clock())
+
+        override suspend fun upcoming(point: LatLng, radiusM: Int): List<CivicItem> =
+            Civic.upcoming(store.civicItems, point, clock(), radiusM)
+
+        override suspend fun follow(regionId: String, address: String) {
+            val profile = requireViewer()
+            val key = Civic.addressKey(address)
+            if (key.split(" ").size < 2) {
+                throw XHereApiException("invalid_address", sqlState = XHereApiException.SQL_VALIDATION)
+            }
+            val mine = store.civicFollows.filter { it.userId == profile.id }
+            val existing = mine.firstOrNull { it.regionId == regionId && it.addressKey == key }
+            if (existing == null && mine.size >= 30) {
+                throw XHereApiException("civic_follow_limit", sqlState = XHereApiException.SQL_VALIDATION)
+            }
+            if (existing == null) {
+                store.civicFollows += CivicFollow(profile.id, regionId, key, address.trim())
+            }
+            store.civicItems.filter { item ->
+                item.regionId == regionId && Civic.visible(item, clock()) && Civic.addressMatches(address, item.addressText)
+            }.forEach { item ->
+                if (store.civicNotices.none { it.recipientId == profile.id && it.itemId == item.id }) {
+                    store.civicNotices += StoredCivicNotice(
+                        id = Uuid.random(),
+                        recipientId = profile.id,
+                        itemId = item.id,
+                        title = item.title,
+                        addressText = item.addressText,
+                        sourceUrl = item.sourceUrl,
+                        createdAt = clock(),
+                    )
+                }
+            }
+        }
+
+        override suspend fun unfollow(regionId: String, address: String) {
+            val profile = requireViewer()
+            val key = Civic.addressKey(address)
+            store.civicFollows.removeAll { it.userId == profile.id && it.regionId == regionId && it.addressKey == key }
+        }
+
+        override suspend fun notices(): List<CivicNotice> {
+            val profile = requireViewer()
+            return store.civicNotices.filter { it.recipientId == profile.id }
+                .sortedByDescending { it.createdAt }
+                .map { row ->
+                    CivicNotice(
+                        id = row.id,
+                        title = row.title,
+                        addressText = row.addressText,
+                        sourceUrl = row.sourceUrl,
+                        readAt = row.readAt,
+                        createdAt = row.createdAt,
+                    )
+                }
+        }
+
+        override suspend fun markRead(id: Uuid) {
+            val profile = requireViewer()
+            val index = store.civicNotices.indexOfFirst { it.id == id && it.recipientId == profile.id }
+            if (index < 0) return
+            val row = store.civicNotices[index]
+            if (row.readAt == null) store.civicNotices[index] = row.copy(readAt = clock())
+        }
+    }
 }
 
 class MemoryStore(
@@ -1706,6 +1790,10 @@ class MemoryStore(
     val quests: MutableList<StoredQuest> = mutableListOf()
     val questDismissals: MutableSet<Pair<Uuid, Uuid>> = linkedSetOf()
     val impactNotices: MutableList<ImpactNotice> = mutableListOf()
+    /** Published agendas, hearings, permits, and notices. Not drops. */
+    val civicItems: MutableList<CivicItem> = mutableListOf()
+    val civicFollows: MutableList<CivicFollow> = mutableListOf()
+    val civicNotices: MutableList<StoredCivicNotice> = mutableListOf()
     /** Region programs (founding cap and campaign). Empty until a config is installed. */
     val programs: MutableList<StoredProgram> = mutableListOf()
     /** People who turned off campaign leaderboards. Everyone else is listed when they have a display name. */
@@ -2096,3 +2184,21 @@ private fun acceptablePlaceText(value: String, max: Int): Boolean {
         character.isLetterOrDigit() || character.isWhitespace() || character in punctuation
     }
 }
+
+data class CivicFollow(
+    val userId: Uuid,
+    val regionId: String,
+    val addressKey: String,
+    val addressText: String,
+)
+
+data class StoredCivicNotice(
+    val id: Uuid,
+    val recipientId: Uuid,
+    val itemId: Uuid,
+    val title: String,
+    val addressText: String?,
+    val sourceUrl: String,
+    val readAt: Instant? = null,
+    val createdAt: Instant,
+)

@@ -72,6 +72,10 @@ jobs:
           python3 supabase/scripts/import_history.py \
             --check supabase/seed/history/jamestown-ny.json \
             --region supabase/regions/us/jamestown-ny.yaml
+          python3 supabase/scripts/import_civic.py --self-test
+          python3 supabase/scripts/import_civic.py \
+            --check supabase/seed/civic/jamestown-ny.json \
+            --region supabase/regions/us/jamestown-ny.yaml
 
   pgtap:
     name: pgtap

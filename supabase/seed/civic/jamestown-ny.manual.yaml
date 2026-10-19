@@ -1,0 +1,107 @@
+# Curated public record for Jamestown, New York.
+# Headlines and official links only. No agenda text is copied.
+# Meeting days are the 2026 list on the city meeting-schedule page.
+# 200 East Third Street is the Municipal Building (Census geocoder, 2026-10-19).
+# Hall Avenue is the midpoint of Front Street and Palmer Street (Census).
+# The viaduct notice has no matched street number, so it stays unpinned.
+items:
+  - external_id: council-work-2026-10-19
+    type: agenda_item
+    title: City Council work session
+    summary: Work session at the Municipal Building, Police Training Room, 4th floor.
+    date: 2026-10-19
+    body: City Council
+    source_url: https://www.jamestownny.gov/city-council/meeting-schedule/
+    address: 200 East Third Street, Jamestown, NY 14701
+    lat: 42.096704
+    lng: -79.238842
+  - external_id: council-voting-2026-10-26
+    type: agenda_item
+    title: City Council voting session
+    summary: Voting session at the Municipal Building, Council Chambers, 2nd floor.
+    date: 2026-10-26
+    body: City Council
+    source_url: https://www.jamestownny.gov/city-council/meeting-schedule/
+    address: 200 East Third Street, Jamestown, NY 14701
+    lat: 42.096704
+    lng: -79.238842
+  - external_id: council-work-2026-11-09
+    type: agenda_item
+    title: City Council work session
+    summary: Work session at the Municipal Building, Police Training Room, 4th floor.
+    date: 2026-11-09
+    body: City Council
+    source_url: https://www.jamestownny.gov/city-council/meeting-schedule/
+    address: 200 East Third Street, Jamestown, NY 14701
+    lat: 42.096704
+    lng: -79.238842
+  - external_id: council-work-2026-11-16
+    type: agenda_item
+    title: City Council work session
+    summary: Work session at the Municipal Building, Police Training Room, 4th floor.
+    date: 2026-11-16
+    body: City Council
+    source_url: https://www.jamestownny.gov/city-council/meeting-schedule/
+    address: 200 East Third Street, Jamestown, NY 14701
+    lat: 42.096704
+    lng: -79.238842
+  - external_id: council-voting-2026-11-30
+    type: agenda_item
+    title: City Council voting session
+    summary: Voting session at the Municipal Building, Council Chambers, 2nd floor.
+    date: 2026-11-30
+    body: City Council
+    source_url: https://www.jamestownny.gov/city-council/meeting-schedule/
+    address: 200 East Third Street, Jamestown, NY 14701
+    lat: 42.096704
+    lng: -79.238842
+  - external_id: council-work-2026-12-07
+    type: agenda_item
+    title: City Council work session
+    summary: Work session at the Municipal Building, Police Training Room, 4th floor.
+    date: 2026-12-07
+    body: City Council
+    source_url: https://www.jamestownny.gov/city-council/meeting-schedule/
+    address: 200 East Third Street, Jamestown, NY 14701
+    lat: 42.096704
+    lng: -79.238842
+  - external_id: council-work-2026-12-14
+    type: agenda_item
+    title: City Council work session
+    summary: Work session at the Municipal Building, Police Training Room, 4th floor.
+    date: 2026-12-14
+    body: City Council
+    source_url: https://www.jamestownny.gov/city-council/meeting-schedule/
+    address: 200 East Third Street, Jamestown, NY 14701
+    lat: 42.096704
+    lng: -79.238842
+  - external_id: council-voting-2026-12-28
+    type: agenda_item
+    title: City Council voting session
+    summary: Voting session at the Municipal Building, Council Chambers, 2nd floor.
+    date: 2026-12-28
+    body: City Council
+    source_url: https://www.jamestownny.gov/city-council/meeting-schedule/
+    address: 200 East Third Street, Jamestown, NY 14701
+    lat: 42.096704
+    lng: -79.238842
+  - external_id: hall-ave-reconstruction-2026
+    type: notice
+    title: Hall Avenue street reconstruction
+    summary: The September 21, 2026 work-session agenda names Hall Avenue reconstruction from Front Street to Palmer Street. The pin is the Census midpoint of those two intersections, not a parcel.
+    date: 2026-09-21
+    body: City Council
+    source_url: https://ecode360.com/JA1371/document/753285914.pdf
+    address: Hall Avenue, Jamestown, NY
+    lat: 42.091578
+    lng: -79.255392
+    expires_at: 2027-06-30T05:00:00Z
+  - external_id: main-st-viaduct-rfp-2026
+    type: notice
+    title: Main Street Viaduct placemaking notice
+    summary: Legal notice for a Main Street Viaduct placemaking request. No street number matched a geocoder, so this row is not pinned.
+    date: 2026-10-05
+    body: City Clerk
+    source_url: https://www.jamestownny.gov/wp-content/uploads/2026/10/MainViaduct_RFP_LEGAL-NOTICE.pdf
+    address: Main Street Viaduct, Jamestown, NY
+    expires_at: 2027-04-01T05:00:00Z

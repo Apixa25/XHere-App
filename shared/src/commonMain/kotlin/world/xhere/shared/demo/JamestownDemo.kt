@@ -8,6 +8,8 @@ import kotlin.uuid.Uuid
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
+import world.xhere.shared.civic.CivicItem
+import world.xhere.shared.civic.CivicType
 import world.xhere.shared.data.fake.MemoryStore
 import world.xhere.shared.data.fake.StoredDrop
 import world.xhere.shared.geo.BoundingBox
@@ -229,8 +231,93 @@ object JamestownDemo {
         )
         JamestownHistoryWalk.install(store)
         JamestownCampaign.install(store)
+        store.civicItems += civicItems()
         return store
     }
+
+    /**
+     * A few real public rows so the fake app can show Town Hall without Supabase.
+     * The same headlines are in supabase/seed/civic/jamestown-ny.manual.yaml.
+     */
+    fun civicItems(): List<CivicItem> {
+        val credit = "City of Jamestown. Headline and link only."
+        val hall = "https://www.jamestownny.gov/city-council/meeting-schedule/"
+        return listOf(
+            civic(
+                "00000000-0000-4000-8000-000000000c01",
+                CivicType.AGENDA_ITEM,
+                "City Council voting session",
+                "Voting session at the Municipal Building, Council Chambers, 2nd floor.",
+                "2026-10-26",
+                "City Council",
+                hall,
+                "200 East Third Street, Jamestown, NY 14701",
+                42.096704,
+                -79.238842,
+                credit,
+                "2026-10-27T05:00:00Z",
+            ),
+            civic(
+                "00000000-0000-4000-8000-000000000c02",
+                CivicType.NOTICE,
+                "Main Street Viaduct placemaking notice",
+                "Legal notice for a Main Street Viaduct placemaking request. No street number matched, so this row is not pinned.",
+                "2026-10-05",
+                "City Clerk",
+                "https://www.jamestownny.gov/wp-content/uploads/2026/10/MainViaduct_RFP_LEGAL-NOTICE.pdf",
+                "Main Street Viaduct, Jamestown, NY",
+                null,
+                null,
+                credit,
+                "2027-04-01T05:00:00Z",
+            ),
+            civic(
+                "00000000-0000-4000-8000-000000000c03",
+                CivicType.NOTICE,
+                "Hall Avenue street reconstruction",
+                "The September 21, 2026 work-session agenda names Hall Avenue from Front Street to Palmer Street.",
+                "2026-09-21",
+                "City Council",
+                "https://ecode360.com/JA1371/document/753285914.pdf",
+                "Hall Avenue, Jamestown, NY",
+                42.091578,
+                -79.255392,
+                credit,
+                "2027-06-30T05:00:00Z",
+            ),
+        )
+    }
+
+    private fun civic(
+        id: String,
+        type: CivicType,
+        title: String,
+        summary: String,
+        day: String,
+        body: String,
+        url: String,
+        address: String,
+        lat: Double?,
+        lng: Double?,
+        credit: String,
+        expires: String,
+    ) = CivicItem(
+        id = Uuid.parse(id),
+        regionId = "us-ny-jamestown",
+        itemType = type,
+        title = title,
+        summary = summary,
+        occursOn = day,
+        bodyName = body,
+        sourceUrl = url,
+        addressText = address,
+        latitude = lat,
+        longitude = lng,
+        attribution = credit,
+        license = "Public record",
+        expiresAt = Instant.parse(expires),
+        sourceSlug = "jamestown-city-record",
+    )
 
     private fun groups(): List<CategoryGroup> = listOf(
         group(1, "history_stories", "History & Stories", "📜", "#8D6E63", 1),
@@ -244,6 +331,7 @@ object JamestownDemo {
         group(9, "local_secrets", "Local Secrets", "💎", "#D81B60", 9),
         group(10, "art_culture", "Art & Culture", "🎨", "#F9A825", 10),
         group(11, "note", "Note", "📍", "#757575", 11),
+        group(12, "town_hall", "Town Hall", "📋", "#1565C0", 12),
     )
 
     private fun categories(groups: List<CategoryGroup>): List<Category> {
@@ -259,6 +347,7 @@ object JamestownDemo {
         val secrets = inGroup("local_secrets")
         val art = inGroup("art_culture")
         val notes = inGroup("note")
+        val townHall = inGroup("town_hall")
         return listOf(
             category(21, history, "historical_fact", "Historical fact", "🏛️", 150, 1, attributes = HISTORICAL_SCHEMA),
             category(22, history, "story", "Story", "📖", 150, 2, attributes = HISTORICAL_SCHEMA),
@@ -386,6 +475,22 @@ object JamestownDemo {
             category(49, art, "public_art", "Public art", "🗿", 150, 2),
             category(50, art, "music_spot", "Music spot", "🎸", 150, 3),
             category(29, notes, "note", "Note", "📍", 100, 1, confirmations = 2, permanentWhenConfirmed = true),
+            category(
+                63, townHall, "civic_agenda", "Agenda", "📋", 300, 1,
+                postingNotice = "Town Hall rows come from a public source. A person cannot post one.",
+            ),
+            category(
+                64, townHall, "civic_hearing", "Hearing", "📣", 300, 2,
+                postingNotice = "Town Hall rows come from a public source. A person cannot post one.",
+            ),
+            category(
+                65, townHall, "civic_permit", "Permit", "🏗️", 300, 3,
+                postingNotice = "Town Hall rows come from a public source. A person cannot post one.",
+            ),
+            category(
+                66, townHall, "civic_notice", "Notice", "📌", 300, 4,
+                postingNotice = "Town Hall rows come from a public source. A person cannot post one.",
+            ),
         )
     }
 

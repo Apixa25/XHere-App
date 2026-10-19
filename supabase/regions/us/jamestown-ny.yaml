@@ -134,6 +134,22 @@ walks:
         external_id: "nrhp:100011762"
         title: First Presbyterian Church, Jamestown, New York
 
+# Town Hall. One block per region. Jamestown has no Legistar client, no
+# AgendaCenter, and no open building-permit table, so the source is the
+# curated file. Another town swaps the adapter. See docs/TOWN-HALL.md.
+civic:
+  sources:
+    - id: jamestown-city-record
+      adapter: manual
+      publisher: City of Jamestown
+      url: https://www.jamestownny.gov/city-council/meeting-schedule/
+      license: Public record
+      attribution: "City of Jamestown. Headline and link only. Numbered-street coordinates are from the U.S. Census Bureau geocoder (public domain)."
+      automated_access: allowed
+      cost: 0
+      file: supabase/seed/civic/jamestown-ny.manual.yaml
+      body: City Council
+
 # Founding Locals and the time-boxed map campaign.
 # Applied by seed/campaigns/jamestown-ny.sql. Another region copies this block.
 # starts_at null means the seed starts the clock when it is applied.
@@ -196,3 +212,27 @@ candidates:
     decision: reject
     reason: "Checked 2026-10-18. Jamestown NY is not on the Open311 GeoReport server list (https://wiki.open311.org/GeoReport_v2/Servers/). No New York city is listed. jamestownny.gov has no open 311 or SeeClickFix service-request API. Police annual reports are PDFs of calls for service and are person-related, so they are not imported. data.ny.gov 311 Service Requests is New York City (erm2-nwe9), not Jamestown. The SeeClickFix issues API returned 403 and is not a free open feed. No civic feed is configured."
     url: https://wiki.open311.org/GeoReport_v2/Servers/
+  - id: jamestown-legistar
+    decision: reject
+    reason: "Checked 2026-10-19. https://webapi.legistar.com/v1/jamestown/bodies and /chautauqua/bodies return HTTP 500 (LegistarConnectionString is not set up). No Jamestown or Chautauqua Legistar client. The legistar adapter stays in the importer for cities that have one. robots.txt on webapi.legistar.com was 404."
+    url: https://webapi.legistar.com/v1/jamestown/bodies
+  - id: jamestown-agendacenter
+    decision: reject
+    reason: "Checked 2026-10-19. https://www.jamestownny.gov/AgendaCenter returns 404. Agendas are hosted on eCode360, not CivicPlus AgendaCenter."
+    url: https://www.jamestownny.gov/AgendaCenter
+  - id: jamestown-ecode360
+    decision: link-only
+    reason: "Checked 2026-10-19. Council agendas are listed at https://ecode360.com/JA1371/documents/Agendas. A fetch of ecode360 robots.txt returned HTTP 403 (Cloudflare). Do not crawl the site. One already-public PDF may be linked by its stable URL. Do not copy resolution text."
+    url: https://ecode360.com/JA1371/documents/Agendas
+  - id: jamestown-calendar-export
+    decision: reject
+    reason: "jamestownny.gov robots.txt disallows /calendar/action~* and the ai1ec exporter. Do not pull the calendar iCal or JSON export. The meeting-schedule page and the news RSS are allowed."
+    url: https://www.jamestownny.gov/robots.txt
+  - id: jamestown-building-permits
+    decision: reject
+    reason: "Checked 2026-10-19. Permits are filed through GovPilot (https://eforms-main.govpilot.com/NY/jamestowncityny), an application portal, not an open dataset. data.ny.gov catalog search (domains=data.ny.gov, q=permit) has no Jamestown or Chautauqua building-permit table. Federated hits are other cities. data.ny.gov robots.txt allows the API with a crawl delay. The socrata and arcgis_permits adapters stay for regions that publish a dataset."
+    url: https://data.ny.gov/
+  - id: chautauqua-planning-agendas
+    decision: reject
+    reason: "Checked 2026-10-19. https://planningchautauqua.com/planning/cpb/minutes-agendas/ returned HTTP 403. Do not crawl it. The October 6, 2026 planning board met at the Jamestown airport, which is north of the Jamestown region box, and that date is past. No later meeting was invented."
+    url: https://planningchautauqua.com/planning/cpb/minutes-agendas/

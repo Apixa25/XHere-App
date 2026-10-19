@@ -2,6 +2,10 @@
 
 All times America/New_York (ET).
 
+## 2026-10-19: Town Hall board
+
+Agendas, hearings, permits, and notices are their own table (`civic_items`), pinned to an address when one can be read from the public record. Jamestown uses a manual file of city meeting dates plus two official notices, because Legistar, AgendaCenter, and a permit dataset are not available. Details are in `docs/TOWN-HALL.md`. The hosted project was not changed.
+
 ## 2026-10-17 (Sat), ~8:25–8:45 PM ET: Planning kickoff
 - Cloned `Apixa25/XHere-Web` read-only to the box (`/workspace/xhere-rebuild/old-repo`, write permissions removed). Nothing was changed, pushed, or deleted upstream.
 - Read every doc in the old repo (30 markdown files) and surveyed the code: stack, ~200 REST endpoints, models, auth, maps/PostGIS usage, Capacitor Android, deploy configs, env vars, and 363 commits (Dec 2024 → Jul 2025).

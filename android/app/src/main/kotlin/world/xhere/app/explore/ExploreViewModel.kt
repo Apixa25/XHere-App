@@ -16,6 +16,7 @@ import world.xhere.app.map.FilterPresetStore
 import world.xhere.app.map.MapAnchor
 import world.xhere.app.voice.NearbyThing
 import world.xhere.app.voice.VoiceSession
+import world.xhere.shared.civic.CivicItem
 import world.xhere.shared.data.XHereServices
 import world.xhere.shared.explore.Experience
 import world.xhere.shared.explore.ExperienceDismissal
@@ -55,6 +56,7 @@ class ExploreViewModel(
     private var owned: List<ThingCard> = emptyList()
     private var heard: List<NearbyThing> = emptyList()
     private var capsules: List<DropCard> = emptyList()
+    private var meetings: List<CivicItem> = emptyList()
 
     init {
         viewModelScope.launch {
@@ -139,6 +141,7 @@ class ExploreViewModel(
         capsules = runCatching {
             services.drops.dropsNearby(center, radiusM = 2_000, categories = listOf("time_capsule"), limit = 20)
         }.getOrDefault(capsules)
+        meetings = runCatching { services.civic.upcoming(center) }.getOrDefault(meetings)
         _state.update { it.copy(dismissedAlertIds = presets.dismissedAlerts()) }
         publish()
     }
@@ -162,6 +165,7 @@ class ExploreViewModel(
             here = point,
             heardMeters = meters,
             capsules = capsules,
+            meetings = meetings,
         )
         _state.update {
             it.copy(
