@@ -4,6 +4,13 @@ import world.xhere.shared.demo.JamestownDemo
 import world.xhere.shared.geo.BoundingBox
 import world.xhere.shared.geo.LatLng
 import world.xhere.shared.here.Here
+import world.xhere.shared.history.Clipping
+import world.xhere.shared.history.Georef
+import world.xhere.shared.history.History
+import world.xhere.shared.history.HistoryOverlay
+import world.xhere.shared.history.HistoryPhoto
+import world.xhere.shared.history.HistoryPlace
+import world.xhere.shared.history.HistorySheet
 import world.xhere.shared.here.isPublicRecord
 import world.xhere.shared.live.WeatherAlert
 import world.xhere.shared.model.CampaignProgress
@@ -112,7 +119,76 @@ data class HereSheet(
     val place: PlaceLabel? = null,
     val drops: List<DropCard> = emptyList(),
     val failed: Boolean = false,
+    val clippings: List<Clipping> = emptyList(),
 )
+
+/**
+ * Time Machine for one spot. [year] null means the newest era once the cache
+ * has loaded. [sheetId] is the Sanborn sheet drawn on the map, when it has
+ * control points.
+ */
+data class TimeMachineUi(
+    val spot: LatLng,
+    val loading: Boolean = false,
+    val failed: Boolean = false,
+    val place: HistoryPlace = HistoryPlace(),
+    val year: Int? = null,
+    val sheetId: String? = null,
+    val opacity: Float = 0.55f,
+    val viewerService: String? = null,
+    val viewerTitle: String = "",
+    val viewerYear: String = "",
+) {
+    val eras: List<Int> get() = History.eras(place.sheets, place.photos)
+
+    val sheets: List<HistorySheet> get() = History.sheetsFor(place.sheets, year)
+
+    val photos: List<HistoryPhoto> get() = History.photosFor(place.photos, year)
+
+    val overlay: HistoryOverlay?
+        get() {
+            val id = sheetId ?: return null
+            val geo = place.georefFor(id) ?: return null
+            return Georef.overlay(geo)
+        }
+}
+
+/** The raster the map draws. Null until a sheet has a real fit. */
+data class HistoryMapLayer(
+    val sheetId: String,
+    val imageUrl: String,
+    val corners: List<LatLng>,
+    val opacity: Float,
+    val attribution: String,
+)
+
+internal fun historyLayer(state: MapUiState): HistoryMapLayer? {
+    val machine = state.timeMachine ?: return null
+    val overlay = machine.overlay ?: return null
+    return HistoryMapLayer(
+        sheetId = overlay.sheetId,
+        imageUrl = overlay.imageUrl,
+        corners = overlay.corners,
+        opacity = machine.opacity,
+        attribution = overlay.attribution,
+    )
+}
+
+internal fun pickHistorySheet(place: HistoryPlace, year: Int?): String? {
+    val sheets = History.sheetsFor(place.sheets, year)
+    val linedUp = sheets.firstOrNull { sheet ->
+        place.georefFor(sheet.id)?.let(Georef::overlay) != null
+    }
+    return (linedUp ?: sheets.firstOrNull { !it.iiifService.isNullOrBlank() })?.id
+}
+
+/** `year|eras|sheet` for UI tests. `loading` until the cache returns. */
+internal fun describeTime(ui: TimeMachineUi): String {
+    if (ui.loading) return "loading"
+    if (ui.failed) return "failed"
+    val years = ui.eras.joinToString(",")
+    return "${ui.year ?: "none"}|$years|${ui.sheetId ?: "none"}"
+}
 
 /**
  * Stable text for UI tests. `place|category:shortId:revealed:user` with
@@ -158,6 +234,7 @@ data class MapUiState(
     val teaserLoading: Boolean = false,
     val nearMe: List<DropCard>? = null,
     val here: HereSheet? = null,
+    val timeMachine: TimeMachineUi? = null,
     val alerts: List<WeatherAlert> = emptyList(),
     val dismissedAlertIds: Set<String> = emptySet(),
     val subcategoryGroup: String? = null,

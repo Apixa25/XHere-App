@@ -132,6 +132,36 @@ programs:
     starts_at: null
     leaderboard_size: 8
 
+# Time Machine and "This day here". The importer reads this block.
+# Another town copies it and changes the names. control points live in
+# jamestown-ny.georef.json, not here, so an empty list does not draw a map.
+history:
+  town: Jamestown
+  state: New York
+  sanborn:
+    collection: sanborn-maps
+    location:
+      - jamestown
+      - new york
+  photos:
+    loc:
+      collection: photos
+      location:
+        - jamestown
+        - new york
+      limit: 24
+    commons:
+      enabled: true
+      radius_m: 600
+      limit: 8
+  newspapers:
+    state: New York
+    city: Jamestown
+    seed_queries:
+      - West 3rd Street
+      - Main Street
+      - Prendergast Avenue
+
 candidates:
   - id: hmdb
     decision: link-only

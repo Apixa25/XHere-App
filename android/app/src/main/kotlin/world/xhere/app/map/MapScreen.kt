@@ -7,7 +7,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -77,6 +78,7 @@ internal val WalkRouteSemantics = SemanticsPropertyKey<String>("WalkRoute")
 /** `yes` when the AR button is shown. `no` when the phone or the spot cannot do Geospatial. */
 internal val ArReadySemantics = SemanticsPropertyKey<String>("ArReady")
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun MapScreen(
     onDrop: () -> Unit = {},
@@ -196,11 +198,26 @@ fun MapScreen(
                     onOpen = { onOpenDrop(teaser.shortId) },
                 )
             }
-            Row(
+            FlowRow(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
-                verticalAlignment = Alignment.CenterVertically,
+                verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
+                Surface(
+                    onClick = { viewModel.openTimeMachine() },
+                    shape = MaterialTheme.shapes.large,
+                    color = MaterialTheme.colorScheme.secondaryContainer,
+                    modifier = Modifier
+                        .defaultMinSize(minHeight = 48.dp)
+                        .testTag(TestTags.MAP_TIME),
+                ) {
+                    Text(
+                        text = stringResource(R.string.time_machine),
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                        style = MaterialTheme.typography.labelLarge,
+                    )
+                }
                 Surface(
                     onClick = hapticClick(onDrop),
                     shape = CircleShape,
@@ -306,7 +323,30 @@ fun MapScreen(
                 taxonomy = state.taxonomy,
                 alerts = state.alerts,
                 onDropHere = { onDropHere(sheet.spot, sheet.place?.name) },
+                onTimeMachine = { viewModel.openTimeMachine(sheet.spot) },
                 onDismiss = viewModel::dismissHere,
+            )
+        }
+        state.timeMachine?.let { time ->
+            TimeMachineSheet(
+                ui = time,
+                onYear = viewModel::selectHistoryYear,
+                onSheet = viewModel::selectHistorySheet,
+                onOpenViewer = viewModel::openHistoryViewer,
+                onOpacity = viewModel::setHistoryOpacity,
+                onCloseViewer = viewModel::closeHistoryViewer,
+                onDismiss = viewModel::dismissTimeMachine,
+            )
+        }
+        historyLayer(state)?.let { layer ->
+            Text(
+                text = layer.attribution,
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = 72.dp, start = 12.dp, end = 12.dp)
+                    .testTag(TestTags.TIME_MAP_CREDIT),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface,
             )
         }
         if (state.savingPreset) {

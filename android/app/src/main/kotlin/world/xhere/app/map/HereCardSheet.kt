@@ -32,6 +32,8 @@ import world.xhere.shared.here.Here
 import world.xhere.shared.here.isPublicRecord
 import world.xhere.shared.live.NwsAlerts
 import world.xhere.shared.live.WeatherAlert
+import world.xhere.shared.history.Clipping
+import world.xhere.shared.history.History
 import world.xhere.shared.model.DropCard
 import world.xhere.shared.model.Taxonomy
 
@@ -46,6 +48,7 @@ internal fun HereCardSheet(
     taxonomy: Taxonomy?,
     alerts: List<WeatherAlert> = emptyList(),
     onDropHere: () -> Unit,
+    onTimeMachine: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     val groups = Here.groups(sheet.drops)
@@ -104,6 +107,14 @@ internal fun HereCardSheet(
             ) {
                 Text(stringResource(R.string.drop_fab))
             }
+            TextButton(
+                onClick = onTimeMachine,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag(TestTags.HERE_TIME),
+            ) {
+                Text(stringResource(R.string.time_machine))
+            }
             if (alerts.isNotEmpty()) {
                 Column(
                     modifier = Modifier
@@ -154,6 +165,7 @@ internal fun HereCardSheet(
                         modifier = Modifier.testTag(TestTags.HERE_EMPTY),
                         style = MaterialTheme.typography.bodyLarge,
                     )
+                    if (sheet.clippings.isNotEmpty()) ThisDayHere(sheet.clippings)
                 }
                 else -> {
                     Column(
@@ -175,6 +187,7 @@ internal fun HereCardSheet(
                                 HereRow(card)
                             }
                         }
+                        if (sheet.clippings.isNotEmpty()) ThisDayHere(sheet.clippings)
                     }
                 }
             }
@@ -257,6 +270,54 @@ private fun HereRow(card: DropCard) {
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+        }
+    }
+}
+
+@Composable
+private fun ThisDayHere(clippings: List<Clipping>) {
+    val today = java.time.LocalDate.now()
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag(TestTags.HERE_THIS_DAY),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Text(
+            text = stringResource(R.string.this_day_here),
+            style = MaterialTheme.typography.titleMedium,
+        )
+        clippings.forEach { clipping ->
+            val context = LocalContext.current
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(
+                    text = clipping.snippet,
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                val whenLabel = if (History.onThisDate(clipping, today.monthValue, today.dayOfMonth)) {
+                    stringResource(R.string.this_day_on_this_date, clipping.dateLabel, clipping.paper)
+                } else {
+                    stringResource(R.string.this_day_other_date, clipping.dateLabel, clipping.paper)
+                }
+                Text(
+                    text = whenLabel,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    text = clipping.attribution,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                TextButton(
+                    onClick = {
+                        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(clipping.pageUrl)))
+                    },
+                    modifier = Modifier.testTag(TestTags.hereClipping(clipping.id)),
+                ) {
+                    Text(stringResource(R.string.this_day_open))
+                }
+            }
         }
     }
 }

@@ -120,6 +120,24 @@ internal object TestTags {
     const val HERE_CLOSE = "here_close"
     const val HERE_LOADING = "here_loading"
     const val HERE_FAILED = "here_failed"
+    const val HERE_TIME = "here_time"
+    const val HERE_THIS_DAY = "here_this_day"
+    const val MAP_TIME = "map_time"
+    const val TIME_SHEET = "time_sheet"
+    const val TIME_CLOSE = "time_close"
+    const val TIME_OPACITY = "time_opacity"
+    const val TIME_OVERLAY_NOTE = "time_overlay_note"
+    const val TIME_EMPTY = "time_empty"
+    const val TIME_FAILED = "time_failed"
+    const val TIME_VIEWER = "time_viewer"
+    const val TIME_VIEWER_CLOSE = "time_viewer_close"
+    const val TIME_MAP_CREDIT = "time_map_credit"
+
+    fun timeYear(year: Int): String = "time_year_$year"
+
+    fun timeSheet(id: String): String = "time_sheet_$id"
+
+    fun hereClipping(id: String): String = "here_clipping_$id"
 
     fun hereRow(shortId: String): String = "here_row_$shortId"
 

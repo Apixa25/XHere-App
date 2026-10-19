@@ -17,6 +17,7 @@ import org.maplibre.android.MapLibre
 import org.maplibre.android.camera.CameraPosition
 import org.maplibre.android.camera.CameraUpdateFactory
 import org.maplibre.android.geometry.LatLng as MapLatLng
+import org.maplibre.android.geometry.LatLngQuad
 import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.MapView
 import org.maplibre.android.maps.Style
@@ -25,11 +26,14 @@ import org.maplibre.android.style.layers.CircleLayer
 import org.maplibre.android.style.layers.LineLayer
 import org.maplibre.android.style.layers.Property
 import org.maplibre.android.style.layers.PropertyFactory
+import org.maplibre.android.style.layers.RasterLayer
 import org.maplibre.android.style.layers.SymbolLayer
 import org.maplibre.android.style.sources.GeoJsonSource
+import org.maplibre.android.style.sources.ImageSource
 import world.xhere.shared.geo.BoundingBox
 import world.xhere.shared.geo.Geo
 import world.xhere.shared.geo.LatLng
+import java.net.URI
 import world.xhere.shared.model.MapFeature
 import world.xhere.shared.model.Taxonomy
 
@@ -83,6 +87,7 @@ private class MapHolder {
     var taxonomy: Taxonomy? = null
     var view: MapView? = null
     var scene: Int = Int.MIN_VALUE
+    var history: HistoryMapLayer? = null
 }
 
 @Composable
@@ -167,8 +172,8 @@ private fun NativeMap(
                     map.setStyle(styleUrl) { style ->
                         holder.style = style
                         holder.styleUrl = styleUrl
-                        render(style, holder.features, holder.location, holder.taxonomy, emptyList(), emptyList())
-                        holder.scene = sceneKey(holder.features, holder.location, holder.taxonomy, emptyList(), emptyList())
+                        render(style, holder.features, holder.location, holder.taxonomy, emptyList(), emptyList(), holder.history)
+                        holder.scene = sceneKey(holder.features, holder.location, holder.taxonomy, emptyList(), emptyList(), holder.history)
                     }
                 }
             }
@@ -191,17 +196,18 @@ private fun NativeMap(
             val loaded = holder.style
             val route = state.walk?.let { world.xhere.shared.walks.WalkGuide.route(it) }.orEmpty()
             val guide = guideLine(state)
-            val scene = sceneKey(state.features, state.myLocation, state.taxonomy, route, guide)
+            holder.history = historyLayer(state)
+            val scene = sceneKey(state.features, state.myLocation, state.taxonomy, route, guide, holder.history)
             if (loaded != null && holder.styleUrl == styleUrl) {
                 if (scene != holder.scene) {
                     holder.scene = scene
-                    render(loaded, state.features, state.myLocation, state.taxonomy, route, guide)
+                    render(loaded, state.features, state.myLocation, state.taxonomy, route, guide, holder.history)
                 }
             } else if (holder.styleUrl != null && holder.styleUrl != styleUrl) {
                 map.setStyle(styleUrl) { style ->
                     holder.style = style
                     holder.styleUrl = styleUrl
-                    render(style, state.features, state.myLocation, state.taxonomy, route, guide)
+                    render(style, state.features, state.myLocation, state.taxonomy, route, guide, holder.history)
                     holder.scene = scene
                 }
             }
@@ -224,6 +230,7 @@ private fun sceneKey(
     taxonomy: Taxonomy?,
     route: List<LatLng>,
     guide: List<LatLng>,
+    history: HistoryMapLayer?,
 ): Int {
     var hash = 1
     hash = 31 * hash + features.hashCode()
@@ -231,6 +238,7 @@ private fun sceneKey(
     hash = 31 * hash + (taxonomy?.hashCode() ?: 0)
     hash = 31 * hash + route.hashCode()
     hash = 31 * hash + guide.hashCode()
+    hash = 31 * hash + (history?.hashCode() ?: 0)
     return hash
 }
 
@@ -241,7 +249,9 @@ private fun render(
     taxonomy: Taxonomy?,
     route: List<LatLng>,
     guide: List<LatLng>,
+    history: HistoryMapLayer?,
 ) {
+    drawHistory(style, history)
     drawLine(style, ROUTE_SOURCE, ROUTE_LAYER, route, Color.parseColor("#1B6B4A"), width = 4.5f, dashed = false)
     drawLine(style, GUIDE_SOURCE, GUIDE_LAYER, guide, Color.parseColor("#C47B0A"), width = 3f, dashed = true)
     features.map { iconKey(it, taxonomy) }.distinct().forEach { key ->
@@ -352,6 +362,39 @@ private fun drawLine(
     }
 }
 
+private fun drawHistory(style: Style, layer: HistoryMapLayer?) {
+    if (layer == null || layer.corners.size != 4) {
+        style.getLayer(HISTORY_LAYER)?.let { style.removeLayer(it) }
+        style.getSource(HISTORY_SOURCE)?.let { style.removeSource(it) }
+        return
+    }
+    val quad = LatLngQuad(
+        MapLatLng(layer.corners[0].latitude, layer.corners[0].longitude),
+        MapLatLng(layer.corners[1].latitude, layer.corners[1].longitude),
+        MapLatLng(layer.corners[2].latitude, layer.corners[2].longitude),
+        MapLatLng(layer.corners[3].latitude, layer.corners[3].longitude),
+    )
+    val existing = style.getSource(HISTORY_SOURCE) as? ImageSource
+    val raster = style.getLayer(HISTORY_LAYER) as? RasterLayer
+    if (existing != null && raster != null) {
+        existing.setCoordinates(quad)
+        existing.setUri(URI(layer.imageUrl))
+        raster.setProperties(PropertyFactory.rasterOpacity(layer.opacity))
+        return
+    }
+    style.getLayer(HISTORY_LAYER)?.let { style.removeLayer(it) }
+    style.getSource(HISTORY_SOURCE)?.let { style.removeSource(it) }
+    style.addSource(ImageSource(HISTORY_SOURCE, quad, URI(layer.imageUrl)))
+    val added = RasterLayer(HISTORY_LAYER, HISTORY_SOURCE).withProperties(
+        PropertyFactory.rasterOpacity(layer.opacity),
+    )
+    if (style.getLayer(DROP_LAYER) != null) {
+        style.addLayerBelow(added, DROP_LAYER)
+    } else {
+        style.addLayer(added)
+    }
+}
+
 private fun lineCollection(points: List<LatLng>): String {
     if (points.size < 2) return EMPTY
     val coords = points.joinToString(",") { "[${it.longitude},${it.latitude}]" }
@@ -367,4 +410,6 @@ private const val ROUTE_SOURCE = "xhere-walk-route"
 private const val ROUTE_LAYER = "xhere-walk-route-line"
 private const val GUIDE_SOURCE = "xhere-walk-guide"
 private const val GUIDE_LAYER = "xhere-walk-guide-line"
+private const val HISTORY_SOURCE = "xhere-history"
+private const val HISTORY_LAYER = "xhere-history-raster"
 private const val EMPTY = """{"type":"FeatureCollection","features":[]}"""

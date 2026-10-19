@@ -227,6 +227,19 @@ internal data class QueueParams(
     @SerialName("p_limit") val limit: Int,
 )
 
+@Serializable
+internal data class HistoryAtParams(
+    @SerialName("p_lat") val lat: Double,
+    @SerialName("p_lng") val lng: Double,
+)
+
+@Serializable
+internal data class ClippingsAtParams(
+    @SerialName("p_lat") val lat: Double,
+    @SerialName("p_lng") val lng: Double,
+    @SerialName("p_terms") val terms: List<String>,
+)
+
 internal fun CreateDropRequest.toParams(): CreateDropParams = CreateDropParams(
     category = categorySlug,
     lat = latitude,
