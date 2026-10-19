@@ -340,8 +340,8 @@ select is(
 );
 select throws_ok(
   $$ select public.my_campaigns() $$,
-  '42501', 'not_authenticated',
-  'the profile list needs a signed-in person'
+  '42501', 'permission denied for function my_campaigns',
+  'the profile list is not granted to a signed-out visitor'
 );
 select throws_ok(
   $$ select public.campaigns_for_map(11, 9, 9, 11) $$,
