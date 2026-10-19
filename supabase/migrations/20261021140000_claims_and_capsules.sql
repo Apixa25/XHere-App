@@ -1204,8 +1204,8 @@ $$;
 create function public.start_place_claim(
   p_anchor_drop_id uuid,
   p_website text default null,
-  p_lat double precision,
-  p_lng double precision,
+  p_lat double precision default null,
+  p_lng double precision default null,
   p_integrity jsonb default null
 )
 returns jsonb
@@ -1925,9 +1925,9 @@ $$;
 create function public.create_capsule(
   p_title text,
   p_body text default null,
-  p_lat double precision,
-  p_lng double precision,
-  p_mode text,
+  p_lat double precision default null,
+  p_lng double precision default null,
+  p_mode text default null,
   p_unlock_at timestamptz default null,
   p_oral_history boolean default false,
   p_media jsonb default '[]'::jsonb,
