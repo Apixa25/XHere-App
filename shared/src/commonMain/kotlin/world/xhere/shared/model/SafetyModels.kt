@@ -12,7 +12,22 @@ import world.xhere.shared.json.UuidSerializer
  * `supabase/migrations/20261018001000_safety_compliance.sql`.
  */
 
-/** `public_profile(handle)`: what anyone signed in may know about a handle shown on a drop. */
+/** One public drop on a person's profile. Anonymous drops are not included. */
+@Serializable
+data class PublicDrop(
+    @Serializable(with = UuidSerializer::class)
+    val id: Uuid,
+    @SerialName("short_id") val shortId: String,
+    val title: String,
+    @SerialName("category_slug") val categorySlug: String,
+    @Serializable(with = InstantSerializer::class)
+    @SerialName("created_at") val createdAt: Instant,
+)
+
+/**
+ * `public_profile(handle)`: the page opened from an author.
+ * Role, points, and moderation are not on this payload.
+ */
 @Serializable
 data class PublicProfile(
     @Serializable(with = UuidSerializer::class)
@@ -21,6 +36,14 @@ data class PublicProfile(
     @SerialName("display_name") val displayName: String? = null,
     @Serializable(with = InstantSerializer::class)
     @SerialName("created_at") val createdAt: Instant,
+    @SerialName("avatar_path") val avatarPath: String? = null,
+    val bio: String? = null,
+    @SerialName("home_area") val homeArea: String? = null,
+    val website: String? = null,
+    val tier: UserTier = UserTier.NEW,
+    @SerialName("drop_count") val dropCount: Int = 0,
+    val badges: List<BadgeAward> = emptyList(),
+    @SerialName("recent_drops") val recentDrops: List<PublicDrop> = emptyList(),
 )
 
 /** One row of `my_blocks()`. */

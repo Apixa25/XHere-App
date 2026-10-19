@@ -253,6 +253,6 @@ private fun androidx.compose.ui.test.junit4.AndroidComposeTestRule<*, *>.openSet
     waitForTag(TestTags.NAV_PROFILE)
     onNodeWithTag(TestTags.NAV_PROFILE).performClick()
     waitForTag(TestTags.OPEN_SETTINGS)
-    onNodeWithTag(TestTags.OPEN_SETTINGS).performClick()
+    onNodeWithTag(TestTags.OPEN_SETTINGS).performScrollTo().performClick()
     waitForTag(TestTags.SETTINGS_SIGN_OUT)
 }

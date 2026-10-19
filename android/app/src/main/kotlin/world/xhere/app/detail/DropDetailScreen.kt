@@ -4,6 +4,7 @@ import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -84,6 +85,7 @@ internal val DetailListeningSemantics = SemanticsPropertyKey<String>("DetailList
 fun DropDetailScreen(
     shortId: String,
     onBack: () -> Unit,
+    onOpenAuthor: (String) -> Unit = {},
     startEditing: Boolean = false,
     viewModel: DropDetailViewModel = koinViewModel { parametersOf(shortId) },
     sharer: DropSharer = koinInject(),
@@ -218,6 +220,7 @@ fun DropDetailScreen(
                     onNotTrue = hapticClick { viewModel.confirm(ConfirmationVerdict.NOT_TRUE) },
                     onShare = { sharer.share(state.shareUrl) },
                     onUseLocation = { permission.launch(ForegroundLocation.permissions) },
+                    onOpenAuthor = { state.authorHandle?.let(onOpenAuthor) },
                     onAccess = {
                         accessDraft = SurveyDraft()
                         surveying = true
@@ -362,6 +365,7 @@ private fun DetailBody(
     onNotTrue: () -> Unit,
     onShare: () -> Unit,
     onUseLocation: () -> Unit,
+    onOpenAuthor: () -> Unit,
     onAccess: () -> Unit,
     onReply: (String) -> Unit = {},
     onDispute: () -> Unit = {},
@@ -412,7 +416,7 @@ private fun DetailBody(
     if (!state.publicRecord) {
         ConfirmationSummary(viewCount = state.viewCount, confirmCount = state.confirmCount)
     }
-    AuthorRow(state)
+    AuthorRow(state, onOpen = onOpenAuthor)
     if (!state.publicRecord) {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
             if (state.isConfirmed) {
@@ -673,19 +677,31 @@ private fun ConfirmationSummary(viewCount: Long, confirmCount: Int) {
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun AuthorRow(state: DetailUiState) {
+private fun AuthorRow(state: DetailUiState, onOpen: () -> Unit) {
     val handle = state.authorHandle ?: return
     val name = state.authorLabel ?: stringResource(R.string.detail_neighbor)
     FlowRow(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        Text(
-            text = stringResource(R.string.detail_author, name),
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier,
-        )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .clickable(onClick = onOpen)
+                .testTag(TestTags.DETAIL_AUTHOR),
+        ) {
+            world.xhere.app.profile.ProfileAvatar(
+                url = state.authorAvatarUrl,
+                label = name,
+                size = 36.dp,
+            )
+            Text(
+                text = stringResource(R.string.detail_author, name),
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(start = 8.dp),
+            )
+        }
         state.authorTierLabel?.let { tier ->
             TierChip(label = tier, tag = TestTags.DETAIL_TIER)
         }

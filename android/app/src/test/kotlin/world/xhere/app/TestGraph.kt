@@ -233,6 +233,8 @@ fun testModule() = module {
     viewModel { ArViewModel(get(), get(), get()) }
     viewModel { DropViewModel(get(), get(), get(), get(), get()) }
     viewModel { ProfileViewModel(get(), get()) }
+    viewModel { world.xhere.app.profile.EditProfileViewModel(get()) }
+    viewModel { (handle: String) -> world.xhere.app.profile.PublicProfileViewModel(handle, get()) }
     viewModel {
         val context = androidContext()
         SettingsViewModel(

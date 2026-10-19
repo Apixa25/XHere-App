@@ -184,7 +184,7 @@ class DropDetailTest {
         rule.openMap()
         rule.onNodeWithTag(TestTags.NAV_PROFILE).performClick()
         rule.waitForTag(TestTags.IMPACT_INBOX)
-        rule.onNodeWithTag(TestTags.impactRow("lunch")).assertTextContains("Seen by 3, Confirmed by 1")
+        rule.onNodeWithTag(TestTags.impactRow("lunch")).performScrollTo().assertTextContains("Seen by 3, Confirmed by 1")
         rule.onNodeWithTag(TestTags.impactRow("lunch")).performClick()
         rule.waitForTag(TestTags.DETAIL_TITLE)
         rule.onNodeWithTag(TestTags.DETAIL_TITLE).assertTextContains("West 3rd at lunch")

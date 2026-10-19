@@ -40,6 +40,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
@@ -97,10 +98,14 @@ private object Routes {
     const val LISTS = "blocked"
     const val MODERATION = "moderation"
     const val DETAIL = "detail/{shortId}?edit={edit}"
+    const val EDIT_PROFILE = "profile/edit"
+    const val PERSON = "person/{handle}"
     const val AR = "ar"
 
     /** Full-screen pages with their own back arrow and no bottom bar. */
-    val fullScreen = setOf(SETTINGS, GUIDELINES, LISTS, MODERATION, DETAIL, AR)
+    val fullScreen = setOf(SETTINGS, GUIDELINES, LISTS, MODERATION, DETAIL, AR, EDIT_PROFILE, PERSON)
+
+    fun person(handle: String): String = "person/${android.net.Uri.encode(handle)}"
 
     fun detail(shortId: String, edit: Boolean = false): String =
         if (edit) "detail/$shortId?edit=true" else "detail/$shortId"
@@ -187,6 +192,9 @@ fun MainShell() {
                     onOpenDrop = { shortId ->
                         nav.navigate(Routes.detail(shortId)) { launchSingleTop = true }
                     },
+                    onOpenAuthor = { handle ->
+                        nav.navigate(Routes.person(handle)) { launchSingleTop = true }
+                    },
                     onOpenAr = {
                         nav.navigate(Routes.AR) { launchSingleTop = true }
                     },
@@ -233,6 +241,22 @@ fun MainShell() {
                     onEditDrop = { shortId ->
                         nav.navigate(Routes.detail(shortId, edit = true)) { launchSingleTop = true }
                     },
+                    onEditProfile = { nav.navigate(Routes.EDIT_PROFILE) { launchSingleTop = true } },
+                )
+            }
+            composable(Routes.EDIT_PROFILE) {
+                world.xhere.app.profile.EditProfileScreen(onBack = { nav.popBackStack() })
+            }
+            composable(
+                route = Routes.PERSON,
+                arguments = listOf(navArgument("handle") { type = NavType.StringType }),
+            ) { entry ->
+                world.xhere.app.profile.PublicProfileScreen(
+                    handle = entry.arguments?.getString("handle").orEmpty(),
+                    onBack = { nav.popBackStack() },
+                    onOpenDrop = { shortId ->
+                        nav.navigate(Routes.detail(shortId)) { launchSingleTop = true }
+                    },
                 )
             }
             composable(Routes.SETTINGS) {
@@ -257,6 +281,9 @@ fun MainShell() {
                     shortId = entry.arguments?.getString("shortId").orEmpty(),
                     startEditing = entry.arguments?.getBoolean("edit") == true,
                     onBack = { nav.popBackStack() },
+                    onOpenAuthor = { handle ->
+                        nav.navigate(Routes.person(handle)) { launchSingleTop = true }
+                    },
                 )
             }
         }
@@ -290,6 +317,7 @@ private fun ProfilePage(
     onSettings: () -> Unit,
     onOpenDrop: (String) -> Unit,
     onEditDrop: (String) -> Unit,
+    onEditProfile: () -> Unit,
     viewModel: ProfileViewModel = koinViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -345,10 +373,36 @@ private fun ProfilePage(
             .testTag(TestTags.SCREEN_PROFILE),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Text(
-            text = state.displayName.ifBlank { stringResource(R.string.profile_signed_in) },
-            style = MaterialTheme.typography.headlineSmall,
-        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            world.xhere.app.profile.ProfileAvatar(
+                url = state.avatarUrl,
+                label = state.displayName.ifBlank { stringResource(R.string.profile_signed_in) },
+                size = 72.dp,
+                tag = TestTags.PROFILE_AVATAR,
+            )
+            Text(
+                text = state.displayName.ifBlank { stringResource(R.string.profile_signed_in) },
+                style = MaterialTheme.typography.headlineSmall,
+                modifier = Modifier
+                    .padding(start = 12.dp)
+                    .testTag(TestTags.PROFILE_HEADLINE),
+            )
+        }
+        if (state.bio.isNotBlank()) {
+            Text(state.bio, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.testTag(TestTags.PROFILE_BIO))
+        }
+        if (state.homeArea.isNotBlank()) {
+            Text(state.homeArea, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        if (state.website.isNotBlank()) {
+            Text(state.website, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.primary)
+        }
+        androidx.compose.material3.OutlinedButton(
+            onClick = onEditProfile,
+            modifier = Modifier.testTag(TestTags.PROFILE_EDIT),
+        ) {
+            Text(stringResource(R.string.profile_edit))
+        }
         if (state.needsName) {
             NamePrompt(
                 displayName = state.nameDraft,
@@ -426,6 +480,8 @@ private fun ProfilePage(
         ImpactInbox(
             notices = if (state.impactLoaded) state.notices else emptyList(),
             showEmpty = state.impactLoaded && state.notices.isEmpty(),
+            authorName = state.displayName,
+            avatarUrl = state.avatarUrl,
             onOpen = { notice -> viewModel.openNotice(notice, onOpenDrop) },
         )
     }
@@ -440,6 +496,8 @@ private fun ProfilePage(
 private fun ColumnScope.ImpactInbox(
     notices: List<ImpactNotice>,
     showEmpty: Boolean,
+    authorName: String,
+    avatarUrl: String?,
     onOpen: (ImpactNotice) -> Unit,
 ) {
     Text(
@@ -469,6 +527,18 @@ private fun ColumnScope.ImpactInbox(
                 .testTag(TestTags.impactRow(notice.shortId)),
         ) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                if (authorName.isNotBlank()) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        world.xhere.app.profile.ProfileAvatar(url = avatarUrl, label = authorName, size = 28.dp)
+                        Text(
+                            text = authorName,
+                            modifier = Modifier
+                                .padding(start = 8.dp)
+                                .testTag(TestTags.IMPACT_AUTHOR),
+                            style = MaterialTheme.typography.titleSmall,
+                        )
+                    }
+                }
                 Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
                     Text(notice.title, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
                     if (notice.unread) {

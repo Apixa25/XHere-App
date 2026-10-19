@@ -85,7 +85,10 @@ object CampaignRules {
             }
             .sortedWith(compareByDescending<Triple<Uuid, String, Int>> { it.third }.thenBy { it.second }.thenBy { it.first.toString() })
             .take(limit)
-            .map { LeaderboardEntry(it.second, it.third) }
+            .map { (authorId, name, count) ->
+                val picture = drops.firstOrNull { it.authorId == authorId }?.avatarPath?.trim()?.takeIf { it.isNotEmpty() }
+                LeaderboardEntry(name, count, picture)
+            }
     }
 
     fun listed(drops: List<CountedDrop>, userId: Uuid, limit: Int, show: Boolean, displayName: String?): Boolean {
@@ -149,6 +152,7 @@ data class CountedDrop(
     val createdAt: Instant,
     val displayName: String?,
     val showOnLeaderboard: Boolean,
+    val avatarPath: String? = null,
 )
 
 data class Founder(

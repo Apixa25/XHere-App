@@ -219,6 +219,16 @@ internal data class SetPublicNameParams(
 )
 
 @Serializable
+internal data class UpdateProfileParams(
+    @SerialName("p_display_name") val displayName: String,
+    @SerialName("p_handle") val handle: String,
+    @SerialName("p_bio") val bio: String = "",
+    @SerialName("p_home_area") val homeArea: String = "",
+    @SerialName("p_website") val website: String = "",
+    @SerialName("p_avatar_path") val avatarPath: String = "",
+)
+
+@Serializable
 internal data class DropIdParams(
     @Serializable(with = UuidSerializer::class)
     @SerialName("p_drop_id") val dropId: Uuid,

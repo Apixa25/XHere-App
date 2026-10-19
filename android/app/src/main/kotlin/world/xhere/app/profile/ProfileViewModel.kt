@@ -40,6 +40,10 @@ data class ProfileUi(
     val nameFailed: Boolean = false,
     val undoToken: Int = 0,
     val canUndoDelete: Boolean = false,
+    val bio: String = "",
+    val homeArea: String = "",
+    val website: String = "",
+    val avatarUrl: String? = null,
 )
 
 class ProfileViewModel(
@@ -68,14 +72,14 @@ class ProfileViewModel(
             val campaigns = runCatching { services.campaigns.myCampaigns() }
             val mine = runCatching { services.drops.myDrops() }
             if (profile.isSuccess) {
-                val person = profile.getOrNull()
+                val person = profile.getOrThrow()
                 _state.value = person.toUi(
                     email = email.getOrElse { previous.email },
                     notices = notices.getOrElse { previous.notices },
                     badges = badges.getOrNull()?.badges ?: previous.badges,
                     campaigns = campaigns.getOrElse { previous.campaigns },
                     standing = standing.getOrNull()
-                        ?: person?.let { Reputation.standing(it.points, it.tier) }
+                        ?: Reputation.standing(person.points, person.tier)
                         ?: previous.standing,
                 ).copy(
                     impactLoaded = notices.isSuccess || previous.impactLoaded,
@@ -83,6 +87,10 @@ class ProfileViewModel(
                     dropsLoaded = mine.isSuccess || previous.dropsLoaded,
                     undoToken = previous.undoToken,
                     canUndoDelete = previous.canUndoDelete,
+                    bio = person.bio.orEmpty(),
+                    homeArea = person.homeArea.orEmpty(),
+                    website = person.website.orEmpty(),
+                    avatarUrl = services.media.avatarUrl(person.avatarPath),
                 )
             } else {
                 _state.value = previous.copy(

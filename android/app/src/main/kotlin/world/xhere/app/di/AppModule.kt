@@ -142,6 +142,8 @@ val appModule = module {
     viewModel { (shortId: String) -> DropDetailViewModel(shortId, get(), get(), get()) }
     viewModel { AuthViewModel(get(), get(), get(), get(), get(), PrefsAuthDraft(androidContext())) }
     viewModel { ProfileViewModel(get(), get()) }
+    viewModel { world.xhere.app.profile.EditProfileViewModel(get()) }
+    viewModel { (handle: String) -> world.xhere.app.profile.PublicProfileViewModel(handle, get()) }
     viewModel { SafetyListsViewModel(get()) }
     viewModel { ModerationViewModel(get()) }
     viewModel { PlaceDeskViewModel(get()) }

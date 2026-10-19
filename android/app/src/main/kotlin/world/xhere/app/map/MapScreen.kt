@@ -117,6 +117,7 @@ fun MapScreen(
     onDrop: () -> Unit = {},
     onDropHere: (world.xhere.shared.geo.LatLng, String?) -> Unit = { _, _ -> },
     onOpenDrop: (String) -> Unit = {},
+    onOpenAuthor: (String) -> Unit = {},
     onOpenAr: () -> Unit = {},
     onExplore: () -> Unit = {},
     viewModel: MapViewModel = koinViewModel(),
@@ -336,6 +337,7 @@ fun MapScreen(
                     teaser = teaser,
                     onClose = viewModel::dismissTeaser,
                     onOpen = { onOpenDrop(teaser.shortId) },
+                    onOpenAuthor = { teaser.authorHandle?.let(onOpenAuthor) },
                 )
             }
             if (hintCount > 0 && state.experienceLocal.hintEnabled) {

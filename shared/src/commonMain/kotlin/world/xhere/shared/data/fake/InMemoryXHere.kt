@@ -26,6 +26,7 @@ import world.xhere.shared.data.ImpactRepository
 import world.xhere.shared.data.IdentityProvider
 import world.xhere.shared.data.MediaRepository
 import world.xhere.shared.data.ModerationRepository
+import world.xhere.shared.data.ProfileDraft
 import world.xhere.shared.data.ProfileRepository
 import world.xhere.shared.data.ReportRepository
 import world.xhere.shared.data.SessionInfo
@@ -63,7 +64,9 @@ import world.xhere.shared.model.ImpactNotice
 import world.xhere.shared.model.ModerationAction
 import world.xhere.shared.model.ModerationActionType
 import world.xhere.shared.model.ModerationQueueItem
+import world.xhere.shared.model.PublicDrop
 import world.xhere.shared.model.PublicProfile
+import world.xhere.shared.profile.ProfileFields
 import world.xhere.shared.model.QueueItemKind
 import world.xhere.shared.model.Confirmation
 import world.xhere.shared.model.ConfirmationVerdict
@@ -204,7 +207,8 @@ class InMemoryXHere(
         val profile = store.profiles[drop.authorId]
         val badges = store.awardsFor(drop.authorId, drop.trueLocation, anonymous, clock()) + drop.extraBadges
         val displayName = if (anonymous) null else profile?.displayName
-        val built = drop.toCard(viewerId, distance, verdict, revealDistance, badges, rankTier(drop), displayName)
+        val avatar = if (anonymous) null else profile?.avatarPath
+        val built = drop.toCard(viewerId, distance, verdict, revealDistance, badges, rankTier(drop), displayName, avatar)
         return placeDesk.decorate(drop, built, viewerId)
     }
 
@@ -334,7 +338,7 @@ class InMemoryXHere(
             requireViewer()
             val wanted = handle.trim().lowercase()
             val known = store.profiles.values.firstOrNull { it.handle == wanted && it.id !in store.deleted && it.deletedAt == null }
-            if (known != null) return PublicProfile(known.id, known.handle, known.displayName, known.createdAt)
+            if (known != null) return known.toPublic(store, clock())
             val author = store.drops.values.firstOrNull { it.authorHandle == wanted && it.authorId !in store.deleted } ?: return null
             return PublicProfile(author.authorId, author.authorHandle, null, author.createdAt)
         }
@@ -361,6 +365,44 @@ class InMemoryXHere(
             viewer = updated
             store.drops.values.filter { it.authorId == profile.id }.forEach { it.authorHandle = nextHandle }
             return updated
+        }
+
+        override suspend fun updateProfile(draft: ProfileDraft): Profile {
+            val profile = requireViewer()
+            val name = ProfileFields.cleanName(draft.displayName)
+                ?: throw XHereApiException("invalid_display_name", sqlState = XHereApiException.SQL_VALIDATION)
+            val handle = ProfileFields.cleanHandle(draft.handle)
+                ?: throw XHereApiException("invalid_handle", sqlState = XHereApiException.SQL_VALIDATION)
+            if (store.profiles.values.any { it.id != profile.id && it.handle == handle && it.deletedAt == null }) {
+                throw XHereApiException("handle_taken", sqlState = "23505")
+            }
+            val bio = ProfileFields.cleanOptional(draft.bio, ProfileFields.BIO_MAX)
+                ?: throw XHereApiException("invalid_bio", sqlState = XHereApiException.SQL_VALIDATION)
+            val home = ProfileFields.cleanOptional(draft.homeArea, ProfileFields.HOME_MAX)
+                ?: throw XHereApiException("invalid_home_area", sqlState = XHereApiException.SQL_VALIDATION)
+            val website = ProfileFields.cleanWebsite(draft.website)
+                ?: throw XHereApiException("invalid_website", sqlState = XHereApiException.SQL_VALIDATION)
+            val avatar = draft.avatarPath.trim()
+            if (avatar.isNotEmpty() && avatar != profile.avatarPath && !ProfileFields.avatarPathOk(profile.id, avatar)) {
+                throw XHereApiException("invalid_avatar", sqlState = XHereApiException.SQL_VALIDATION)
+            }
+            val updated = profile.copy(
+                displayName = name,
+                handle = handle,
+                bio = bio.ifEmpty { null },
+                homeArea = home.ifEmpty { null },
+                website = website.ifEmpty { null },
+                avatarPath = avatar.ifEmpty { null },
+            )
+            viewer = updated
+            store.drops.values.filter { it.authorId == profile.id }.forEach { it.authorHandle = handle }
+            return updated
+        }
+
+        override suspend fun handleAvailable(handle: String): Boolean {
+            val profile = requireViewer()
+            val cleaned = ProfileFields.cleanHandle(handle) ?: return false
+            return store.profiles.values.none { it.id != profile.id && it.handle == cleaned && it.deletedAt == null }
         }
     }
 
@@ -920,6 +962,24 @@ class InMemoryXHere(
 
         override suspend fun photoUrl(bucket: String, path: String): String =
             "https://media.xhere.test/$bucket/$path"
+
+        override suspend fun uploadAvatar(bytes: ByteArray, mimeType: String): String {
+            val profile = requireViewer()
+            val mime = mimeType.substringBefore(';').trim().lowercase()
+            val extension = when (mime) {
+                "image/webp" -> "webp"
+                "image/jpeg" -> "jpg"
+                else -> throw XHereApiException("unsupported_type", sqlState = XHereApiException.SQL_VALIDATION, detail = mime)
+            }
+            if (bytes.isEmpty() || bytes.size > ProfileFields.AVATAR_MAX_BYTES) {
+                throw XHereApiException("invalid_avatar", sqlState = XHereApiException.SQL_VALIDATION, detail = "avatar must be 1 byte..512 KB")
+            }
+            val path = "${profile.id}/${Uuid.random()}.$extension"
+            store.mediaBytes[path] = bytes
+            return path
+        }
+
+        override fun avatarUrl(path: String?): String? = ProfileFields.avatarUrl(null, path)
     }
 
     private inner class AccessRepo : AccessRepository {
@@ -1386,6 +1446,9 @@ class InMemoryXHere(
         put("profile", buildJsonObject {
             put("handle", profile.handle)
             put("display_name", profile.displayName)
+            put("avatar_path", profile.avatarPath)
+            put("bio", profile.bio)
+            put("website", profile.website)
             put("tier", profile.tier.name.lowercase())
             put("role", profile.role.name.lowercase())
             put("points", profile.points)
@@ -1916,6 +1979,40 @@ private fun StoredDrop.passes(categories: List<String>?): Boolean {
     return category.slug in categories || groupSlug in categories
 }
 
+private fun Profile.toPublic(store: MemoryStore, now: Instant): PublicProfile {
+    val drops = store.drops.values
+        .filter { drop ->
+            drop.authorId == id &&
+                drop.source == DropSource.USER &&
+                drop.deletedAt == null &&
+                !drop.displayAnonymous &&
+                (drop.status == DropStatus.ACTIVE || drop.status == DropStatus.CONFIRMED)
+        }
+        .sortedByDescending { it.createdAt }
+    return PublicProfile(
+        id = id,
+        handle = handle,
+        displayName = displayName,
+        createdAt = createdAt,
+        avatarPath = avatarPath,
+        bio = bio,
+        homeArea = homeArea,
+        website = website,
+        tier = tier,
+        dropCount = drops.size,
+        badges = store.badgesOf(id, now),
+        recentDrops = drops.take(12).map { drop ->
+            PublicDrop(
+                id = drop.id,
+                shortId = drop.shortId,
+                title = drop.title,
+                categorySlug = drop.category.slug,
+                createdAt = drop.createdAt,
+            )
+        },
+    )
+}
+
 private fun StoredDrop.toCard(
     viewerId: Uuid?,
     distance: Double?,
@@ -1924,6 +2021,7 @@ private fun StoredDrop.toCard(
     authorBadges: List<BadgeAward> = emptyList(),
     authorTier: UserTier? = null,
     authorDisplayName: String? = null,
+    authorAvatarPath: String? = null,
 ): DropCard {
     val publicRecord = source == world.xhere.shared.model.DropSource.OPEN_DATA
     val mine = viewerId != null && authorId == viewerId && !publicRecord
@@ -1953,6 +2051,7 @@ private fun StoredDrop.toCard(
         createdAt = createdAt,
         authorHandle = if (publicRecord || (displayAnonymous && category.allowAnonymousDisplay && !mine)) null else authorHandle,
         authorDisplayName = if (publicRecord || (displayAnonymous && category.allowAnonymousDisplay && !mine)) null else authorDisplayName,
+        authorAvatarPath = if (publicRecord || (displayAnonymous && category.allowAnonymousDisplay && !mine)) null else authorAvatarPath,
         isMine = mine,
         source = source,
         sourceName = sourceName,

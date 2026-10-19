@@ -29,6 +29,10 @@ data class Profile(
     val role: AppRole = AppRole.USER,
     val points: Int = 0,
     @SerialName("home_area") val homeArea: String? = null,
+    /** Public bio, at most 160 characters. */
+    val bio: String? = null,
+    /** Optional http or https link. */
+    val website: String? = null,
     @Serializable(with = InstantSerializer::class)
     @SerialName("created_at") val createdAt: Instant,
     @Serializable(with = InstantSerializer::class)

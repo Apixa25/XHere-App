@@ -70,6 +70,7 @@ data class DetailUiState(
     val authorHandle: String? = null,
     /** Display name, or a handle the person chose. Null means "A neighbor". */
     val authorLabel: String? = null,
+    val authorAvatarUrl: String? = null,
     /** Null when the author is hidden or this is a public record. */
     val authorTierLabel: String? = null,
     /** Empty when the drop is anonymous, a public record, or the author has no badge here. */
@@ -543,6 +544,7 @@ class DropDetailViewModel(
                 icon = category?.icon ?: group?.icon ?: "📍",
                 authorHandle = current.authorHandle,
                 authorLabel = AuthorNames.label(current.authorDisplayName, current.authorHandle),
+                authorAvatarUrl = services.media.avatarUrl(current.authorAvatarPath),
                 authorTierLabel = current.authorTier?.let(Reputation::label),
                 authorBadges = if (publicRecord) emptyList() else current.authorBadges,
                 approximate = current.locationPrecisionM > 0,
