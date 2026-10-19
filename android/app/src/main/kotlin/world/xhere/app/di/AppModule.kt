@@ -37,6 +37,7 @@ import world.xhere.app.map.MapAnchor
 import world.xhere.app.map.SheetSignals
 import world.xhere.app.map.MapCanvas
 import world.xhere.app.map.MapLibreMapCanvas
+import world.xhere.app.map.MapPins
 import world.xhere.app.map.MapViewModel
 import world.xhere.shared.live.CachingLiveConditions
 import world.xhere.shared.live.LiveConditions
@@ -106,6 +107,7 @@ val appModule = module {
     single { ExperienceFocus() }
     single<ExperienceMemory> { DataStoreExperienceMemory(androidContext()) }
     single { PendingDropSpot() }
+    single { MapPins() }
     single {
         HerePlaces(get<XHereServices>().places, NominatimClient()::reverse)
     }
@@ -133,12 +135,12 @@ val appModule = module {
         )
     }
     viewModel { ExploreViewModel(get(), get(), get(), get(), get(), conditions = get()) }
-    viewModel { MapViewModel(get(), get(), get(), get(), get(), conditions = get(), experiences = get(), anchor = get(), sheets = get()) }
+    viewModel { MapViewModel(get(), get(), get(), get(), get(), get(), conditions = get(), experiences = get(), anchor = get(), sheets = get()) }
     viewModel { VoiceViewModel(get(), get(), get(), get(), get(), get(), get(), get()) }
     viewModel { ArViewModel(get(), get(), get()) }
-    viewModel { (shortId: String) -> DropDetailViewModel(shortId, get(), get()) }
+    viewModel { (shortId: String) -> DropDetailViewModel(shortId, get(), get(), get()) }
     viewModel { AuthViewModel(get(), get(), get(), get(), get(), PrefsAuthDraft(androidContext())) }
-    viewModel { ProfileViewModel(get()) }
+    viewModel { ProfileViewModel(get(), get()) }
     viewModel { SafetyListsViewModel(get()) }
     viewModel { ModerationViewModel(get()) }
     viewModel {

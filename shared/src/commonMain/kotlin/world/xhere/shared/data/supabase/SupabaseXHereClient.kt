@@ -12,6 +12,8 @@ import io.github.jan.supabase.createSupabaseClient
 import io.github.jan.supabase.postgrest.Postgrest
 import io.github.jan.supabase.postgrest.exception.PostgrestRestException
 import io.github.jan.supabase.postgrest.postgrest
+import io.github.jan.supabase.storage.Storage
+import io.github.jan.supabase.storage.storage
 import io.github.jan.supabase.postgrest.query.Columns
 import io.github.jan.supabase.serializer.KotlinXSerializer
 import io.ktor.client.HttpClient
@@ -24,6 +26,7 @@ import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.contentType
 import io.ktor.http.isSuccess
+import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Instant
 import kotlin.uuid.Uuid
 import kotlinx.serialization.serializer
@@ -87,6 +90,8 @@ import world.xhere.shared.data.remote.RegionLiveRow
 import world.xhere.shared.data.remote.RememberPlaceParams
 import world.xhere.shared.data.remote.MarkImpactReadParams
 import world.xhere.shared.data.remote.DropIdParams
+import world.xhere.shared.data.remote.SetPublicNameParams
+import world.xhere.shared.data.remote.UpdateMyDropParams
 import world.xhere.shared.data.remote.HandleParams
 import world.xhere.shared.data.remote.QueueParams
 import world.xhere.shared.data.remote.DropTeaserParams
@@ -141,6 +146,7 @@ import world.xhere.shared.model.ConfirmationVerdict
 import world.xhere.shared.model.ContentFilter
 import world.xhere.shared.model.CreateDropResult
 import world.xhere.shared.model.DropCard
+import world.xhere.shared.model.OwnDrop
 import world.xhere.shared.model.ImpactNotice
 import world.xhere.shared.model.PlaceLabel
 import world.xhere.shared.model.DropStatus
@@ -192,6 +198,7 @@ class SupabaseXHereClient(
         httpEngine = engine
         install(Auth)
         install(Postgrest)
+        install(Storage)
     }
 
     override val auth: AuthRepository = AuthRepo()
@@ -278,6 +285,13 @@ class SupabaseXHereClient(
             supabase.postgrest.rpc("public_profile", HandleParams(handle).rpcJson())
                 .decodeList<PublicProfile>()
                 .firstOrNull()
+        }
+
+        override suspend fun setPublicName(displayName: String, handle: String?): Profile = call {
+            supabase.postgrest.rpc(
+                "set_my_public_name",
+                SetPublicNameParams(displayName, handle?.trim()?.ifBlank { null }).rpcJson(),
+            ).decodeAs<Profile>()
         }
     }
 
@@ -370,6 +384,39 @@ class SupabaseXHereClient(
                 "confirm_drop",
                 ConfirmDropParams(dropId, verdict, location.latitude, location.longitude, note, signal).rpcJson(),
             ).decodeAs<ConfirmDropResult>()
+        }
+
+        override suspend fun updateMyDrop(
+            id: Uuid,
+            title: String,
+            body: String?,
+            attributes: JsonObject,
+            altText: String?,
+        ): DropCard = call {
+            supabase.postgrest.rpc(
+                "update_my_drop",
+                UpdateMyDropParams(
+                    dropId = id,
+                    title = title,
+                    body = body?.trim().orEmpty(),
+                    attributes = attributes,
+                    altText = altText,
+                ).rpcJson(),
+            ).decodeAs<DropCard>()
+        }
+
+        override suspend fun deleteMyDrop(id: Uuid) = call {
+            supabase.postgrest.rpc("delete_my_drop", DropIdParams(id).rpcJson())
+            Unit
+        }
+
+        override suspend fun restoreMyDrop(id: Uuid) = call {
+            supabase.postgrest.rpc("restore_my_drop", DropIdParams(id).rpcJson())
+            Unit
+        }
+
+        override suspend fun myDrops(): List<OwnDrop> = call {
+            supabase.postgrest.rpc("my_drops").decodeList()
         }
     }
 
@@ -720,6 +767,10 @@ class SupabaseXHereClient(
             } catch (e: Throwable) {
                 throw XHereApiException("upload_failed", detail = "voice clip upload failed", cause = e)
             }
+        }
+
+        override suspend fun photoUrl(bucket: String, path: String): String = call {
+            supabase.storage.from(bucket).createSignedUrl(path, 20.minutes)
         }
     }
 

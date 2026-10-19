@@ -48,6 +48,16 @@ object AttributeFields {
         }
     }
 
+    /** Current attribute values, as the text the form controls edit. */
+    fun readValues(fields: List<AttributeField>, attributes: JsonObject?): Map<String, String> {
+        if (attributes == null) return emptyMap()
+        return fields.mapNotNull { field ->
+            val element = attributes[field.name] as? JsonPrimitive ?: return@mapNotNull null
+            val text = element.content.trim()
+            if (text.isEmpty()) null else field.name to text
+        }.toMap()
+    }
+
     /** Omits blank optional fields. Booleans use "true" / "false". Numbers stay decimal text. */
     fun toAttributes(fields: List<AttributeField>, values: Map<String, String>): JsonObject = buildJsonObject {
         for (field in fields) {

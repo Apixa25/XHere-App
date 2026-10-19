@@ -141,7 +141,9 @@
 
     <string name="detail_back">Back</string>
     <string name="detail_missing">This drop isn\'t here.</string>
-    <string name="detail_author">by @%1$s</string>
+    <string name="detail_author">by %1$s</string>
+    <string name="detail_neighbor">A neighbor</string>
+    <string name="detail_confirm_none">No confirmations yet</string>
     <string name="detail_confirmed">Confirmed</string>
     <string name="detail_public_records">From public records</string>
     <string name="detail_view_source">View source</string>
@@ -164,6 +166,21 @@
     <string name="detail_use_location">Use location</string>
     <string name="detail_yours">You posted this.</string>
     <string name="detail_impact">Seen by %1$d, Confirmed by %2$d</string>
+    <string name="detail_more">More</string>
+    <string name="detail_edit">Edit</string>
+    <string name="detail_delete">Delete</string>
+    <string name="detail_delete_title">Delete this drop?</string>
+    <string name="detail_delete_body">It leaves the map. You can undo for a few seconds.</string>
+    <string name="detail_delete_confirm">Delete</string>
+    <string name="detail_deleted">Drop deleted</string>
+    <string name="detail_undo">Undo</string>
+    <string name="detail_edit_title">Edit drop</string>
+    <string name="detail_edit_title_field">Title</string>
+    <string name="detail_edit_body_field">Description</string>
+    <string name="detail_edit_alt_field">Photo description</string>
+    <string name="detail_edit_save">Save</string>
+    <string name="detail_edit_cancel">Cancel</string>
+    <string name="detail_edit_failed">That edit didn\'t save.</string>
     <string name="detail_still_prompt">Still accurate?</string>
     <string name="detail_still_true">Confirm</string>
     <string name="detail_you_confirmed">You confirmed this</string>
@@ -179,6 +196,14 @@
     <string name="reputation_how">How to level up</string>
     <string name="reputation_badges">Badges</string>
     <string name="profile_badges_empty">Badges show up after a drop, a finished walk, or the starter quest.</string>
+    <string name="profile_my_drops">My drops</string>
+    <string name="profile_my_drops_empty">Drops you post show up here.</string>
+    <string name="profile_name_title">Pick a name</string>
+    <string name="profile_name_body">People see this on your drops instead of a generated handle.</string>
+    <string name="profile_name_display">Display name</string>
+    <string name="profile_name_handle">Handle</string>
+    <string name="profile_name_save">Save name</string>
+    <string name="profile_name_failed">That name didn\'t save. Try a different handle.</string>
     <string name="reputation_points">%1$d points</string>
     <string name="reputation_next">Next is %1$s, at %2$d points.</string>
     <string name="reputation_top">Guide is the top. Keep the map honest.</string>
@@ -473,4 +498,13 @@
     <string name="access_status_no">Not accessible</string>
     <string name="access_status_unknown">Unknown</string>
     <string name="access_failed">Couldn’t save that check. Try again.</string>
+
+    <plurals name="detail_people_checked">
+        <item quantity="one">%d person checked</item>
+        <item quantity="other">%d people checked</item>
+    </plurals>
+    <plurals name="detail_said_still">
+        <item quantity="one">%d said still there</item>
+        <item quantity="other">%d said still there</item>
+    </plurals>
 </resources>

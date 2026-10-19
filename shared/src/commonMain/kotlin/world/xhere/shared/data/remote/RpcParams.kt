@@ -202,6 +202,22 @@ internal data class SuspendUserParams(
 )
 
 @Serializable
+internal data class UpdateMyDropParams(
+    @Serializable(with = UuidSerializer::class)
+    @SerialName("p_drop_id") val dropId: Uuid,
+    @SerialName("p_title") val title: String,
+    @SerialName("p_body") val body: String = "",
+    @SerialName("p_attributes") val attributes: JsonObject,
+    @SerialName("p_alt_text") val altText: String? = null,
+)
+
+@Serializable
+internal data class SetPublicNameParams(
+    @SerialName("p_display_name") val displayName: String,
+    @SerialName("p_handle") val handle: String? = null,
+)
+
+@Serializable
 internal data class DropIdParams(
     @Serializable(with = UuidSerializer::class)
     @SerialName("p_drop_id") val dropId: Uuid,

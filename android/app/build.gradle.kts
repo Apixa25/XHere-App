@@ -147,6 +147,8 @@ dependencies {
     // Play Services for AR is a device install, not these two artifacts.
     implementation(libs.arcore)
     implementation(libs.play.services.location)
+    implementation(libs.coil.compose)
+    implementation(libs.coil.okhttp)
 
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)

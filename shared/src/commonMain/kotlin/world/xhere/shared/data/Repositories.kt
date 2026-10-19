@@ -3,6 +3,7 @@ package world.xhere.shared.data
 import kotlin.time.Instant
 import kotlin.uuid.Uuid
 import kotlinx.coroutines.flow.Flow
+import kotlinx.serialization.json.JsonObject
 import world.xhere.shared.access.AccessAnswer
 import world.xhere.shared.access.AccessSummary
 import world.xhere.shared.geo.BoundingBox
@@ -21,6 +22,7 @@ import world.xhere.shared.model.CreateDropResult
 import world.xhere.shared.here.Here
 import world.xhere.shared.model.DropCard
 import world.xhere.shared.model.DropStatus
+import world.xhere.shared.model.OwnDrop
 import world.xhere.shared.model.PlaceLabel
 import world.xhere.shared.model.MapFeature
 import world.xhere.shared.model.ModerateDropAction
@@ -84,6 +86,12 @@ interface ProfileRepository {
      * The level-up sheet reads this. A pinned tier can sit above the score.
      */
     suspend fun reputation(): ReputationStanding
+
+    /**
+     * The name shown on drops. [handle] is optional; null keeps the current one.
+     * A generated `user_…` handle is not a display name.
+     */
+    suspend fun setPublicName(displayName: String, handle: String? = null): Profile
 }
 
 interface TaxonomyRepository {
@@ -131,6 +139,23 @@ interface DropRepository {
         note: String? = null,
         signal: LocationSignal? = null,
     ): ConfirmDropResult
+
+    /** Owner-only. [altText] null leaves the photo description alone; blank clears it. */
+    suspend fun updateMyDrop(
+        id: Uuid,
+        title: String,
+        body: String?,
+        attributes: JsonObject,
+        altText: String? = null,
+    ): DropCard
+
+    /** Soft-delete. The author can undo for a short window with [restoreMyDrop]. */
+    suspend fun deleteMyDrop(id: Uuid)
+
+    suspend fun restoreMyDrop(id: Uuid)
+
+    /** Live drops this account posted. Deleted and removed drops are left out. */
+    suspend fun myDrops(): List<OwnDrop>
 }
 
 interface ReportRepository {
@@ -294,6 +319,9 @@ interface MediaRepository {
      * The path starts with the caller's id, the same rule as photos.
      */
     suspend fun uploadVoiceClip(bytes: ByteArray, mimeType: String, durationS: Double): MediaUpload
+
+    /** A URL the image loader can fetch. Signed when the bucket is private. */
+    suspend fun photoUrl(bucket: String, path: String): String
 }
 
 /**

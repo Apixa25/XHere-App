@@ -19,12 +19,16 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
@@ -32,6 +36,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -65,10 +70,16 @@ import world.xhere.app.map.SheetSignals
 import world.xhere.app.explore.ExploreScreen
 import world.xhere.app.map.CampaignCard
 import world.xhere.app.map.MapScreen
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import world.xhere.app.detail.DeleteDropDialog
+import world.xhere.app.profile.MyDropsList
+import world.xhere.app.profile.NamePrompt
 import world.xhere.app.profile.ProfileViewModel
 import world.xhere.app.reputation.LevelUpSheet
 import world.xhere.app.reputation.TierChip
 import world.xhere.shared.model.ImpactNotice
+import world.xhere.shared.profile.AuthorNames
 import world.xhere.app.safety.GuidelinesScreen
 import world.xhere.app.safety.ModerationScreen
 import world.xhere.app.safety.SafetyListsScreen
@@ -85,13 +96,14 @@ private object Routes {
     const val GUIDELINES = "guidelines"
     const val LISTS = "blocked"
     const val MODERATION = "moderation"
-    const val DETAIL = "detail/{shortId}"
+    const val DETAIL = "detail/{shortId}?edit={edit}"
     const val AR = "ar"
 
     /** Full-screen pages with their own back arrow and no bottom bar. */
     val fullScreen = setOf(SETTINGS, GUIDELINES, LISTS, MODERATION, DETAIL, AR)
 
-    fun detail(shortId: String): String = "detail/$shortId"
+    fun detail(shortId: String, edit: Boolean = false): String =
+        if (edit) "detail/$shortId?edit=true" else "detail/$shortId"
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -218,6 +230,9 @@ fun MainShell() {
                     onOpenDrop = { shortId ->
                         nav.navigate(Routes.detail(shortId)) { launchSingleTop = true }
                     },
+                    onEditDrop = { shortId ->
+                        nav.navigate(Routes.detail(shortId, edit = true)) { launchSingleTop = true }
+                    },
                 )
             }
             composable(Routes.SETTINGS) {
@@ -233,10 +248,14 @@ fun MainShell() {
             composable(Routes.MODERATION) { ModerationScreen(onBack = { nav.popBackStack() }) }
             composable(
                 route = Routes.DETAIL,
-                arguments = listOf(navArgument("shortId") { type = NavType.StringType }),
+                arguments = listOf(
+                    navArgument("shortId") { type = NavType.StringType },
+                    navArgument("edit") { type = NavType.BoolType; defaultValue = false },
+                ),
             ) { entry ->
                 DropDetailScreen(
                     shortId = entry.arguments?.getString("shortId").orEmpty(),
+                    startEditing = entry.arguments?.getBoolean("edit") == true,
                     onBack = { nav.popBackStack() },
                 )
             }
@@ -270,6 +289,7 @@ private fun PlaceholderPage(tag: String, title: Int, body: Int) {
 private fun ProfilePage(
     onSettings: () -> Unit,
     onOpenDrop: (String) -> Unit,
+    onEditDrop: (String) -> Unit,
     viewModel: ProfileViewModel = koinViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -279,6 +299,33 @@ private fun ProfilePage(
         sheets.dismissals.collect { showLevelUp = false }
     }
     BackHandler(enabled = showLevelUp) { showLevelUp = false }
+    var deleting by remember { mutableStateOf<world.xhere.shared.model.OwnDrop?>(null) }
+    val snackbarHost = remember { SnackbarHostState() }
+    val deletedMessage = stringResource(R.string.detail_deleted)
+    val undoLabel = stringResource(R.string.detail_undo)
+    LaunchedEffect(state.undoToken) {
+        if (state.undoToken == 0) return@LaunchedEffect
+        val dismiss = launch {
+            delay(5_000)
+            snackbarHost.currentSnackbarData?.dismiss()
+        }
+        val result = snackbarHost.showSnackbar(
+            message = deletedMessage,
+            actionLabel = undoLabel,
+            duration = SnackbarDuration.Indefinite,
+        )
+        dismiss.cancel()
+        if (result == SnackbarResult.ActionPerformed) viewModel.undoDelete() else viewModel.expireUndo()
+    }
+    deleting?.let { drop ->
+        DeleteDropDialog(
+            onConfirm = {
+                deleting = null
+                viewModel.deleteDrop(drop)
+            },
+            onDismiss = { deleting = null },
+        )
+    }
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner, viewModel) {
         val observer = LifecycleEventObserver { _, event ->
@@ -288,10 +335,12 @@ private fun ProfilePage(
         viewModel.refresh()
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
+    Scaffold(snackbarHost = { SnackbarHost(snackbarHost) }) { padding ->
     Column(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
+            .padding(padding)
             .padding(24.dp)
             .testTag(TestTags.SCREEN_PROFILE),
         verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -300,7 +349,17 @@ private fun ProfilePage(
             text = state.displayName.ifBlank { stringResource(R.string.profile_signed_in) },
             style = MaterialTheme.typography.headlineSmall,
         )
-        if (state.handle.isNotBlank()) {
+        if (state.needsName) {
+            NamePrompt(
+                displayName = state.nameDraft,
+                handle = state.handleDraft,
+                saving = state.savingName,
+                failed = state.nameFailed,
+                onDisplayName = viewModel::onNameDraft,
+                onHandle = viewModel::onHandleDraft,
+                onSave = viewModel::saveName,
+            )
+        } else if (AuthorNames.label(null, state.handle) != null) {
             Text("@${state.handle}", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
         }
         if (state.tierLabel.isNotBlank()) {
@@ -337,6 +396,20 @@ private fun ProfilePage(
         state.campaigns.forEach { campaign ->
             CampaignCard(campaign = campaign, now = Clock.System.now(), compact = false)
         }
+        MyDropsList(
+            drops = state.myDrops,
+            loaded = state.dropsLoaded,
+            onEdit = { drop -> onEditDrop(drop.shortId) },
+            onDelete = { drop -> deleting = drop },
+        )
+        if (state.canUndoDelete) {
+            androidx.compose.material3.OutlinedButton(
+                onClick = viewModel::undoDelete,
+                modifier = Modifier.testTag(TestTags.DETAIL_UNDO),
+            ) {
+                Text(stringResource(R.string.detail_undo))
+            }
+        }
         state.email?.let { email ->
             Text(email, style = MaterialTheme.typography.bodyLarge)
         }
@@ -355,6 +428,7 @@ private fun ProfilePage(
             showEmpty = state.impactLoaded && state.notices.isEmpty(),
             onOpen = { notice -> viewModel.openNotice(notice, onOpenDrop) },
         )
+    }
     }
     val standing = state.standing
     if (showLevelUp && standing != null) {

@@ -19,6 +19,7 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
 import world.xhere.app.location.DeviceLocation
 import world.xhere.app.location.LocationReading
+import world.xhere.app.map.MapPins
 import world.xhere.shared.access.AccessAnswer
 import world.xhere.shared.access.AccessPlaces
 import world.xhere.shared.access.AccessSummary
@@ -34,7 +35,10 @@ import world.xhere.shared.model.DropStatus
 import world.xhere.shared.model.MediaKind
 import world.xhere.shared.model.ReportReason
 import world.xhere.shared.model.ReportTarget
+import world.xhere.shared.form.AttributeField
+import world.xhere.shared.form.AttributeFields
 import world.xhere.shared.model.Taxonomy
+import world.xhere.shared.profile.AuthorNames
 import world.xhere.shared.safety.SafetyDirectory
 import world.xhere.shared.safety.SafetyResources
 import world.xhere.shared.reputation.Reputation
@@ -50,7 +54,7 @@ enum class DetailNotice {
 
 enum class SafetyDialog { REPORT_DROP, REPORT_AUTHOR, BLOCK_AUTHOR }
 
-enum class SafetyMessage { REPORTED, REPORTED_HIDDEN, HIDDEN, BLOCKED, FAILED }
+enum class SafetyMessage { REPORTED, REPORTED_HIDDEN, HIDDEN, BLOCKED, DELETED, FAILED }
 
 data class DetailUiState(
     val loading: Boolean = true,
@@ -59,6 +63,8 @@ data class DetailUiState(
     val categoryLabel: String = "",
     val icon: String = "📍",
     val authorHandle: String? = null,
+    /** Display name, or a handle the person chose. Null means "A neighbor". */
+    val authorLabel: String? = null,
     /** Null when the author is hidden or this is a public record. */
     val authorTierLabel: String? = null,
     /** Empty when the drop is anonymous, a public record, or the author has no badge here. */
@@ -99,8 +105,19 @@ data class DetailUiState(
     val canUndoHide: Boolean = false,
     /** Close enough, but the location check withheld the body. */
     val locationWithheld: Boolean = false,
-    /** Alt text for each revealed image, in sort order. Empty when the photo is hidden. */
-    val imageAltTexts: List<String> = emptyList(),
+    /** Revealed photos. Empty until a signed URL is ready, and empty while the photo is hidden. */
+    val photos: List<DropPhotoUi> = emptyList(),
+    val editing: Boolean = false,
+    val editTitle: String = "",
+    val editBody: String = "",
+    val editAlt: String = "",
+    val editFields: List<AttributeField> = emptyList(),
+    val editValues: Map<String, String> = emptyMap(),
+    val saving: Boolean = false,
+    val editFailed: Boolean = false,
+    val confirmDelete: Boolean = false,
+    val canUndoDelete: Boolean = false,
+    val undoToken: Int = 0,
     /** Inscription copied from an open-data historical marker, when the source published one. */
     val inscription: String? = null,
     /** HMdb link only. Marker text is never copied from HMdb. */
@@ -123,6 +140,7 @@ class DropDetailViewModel(
     private val shortId: String,
     private val services: XHereServices,
     private val location: DeviceLocation,
+    private val mapPins: MapPins,
 ) : ViewModel() {
     private val _state = MutableStateFlow(DetailUiState(shareUrl = ShareLinks.url(shortId)))
     val state: StateFlow<DetailUiState> = _state.asStateFlow()
@@ -142,6 +160,10 @@ class DropDetailViewModel(
     private var lastReading: LocationReading? = null
     private var lastFetchedKey: String? = null
     private var detailJob: Job? = null
+    private var photoJob: Job? = null
+    private var photoKey: String? = null
+    private var pendingEdit: Boolean = false
+    private var undoArmed: Boolean = false
 
     init {
         viewModelScope.launch { load() }
@@ -195,6 +217,123 @@ class DropDetailViewModel(
                 _state.update { it.copy(answering = false, notice = DetailNotice.FAILED) }
             }
         }
+    }
+
+    fun startEditing() {
+        pendingEdit = true
+        openEditorIfReady()
+    }
+
+    fun dismissEditing() {
+        pendingEdit = false
+        _state.update { it.copy(editing = false, editFailed = false, saving = false) }
+    }
+
+    fun onEditTitle(value: String) {
+        _state.update { it.copy(editTitle = value.take(120), editFailed = false) }
+    }
+
+    fun onEditBody(value: String) {
+        _state.update { it.copy(editBody = value.take(2000), editFailed = false) }
+    }
+
+    fun onEditAlt(value: String) {
+        _state.update { it.copy(editAlt = value.take(300), editFailed = false) }
+    }
+
+    fun onEditField(name: String, value: String) {
+        _state.update { it.copy(editValues = it.editValues + (name to value), editFailed = false) }
+    }
+
+    fun saveEdit() {
+        val id = dropId ?: return
+        val snapshot = _state.value
+        if (snapshot.saving || snapshot.editTitle.isBlank()) return
+        viewModelScope.launch {
+            _state.update { it.copy(saving = true, editFailed = false) }
+            try {
+                val attributes = AttributeFields.toAttributes(snapshot.editFields, snapshot.editValues)
+                val updated = services.drops.updateMyDrop(
+                    id = id,
+                    title = snapshot.editTitle,
+                    body = snapshot.editBody,
+                    attributes = attributes,
+                    altText = snapshot.editAlt,
+                )
+                card = updated
+                photoKey = null
+                _state.update { it.copy(editing = false, saving = false, editFailed = false) }
+                publish()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                _state.update { it.copy(saving = false, editFailed = true) }
+            }
+        }
+    }
+
+    fun requestDelete() {
+        if (dropId == null || _state.value.publicRecord) return
+        _state.update { it.copy(confirmDelete = true) }
+    }
+
+    fun dismissDelete() {
+        _state.update { it.copy(confirmDelete = false) }
+    }
+
+    fun deleteDrop() {
+        val id = dropId ?: return
+        if (_state.value.publicRecord) return
+        undoArmed = true
+        mapPins.hide(shortId)
+        _state.update {
+            it.copy(
+                confirmDelete = false,
+                gone = true,
+                canUndoDelete = true,
+                undoToken = it.undoToken + 1,
+                safetyMessage = SafetyMessage.DELETED,
+                canAnswer = false,
+                dialog = null,
+            )
+        }
+        viewModelScope.launch {
+            try {
+                services.drops.deleteMyDrop(id)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                undoArmed = false
+                mapPins.restore(shortId)
+                _state.update { it.copy(gone = false, canUndoDelete = false, safetyMessage = SafetyMessage.FAILED) }
+                reload()
+            }
+        }
+    }
+
+    fun undoDelete() {
+        if (!undoArmed) return
+        undoArmed = false
+        val id = dropId ?: return
+        _state.update { it.copy(canUndoDelete = false, gone = false, loading = true, safetyMessage = null) }
+        viewModelScope.launch {
+            try {
+                services.drops.restoreMyDrop(id)
+                mapPins.restore(shortId)
+                reload()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                _state.update { it.copy(loading = false, gone = true, safetyMessage = SafetyMessage.FAILED) }
+            }
+        }
+    }
+
+    /** The snackbar window closed. The drop stays deleted. */
+    fun expireUndo() {
+        if (!undoArmed) return
+        undoArmed = false
+        _state.update { it.copy(canUndoDelete = false) }
     }
 
     fun openDialog(dialog: SafetyDialog) {
@@ -355,6 +494,26 @@ class DropDetailViewModel(
             live
         val category = taxonomy?.category(current.categorySlug)
         val group = taxonomy?.group(current.groupSlug)
+        val images = if (showBody) {
+            current.media.orEmpty().filter { it.mediaKind == MediaKind.IMAGE }
+        } else {
+            emptyList()
+        }
+        val key = images.joinToString("\n") { "${it.storageBucket}/${it.storagePath}\t${it.altText.orEmpty()}" }
+        val keepPhotos = key.isNotEmpty() && key == photoKey
+        if (!keepPhotos) {
+            photoKey = key
+            photoJob?.cancel()
+            if (key.isNotEmpty()) {
+                photoJob = viewModelScope.launch {
+                    val resolved = images.map { media ->
+                        val url = runCatching { services.media.photoUrl(media.storageBucket, media.storagePath) }.getOrDefault("")
+                        DropPhotoUi(url = url, alt = media.altText?.trim().orEmpty())
+                    }
+                    if (photoKey == key) _state.update { it.copy(photos = resolved) }
+                }
+            }
+        }
         _state.update { previous ->
             DetailUiState(
                 loading = false,
@@ -363,6 +522,7 @@ class DropDetailViewModel(
                 categoryLabel = category?.label ?: current.categorySlug,
                 icon = category?.icon ?: group?.icon ?: "📍",
                 authorHandle = current.authorHandle,
+                authorLabel = AuthorNames.label(current.authorDisplayName, current.authorHandle),
                 authorTierLabel = current.authorTier?.let(Reputation::label),
                 authorBadges = if (publicRecord) emptyList() else current.authorBadges,
                 approximate = current.locationPrecisionM > 0,
@@ -396,13 +556,18 @@ class DropDetailViewModel(
                 gone = previous.gone,
                 canUndoHide = previous.canUndoHide,
                 locationWithheld = current.locationWithheld && !publicRecord && !current.isMine,
-                imageAltTexts = if (showBody) {
-                    current.media.orEmpty()
-                        .filter { it.mediaKind == MediaKind.IMAGE }
-                        .map { it.altText?.trim().orEmpty() }
-                } else {
-                    emptyList()
-                },
+                photos = if (keepPhotos) previous.photos else emptyList(),
+                editing = previous.editing,
+                editTitle = previous.editTitle,
+                editBody = previous.editBody,
+                editAlt = previous.editAlt,
+                editFields = previous.editFields,
+                editValues = previous.editValues,
+                saving = previous.saving,
+                editFailed = previous.editFailed,
+                confirmDelete = previous.confirmDelete,
+                canUndoDelete = previous.canUndoDelete,
+                undoToken = previous.undoToken,
                 inscription = if (showBody) attributeText(current, "inscription") else null,
                 hmdbUrl = if (showBody) attributeText(current, "hmdb_url") else null,
                 access = accessSummary,
@@ -410,6 +575,38 @@ class DropDetailViewModel(
                 accessFailed = previous.accessFailed,
             )
         }
+        openEditorIfReady()
+    }
+
+    private fun openEditorIfReady() {
+        if (!pendingEdit) return
+        val current = card ?: return
+        if (!current.isMine || current.source == DropSource.OPEN_DATA) {
+            pendingEdit = false
+            return
+        }
+        pendingEdit = false
+        val category = taxonomy?.category(current.categorySlug)
+        val fields = AttributeFields.fromSchema(category?.attributesSchema ?: kotlinx.serialization.json.JsonObject(emptyMap()))
+        val alt = current.media.orEmpty().firstOrNull { it.mediaKind == MediaKind.IMAGE }?.altText.orEmpty()
+        _state.update {
+            it.copy(
+                editing = true,
+                editFailed = false,
+                editTitle = current.title,
+                editBody = current.body.orEmpty(),
+                editAlt = alt,
+                editFields = fields,
+                editValues = AttributeFields.readValues(fields, current.attributes),
+            )
+        }
+    }
+
+    private suspend fun reload() {
+        val id = dropId ?: return
+        val reading = lastReading
+        card = services.drops.dropDetail(id, reading?.point, reading?.signal)
+        publish()
     }
 
     fun submitAccess(stepFree: AccessAnswer, ramp: AccessAnswer, restroom: AccessAnswer, notes: String?) {

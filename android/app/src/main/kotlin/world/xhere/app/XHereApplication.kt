@@ -1,6 +1,10 @@
 package world.xhere.app
 
 import android.app.Application
+import android.content.Context
+import coil3.ImageLoader
+import coil3.SingletonImageLoader
+import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.context.GlobalContext
 import org.koin.core.context.startKoin
@@ -9,7 +13,12 @@ import world.xhere.app.crash.CrashReporting
 import world.xhere.app.di.appModule
 import world.xhere.shared.data.supabase.prepareSupabaseSessionStore
 
-class XHereApplication : Application() {
+class XHereApplication : Application(), SingletonImageLoader.Factory {
+    override fun newImageLoader(context: Context): ImageLoader =
+        ImageLoader.Builder(context)
+            .components { add(OkHttpNetworkFetcherFactory()) }
+            .build()
+
     override fun onCreate() {
         super.onCreate()
         // No-op unless SENTRY_DSN was set for this build. See CrashReporting.

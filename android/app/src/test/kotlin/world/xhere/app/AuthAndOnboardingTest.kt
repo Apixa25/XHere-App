@@ -194,10 +194,15 @@ class FreshSessionRule : TestRule {
                         drop.lastConfirmedAt = null
                         drop.status = DropStatus.ACTIVE
                         drop.expiresAt = null
+                        drop.removedReason = null
+                        drop.deletedAt = null
+                        drop.statusBeforeDelete = null
+                        drop.extraBadges = emptyList()
                     }
                 }
             }
             runCatching { GlobalContext.get().get<SignOutNotice>().clear() }
+            runCatching { GlobalContext.get().get<world.xhere.app.map.MapPins>().clear() }
             runCatching { GlobalContext.get().get<world.xhere.app.drop.PendingDropSpot>().clear() }
             if (TestGraph.isReady()) {
                 TestGraph.location.reset()
