@@ -92,6 +92,8 @@ internal object TestTags {
     const val AR_CLOSE = "ar_close"
     const val AR_RETRY = "ar_retry"
     const val AR_SETTINGS = "ar_settings"
+    const val AR_GUIDANCE = "ar_guidance"
+    const val AR_GUIDANCE_ACTION = "ar_guidance_action"
 
     fun arLabel(shortId: String): String = "ar_label_$shortId"
 

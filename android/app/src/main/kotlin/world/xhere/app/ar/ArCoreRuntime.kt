@@ -1,8 +1,11 @@
 package world.xhere.app.ar
 
 import android.Manifest
+import android.app.Activity
 import android.content.Context
 import android.content.pm.PackageManager
+import android.os.Build
+import android.util.Log
 import android.opengl.GLES20
 import android.opengl.GLSurfaceView
 import android.view.Surface
@@ -23,6 +26,7 @@ import com.google.ar.core.exceptions.CameraNotAvailableException
 import com.google.ar.core.exceptions.UnavailableException
 import javax.microedition.khronos.egl.EGLConfig
 import javax.microedition.khronos.opengles.GL10
+import java.security.MessageDigest
 import kotlin.coroutines.resume
 import kotlin.math.abs
 import kotlin.math.atan
@@ -43,23 +47,26 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import world.xhere.shared.ar.ArPose
 import world.xhere.shared.ar.ArView
+import world.xhere.shared.geo.Geo
+import world.xhere.shared.geo.LatLng
 
 /**
  * Keyless ARCore Geospatial session. Authorization is the app's package
  * name plus its signing certificate in Cloud project `xhere-512103`.
  * There is no API key in the manifest.
  *
- * The map calls [refreshSupport] only. That creates a session, asks whether
- * Geospatial and VPS are available, and closes it. It does not call
- * `requestInstall` and it does not open the camera. [start] is the camera
- * session, and only after the in-app Google notice.
+ * The map calls [refreshSupport] in the background. That creates a session,
+ * asks whether Geospatial and VPS are available, and closes it. It does not
+ * call `requestInstall` and it does not open the camera. [advise] is the
+ * tap: it logs the availability result and may call `requestInstall`.
+ * [start] is the camera session, and only after the in-app Google notice.
  */
 class ArCoreRuntime(
     private val context: Context,
 ) : ArRuntime {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val gate = Mutex()
-    private val _support = MutableStateFlow(ArSupport.UNSUPPORTED)
+    private val _support = MutableStateFlow(ArSupport.UNKNOWN)
     private val _frames = MutableStateFlow(ArFrame(pose = null, status = ArStatus.WAITING))
     override val support: StateFlow<ArSupport> = _support.asStateFlow()
     override val frames: StateFlow<ArFrame> = _frames.asStateFlow()
@@ -76,48 +83,158 @@ class ArCoreRuntime(
     @Volatile private var targets: List<ArTarget> = emptyList()
     @Volatile private var glView: GLSurfaceView? = null
     private var lastPublishMs = 0L
+    private var installPrompted = false
+    private var loggedIdentity = false
 
     override suspend fun refreshSupport(latitude: Double, longitude: Double): Boolean {
         return withContext(Dispatchers.Default) {
             if (!gate.tryLock()) return@withContext false
             try {
                 if (wantsRunning || session != null) return@withContext false
-                if (!installed()) {
-                    _support.value = ArSupport.UNSUPPORTED
-                    return@withContext true
+                val advice = inspect(latitude, longitude, activity = null, install = false)
+                applySupport(advice)
+                advice != ArAdvice.STILL_CHECKING
+            } finally {
+                gate.unlock()
+            }
+        }
+    }
+
+    override suspend fun advise(latitude: Double?, longitude: Double?, activity: Activity?): ArAdvice {
+        return withContext(Dispatchers.Default) {
+            gate.withLock {
+                if (wantsRunning || session != null) return@withLock ArAdvice.OPEN
+                val advice = inspect(latitude, longitude, activity, install = true)
+                applySupport(advice)
+                advice
+            }
+        }
+    }
+
+    private fun applySupport(advice: ArAdvice) {
+        _support.value = when (advice) {
+            ArAdvice.OPEN -> ArSupport.READY
+            ArAdvice.NOT_HERE -> ArSupport.UNAVAILABLE
+            ArAdvice.STILL_CHECKING -> ArSupport.UNKNOWN
+            else -> ArSupport.UNSUPPORTED
+        }
+    }
+
+    /**
+     * Settled results update [support]. [ArAdvice.STILL_CHECKING] means
+     * availability was still transient, so the caller should try again.
+     */
+    private suspend fun inspect(
+        latitude: Double?,
+        longitude: Double?,
+        activity: Activity?,
+        install: Boolean,
+    ): ArAdvice {
+        logIdentity()
+        when (val availability = awaitAvailability()) {
+            ArCoreApk.Availability.SUPPORTED_INSTALLED -> Unit
+            ArCoreApk.Availability.SUPPORTED_NOT_INSTALLED,
+            ArCoreApk.Availability.SUPPORTED_APK_TOO_OLD,
+            -> {
+                Log.w(TAG, "Play Services for AR availability=$availability")
+                if (!install) return ArAdvice.NEEDS_INSTALL
+                maybeInstall(activity)?.let { return it }
+            }
+            ArCoreApk.Availability.UNSUPPORTED_DEVICE_NOT_CAPABLE -> {
+                Log.w(TAG, "checkAvailability=UNSUPPORTED_DEVICE_NOT_CAPABLE. Google Play Services for AR cannot run on this phone.")
+                return ArAdvice.SERVICES_MISSING
+            }
+            else -> {
+                Log.w(
+                    TAG,
+                    "checkAvailability=$availability transient=${availability.isTransient}. " +
+                        "UNKNOWN_CHECKING and UNKNOWN_TIMED_OUT are not installed. The check will run again.",
+                )
+                return ArAdvice.STILL_CHECKING
+            }
+        }
+        if (latitude == null || longitude == null || !Geo.isValid(LatLng(latitude, longitude))) {
+            Log.w(TAG, "No fine fix yet, so VPS was not checked")
+            return ArAdvice.WAITING_FOR_FIX
+        }
+        when (val probe = openProbe()) {
+            is Probe.Blocked -> {
+                if (probe.advice == ArAdvice.NEEDS_INSTALL && install) {
+                    maybeInstall(activity)?.let { return it }
                 }
-                val probe = openProbe() ?: run {
-                    _support.value = ArSupport.UNSUPPORTED
-                    return@withContext true
-                }
+                return probe.advice
+            }
+            is Probe.Opened -> {
+                val opened = probe.session
                 try {
-                    if (!probe.isGeospatialModeSupported(Config.GeospatialMode.ENABLED)) {
-                        _support.value = ArSupport.UNSUPPORTED
-                        return@withContext true
+                    if (!opened.isGeospatialModeSupported(Config.GeospatialMode.ENABLED)) {
+                        Log.w(TAG, "isGeospatialModeSupported=false at $latitude,$longitude")
+                        return ArAdvice.NOT_HERE
                     }
-                    configure(probe)
-                    val availability = withTimeoutOrNull(PROBE_TIMEOUT_MS) {
+                    configure(opened)
+                    val vps = withTimeoutOrNull(PROBE_TIMEOUT_MS) {
                         suspendCancellableCoroutine { cont ->
-                            val future = probe.checkVpsAvailabilityAsync(latitude, longitude) { result ->
+                            val future = opened.checkVpsAvailabilityAsync(latitude, longitude) { result ->
                                 if (cont.isActive) cont.resume(result)
                             }
                             cont.invokeOnCancellation { runCatching { future.cancel() } }
                         }
                     }
-                    _support.value = if (availability == VpsAvailability.AVAILABLE) {
-                        ArSupport.READY
-                    } else {
-                        ArSupport.UNAVAILABLE
+                    if (vps == null) {
+                        Log.w(TAG, "checkVpsAvailabilityAsync timed out after ${PROBE_TIMEOUT_MS}ms at $latitude,$longitude")
+                        return ArAdvice.STILL_CHECKING
                     }
-                    true
-                } catch (_: Throwable) {
-                    _support.value = ArSupport.UNSUPPORTED
-                    true
+                    Log.i(TAG, "VpsAvailability=$vps at $latitude,$longitude")
+                    return when (vps) {
+                        VpsAvailability.AVAILABLE -> ArAdvice.OPEN
+                        VpsAvailability.ERROR_NOT_AUTHORIZED -> {
+                            Log.w(TAG, authFailure())
+                            ArAdvice.NOT_AUTHORIZED
+                        }
+                        VpsAvailability.UNAVAILABLE -> ArAdvice.NOT_HERE
+                        else -> {
+                            Log.w(TAG, "VpsAvailability=$vps is not AVAILABLE at $latitude,$longitude")
+                            ArAdvice.NOT_HERE
+                        }
+                    }
+                } catch (e: kotlinx.coroutines.CancellationException) {
+                    throw e
+                } catch (e: Throwable) {
+                    Log.w(TAG, "Geospatial probe failed: ${e.javaClass.simpleName}: ${e.message}")
+                    return ArAdvice.SERVICES_MISSING
                 } finally {
-                    runCatching { probe.close() }
+                    runCatching { opened.close() }
                 }
-            } finally {
-                gate.unlock()
+            }
+        }
+    }
+
+    /** Null means Play Services for AR is installed and the probe can continue. */
+    private suspend fun maybeInstall(activity: Activity?): ArAdvice? {
+        if (activity == null) {
+            Log.w(TAG, "requestInstall skipped; no Activity. Play Services for AR is missing or outdated.")
+            return ArAdvice.NEEDS_INSTALL
+        }
+        val prompted = installPrompted
+        return withContext(Dispatchers.Main) {
+            try {
+                when (val status = ArCoreApk.getInstance().requestInstall(activity, prompted)) {
+                    ArCoreApk.InstallStatus.INSTALL_REQUESTED -> {
+                        installPrompted = true
+                        Log.i(TAG, "requestInstall returned INSTALL_REQUESTED (alreadyPrompted=$prompted)")
+                        ArAdvice.NEEDS_INSTALL
+                    }
+                    ArCoreApk.InstallStatus.INSTALLED -> {
+                        Log.i(TAG, "requestInstall returned INSTALLED")
+                        null
+                    }
+                }
+            } catch (e: com.google.ar.core.exceptions.UnavailableUserDeclinedInstallationException) {
+                Log.w(TAG, "requestInstall declined by the user")
+                ArAdvice.INSTALL_DECLINED
+            } catch (e: UnavailableException) {
+                Log.w(TAG, "requestInstall failed: ${e.javaClass.simpleName}: ${e.message}")
+                ArAdvice.SERVICES_MISSING
             }
         }
     }
@@ -168,13 +285,75 @@ class ArCoreRuntime(
         AndroidView(factory = { view }, modifier = Modifier.fillMaxSize())
     }
 
-    private fun openProbe(): Session? = try {
-        Session(context)
-    } catch (_: UnavailableException) {
-        null
-    } catch (_: Throwable) {
-        null
+    private fun openProbe(): Probe = try {
+        Probe.Opened(Session(context))
+    } catch (e: com.google.ar.core.exceptions.UnavailableArcoreNotInstalledException) {
+        Log.w(TAG, "Play Services for AR is not installed: ${e.message}")
+        Probe.Blocked(ArAdvice.NEEDS_INSTALL)
+    } catch (e: com.google.ar.core.exceptions.UnavailableApkTooOldException) {
+        Log.w(TAG, "Play Services for AR is outdated: ${e.message}")
+        Probe.Blocked(ArAdvice.NEEDS_INSTALL)
+    } catch (e: com.google.ar.core.exceptions.UnavailableDeviceNotCompatibleException) {
+        Log.w(TAG, "Play Services for AR: device not compatible: ${e.message}")
+        Probe.Blocked(ArAdvice.SERVICES_MISSING)
+    } catch (e: com.google.ar.core.exceptions.UnavailableSdkTooOldException) {
+        Log.w(TAG, "ARCore SDK is too old for Play Services for AR: ${e.message}")
+        Probe.Blocked(ArAdvice.SERVICES_MISSING)
+    } catch (e: UnavailableException) {
+        Log.w(TAG, "Play Services for AR unavailable: ${e.javaClass.simpleName}: ${e.message}")
+        Probe.Blocked(ArAdvice.SERVICES_MISSING)
+    } catch (e: SecurityException) {
+        Log.w(TAG, "ARCore session needs the camera or precise location: ${e.message}")
+        Probe.Blocked(ArAdvice.NEEDS_PERMISSION)
+    } catch (e: Throwable) {
+        Log.w(TAG, "ARCore session failed: ${e.javaClass.simpleName}: ${e.message}")
+        Probe.Blocked(ArAdvice.SERVICES_MISSING)
     }
+
+    private suspend fun awaitAvailability(): ArCoreApk.Availability {
+        val started = android.os.SystemClock.elapsedRealtime()
+        var latest = ArCoreApk.Availability.UNKNOWN_CHECKING
+        repeat(AVAILABILITY_TRIES) { attempt ->
+            latest = ArCoreApk.getInstance().checkAvailability(context)
+            Log.i(TAG, "checkAvailability attempt=$attempt result=$latest transient=${latest.isTransient}")
+            if (!latest.isTransient) return latest
+            delay(AVAILABILITY_DELAY_MS)
+        }
+        Log.w(
+            TAG,
+            "checkAvailability never settled. last=$latest after " +
+                "${android.os.SystemClock.elapsedRealtime() - started}ms. " +
+                "UNKNOWN_CHECKING and UNKNOWN_TIMED_OUT were not treated as installed.",
+        )
+        return latest
+    }
+
+    private fun logIdentity() {
+        if (loggedIdentity) return
+        loggedIdentity = true
+        Log.i(TAG, "AR identity package=${context.packageName} sha1=${signingSha1()} project=$CLOUD_PROJECT ($CLOUD_PROJECT_NUMBER)")
+    }
+
+    private fun authFailure(): String =
+        "Geospatial keyless auth failed (VpsAvailability.ERROR_NOT_AUTHORIZED). " +
+            "Package ${context.packageName}, Cloud project $CLOUD_PROJECT ($CLOUD_PROJECT_NUMBER). " +
+            "No API key is in the manifest. Authorization is an Android OAuth client for this APK's SHA-1. " +
+            "This build's SHA-1 is ${signingSha1()}. A mismatch with the registered debug SHA-1, " +
+            "or a release or Play App Signing SHA-1 that was never added, fails here."
+
+    private fun signingSha1(): String = runCatching {
+        val packageManager = context.packageManager
+        val signatures = if (Build.VERSION.SDK_INT >= 28) {
+            val info = packageManager.getPackageInfo(context.packageName, PackageManager.GET_SIGNING_CERTIFICATES)
+            info.signingInfo?.apkContentsSigners
+        } else {
+            @Suppress("DEPRECATION")
+            packageManager.getPackageInfo(context.packageName, PackageManager.GET_SIGNATURES).signatures
+        }
+        val cert = signatures?.firstOrNull() ?: return "unknown"
+        MessageDigest.getInstance("SHA-1").digest(cert.toByteArray())
+            .joinToString(":") { byte -> "%02X".format(byte) }
+    }.getOrElse { error -> "unreadable (${error.javaClass.simpleName})" }
 
     private fun openLive(): Session? {
         val created = try {
@@ -210,18 +389,6 @@ class ArCoreRuntime(
         config.setLightEstimationMode(Config.LightEstimationMode.DISABLED)
         config.setFocusMode(Config.FocusMode.AUTO)
         target.configure(config)
-    }
-
-    private suspend fun installed(): Boolean {
-        repeat(8) {
-            val availability = ArCoreApk.getInstance().checkAvailability(context)
-            if (availability.isTransient) {
-                delay(200)
-            } else {
-                return availability == ArCoreApk.Availability.SUPPORTED_INSTALLED
-            }
-        }
-        return false
     }
 
     private fun hasFineLocation(): Boolean =
@@ -499,6 +666,11 @@ class ArCoreRuntime(
         }
     }
 
+    private sealed class Probe {
+        data class Opened(val session: Session) : Probe()
+        data class Blocked(val advice: ArAdvice) : Probe()
+    }
+
     private class Held(val target: ArTarget) {
         var phase: Phase = Phase.TERRAIN
         var waiting: Boolean = false
@@ -509,6 +681,11 @@ class ArCoreRuntime(
     private enum class Phase { TERRAIN, ROOFTOP, EYE, READY, FAILED }
 
     private companion object {
+        const val TAG = "XHereAr"
+        const val CLOUD_PROJECT = "xhere-512103"
+        const val CLOUD_PROJECT_NUMBER = "1059257603719"
+        const val AVAILABILITY_TRIES = 20
+        const val AVAILABILITY_DELAY_MS = 250L
         const val PROBE_TIMEOUT_MS = 8_000L
         const val PUBLISH_INTERVAL_MS = 50L
         const val RESOLVES_PER_FRAME = 2

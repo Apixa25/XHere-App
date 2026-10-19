@@ -24,6 +24,7 @@ import world.xhere.app.drop.DropCapture
 import world.xhere.app.drop.DropViewModel
 import world.xhere.app.drop.PendingDropSpot
 import world.xhere.app.drop.ImageLabeler
+import world.xhere.app.ar.ArAdvice
 import world.xhere.app.ar.ArFrame
 import world.xhere.app.ar.ArRuntime
 import world.xhere.app.ar.ArStatus
@@ -276,10 +277,24 @@ class ScriptedArRuntime : ArRuntime {
     var scriptedAnchors: List<ResolvedAnchor> = emptyList()
     var started: Boolean = false
 
+    var nextAdvice: ArAdvice? = null
+
     override suspend fun refreshSupport(latitude: Double, longitude: Double): Boolean {
         checksAtomic.incrementAndGet()
         _support.value = nextSupport
-        return true
+        return nextSupport != ArSupport.UNKNOWN
+    }
+
+    override suspend fun advise(latitude: Double?, longitude: Double?, activity: android.app.Activity?): ArAdvice {
+        checksAtomic.incrementAndGet()
+        val advice = nextAdvice ?: when (nextSupport) {
+            ArSupport.READY -> ArAdvice.OPEN
+            ArSupport.UNAVAILABLE -> ArAdvice.NOT_HERE
+            ArSupport.UNKNOWN -> ArAdvice.STILL_CHECKING
+            ArSupport.UNSUPPORTED -> ArAdvice.SERVICES_MISSING
+        }
+        if (advice == ArAdvice.OPEN) _support.value = ArSupport.READY
+        return advice
     }
 
     override fun setTargets(targets: List<ArTarget>) = Unit
@@ -307,6 +322,7 @@ class ScriptedArRuntime : ArRuntime {
     fun reset() {
         checksAtomic.set(0)
         nextSupport = ArSupport.UNSUPPORTED
+        nextAdvice = null
         _support.value = ArSupport.UNSUPPORTED
         scriptedPose = null
         scriptedAnchors = emptyList()

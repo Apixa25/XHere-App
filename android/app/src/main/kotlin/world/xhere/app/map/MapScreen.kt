@@ -27,6 +27,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -47,9 +48,15 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import android.Manifest
 import android.content.pm.PackageManager
 import androidx.core.content.ContextCompat
+import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
 import world.xhere.app.R
+import world.xhere.app.ar.ArAdvice
+import world.xhere.app.ar.ArGuidanceDialog
+import world.xhere.app.ar.ArPermissions
+import world.xhere.app.ar.ArRuntime
+import world.xhere.app.ar.findActivity
 import world.xhere.app.access.AccessSurveySheet
 import world.xhere.app.explore.DismissibleCard
 import world.xhere.app.explore.ExperienceFocus
@@ -99,7 +106,7 @@ internal val HereSemantics = SemanticsPropertyKey<String>("HereCard")
 /** Straight-line walk route, and the guide to the next stop when one is underway. */
 internal val WalkRouteSemantics = SemanticsPropertyKey<String>("WalkRoute")
 
-/** `yes` when the AR button is shown. `no` when the phone or the spot cannot do Geospatial. */
+/** `yes` when Geospatial and VPS cover the latest fix. The AR button is shown either way. */
 internal val ArReadySemantics = SemanticsPropertyKey<String>("ArReady")
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -113,6 +120,7 @@ fun MapScreen(
     viewModel: MapViewModel = koinViewModel(),
     voiceModel: VoiceViewModel = koinViewModel(),
     canvas: MapCanvas = koinInject(),
+    arRuntime: ArRuntime = koinInject(),
     things: ThingsViewModel = koinViewModel(),
     voice: VoiceSession = koinInject(),
     links: IncomingLinks = koinInject(),
@@ -167,6 +175,24 @@ fun MapScreen(
     val hintCount = exploreHintCount(state)
     val loadingLabel = stringResource(R.string.map_loading)
     val myLocationLabel = stringResource(R.string.map_my_location)
+    val lookAroundLabel = stringResource(R.string.ar_title)
+    val scope = rememberCoroutineScope()
+    var guidance by remember { mutableStateOf<ArAdvice?>(null) }
+    val adviseLookAround: () -> Unit = {
+        val spot = state.myLocation
+        scope.launch {
+            val advice = arRuntime.advise(spot?.latitude, spot?.longitude, context.findActivity())
+            if (advice == ArAdvice.OPEN) onOpenAr() else guidance = advice
+        }
+    }
+    val arPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { granted ->
+        val ok = granted[android.Manifest.permission.CAMERA] == true &&
+            granted[android.Manifest.permission.ACCESS_FINE_LOCATION] == true
+        if (ok) adviseLookAround() else guidance = ArAdvice.NEEDS_PERMISSION
+    }
+    val onLookAround: () -> Unit = {
+        if (ArPermissions.granted(context)) adviseLookAround() else arPermission.launch(ArPermissions.requested)
+    }
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -411,22 +437,21 @@ fun MapScreen(
                         strokeWidth = 2.dp,
                     )
                 }
-                if (state.arReady) {
-                    Surface(
-                        onClick = onOpenAr,
-                        shape = MaterialTheme.shapes.large,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier
-                            .defaultMinSize(minHeight = 48.dp)
-                            .testTag(TestTags.MAP_AR),
-                    ) {
-                        Text(
-                            text = stringResource(R.string.map_ar),
-                            modifier = Modifier.padding(horizontal = 18.dp, vertical = 12.dp),
-                            color = MaterialTheme.colorScheme.onPrimary,
-                            style = MaterialTheme.typography.labelLarge,
-                        )
-                    }
+                Surface(
+                    onClick = onLookAround,
+                    shape = MaterialTheme.shapes.large,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier
+                        .defaultMinSize(minHeight = 48.dp)
+                        .semantics { contentDescription = lookAroundLabel }
+                        .testTag(TestTags.MAP_AR),
+                ) {
+                    Text(
+                        text = stringResource(R.string.map_ar),
+                        modifier = Modifier.padding(horizontal = 18.dp, vertical = 12.dp),
+                        color = MaterialTheme.colorScheme.onPrimary,
+                        style = MaterialTheme.typography.labelLarge,
+                    )
                 }
                 Surface(
                     onClick = {
@@ -620,6 +645,20 @@ fun MapScreen(
                 onSendReport = things::report,
                 onDismissReport = things::dismissReport,
                 onDismiss = things::dismissCard,
+            )
+        }
+        guidance?.let { advice ->
+            ArGuidanceDialog(
+                advice = advice,
+                onDismiss = { guidance = null },
+                onConfirm = {
+                    guidance = null
+                    when (advice) {
+                        ArAdvice.NEEDS_PERMISSION -> openAppSettings(context)
+                        ArAdvice.NOT_HERE, ArAdvice.NOT_AUTHORIZED, ArAdvice.SERVICES_MISSING -> Unit
+                        else -> onLookAround()
+                    }
+                },
             )
         }
         if (state.celebrateWalk || state.celebrateQuest) {
