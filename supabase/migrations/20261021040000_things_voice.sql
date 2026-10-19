@@ -35,7 +35,8 @@ as $$
       select 1
       from jsonb_array_elements(p_media) as element
       where jsonb_typeof(element) <> 'object'
-        or coalesce(element ->> 'url', '') !~ '^https://[^[:space:]]{1,280}$'
+        or char_length(coalesce(element ->> 'url', '')) not between 9 and 280
+        or coalesce(element ->> 'url', '') !~ '^https://[^[:space:]]+$'
         or char_length(coalesce(element ->> 'alt', '')) > 140
         or element ? 'storage_path'
     );
@@ -186,7 +187,7 @@ begin
     end if;
     return 'ibeacon:' || v_uuid || ':' || v_major::text || ':' || v_minor::text;
   end if;
-  if v ~ '^url:https?://[a-z0-9._~:/?#\[\]@!$&''()*+,;=%-]{1,160}$' then
+  if v ~ '^url:https?://[^[:space:]]+$' then
     return v;
   end if;
   return null;
