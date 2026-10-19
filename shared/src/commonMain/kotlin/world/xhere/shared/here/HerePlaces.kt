@@ -11,10 +11,12 @@ import world.xhere.shared.model.PlaceLabel
 /**
  * Place name for a Here Card.
  *
- * Reads the database cache first. On a miss, asks for the global Nominatim
- * slot and, if this device is also inside its own 1.1 second gap, does one
- * reverse lookup. The name is stored with attribution the database stamps.
- * A failure leaves the card without a name. The drops still load.
+ * Reads the database cache first. On a miss, asks for the Nominatim slot and,
+ * if this device is also inside its own 1.1 second gap, does one reverse
+ * lookup. The project slot is 1.1 seconds. The same account cannot take
+ * another slot for 10 seconds. The name is stored with attribution the
+ * database stamps. A refused slot, a refused cache write, or a lookup failure
+ * leaves the card without a cached name. The drops still load.
  */
 class HerePlaces(
     private val places: PlaceRepository,

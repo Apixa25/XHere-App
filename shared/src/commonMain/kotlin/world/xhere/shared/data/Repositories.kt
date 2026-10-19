@@ -192,7 +192,11 @@ interface SuggestionRepository {
 
 /**
  * Cached OpenStreetMap place names. The database stamps attribution.
- * [claimNominatimSlot] is the global 1.1 second gate in front of Nominatim.
+ * [claimNominatimSlot] is the project gate: one lookup every 1.1 seconds,
+ * and the same account cannot take another for 10 seconds. A cache write is
+ * limited to one mutating row every 10 seconds and 30 an hour. The in-memory
+ * fake does not simulate those clocks. Both paths reject a label that is not
+ * a place name.
  */
 interface PlaceRepository {
     suspend fun cachedLabel(location: LatLng): PlaceLabel?
