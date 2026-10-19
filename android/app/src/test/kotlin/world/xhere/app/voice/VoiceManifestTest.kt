@@ -17,6 +17,22 @@ import org.robolectric.annotation.Config
 @Config(sdk = [34])
 class VoiceManifestTest {
     @Test
+    fun microphoneIsRequestedButNotRequired() {
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        val info = context.packageManager.getPackageInfo(
+            context.packageName,
+            PackageManager.PackageInfoFlags.of(PackageManager.GET_PERMISSIONS.toLong()),
+        )
+        val names = info.requestedPermissions?.toSet().orEmpty()
+        assertTrue(Manifest.permission.RECORD_AUDIO in names)
+        val required = info.reqFeatures.orEmpty().any { feature ->
+            feature.name == "android.hardware.microphone" &&
+                feature.flags and android.content.pm.FeatureInfo.FLAG_REQUIRED != 0
+        }
+        assertFalse(required)
+    }
+
+    @Test
     fun bluetoothScanIsNeverForLocationAndTheReceiverIsPrivate() {
         val context = ApplicationProvider.getApplicationContext<android.content.Context>()
         val info = context.packageManager.getPackageInfo(

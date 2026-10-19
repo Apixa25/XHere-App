@@ -23,6 +23,9 @@ import world.xhere.app.explore.ExperienceMemory
 import world.xhere.app.explore.MemoryExperienceStore
 import world.xhere.app.location.DeviceLocation
 import world.xhere.app.location.LocationReading
+import world.xhere.shared.access.AccessAnswer
+import world.xhere.shared.access.AccessPlaces
+import world.xhere.shared.access.AccessSummary
 import world.xhere.shared.explore.Experience
 import world.xhere.shared.explore.ExperienceKind
 import world.xhere.shared.integrity.LocationReasons
@@ -199,7 +202,55 @@ class MapViewModel(
 
     fun dismissHere() {
         hereJob?.cancel()
-        _state.update { it.copy(here = null) }
+        _state.update { it.copy(here = null, accessSurvey = false) }
+    }
+
+    /** Wheelchair layer. Category chips stay as they are. */
+    fun toggleAccessibility() {
+        val enable = !_state.value.accessibilityLayer
+        _state.update { it.copy(accessibilityLayer = enable, accessPins = if (enable) it.accessPins else emptyList()) }
+        val frame = lastFrame ?: return
+        cameraJob?.cancel()
+        cameraJob = viewModelScope.launch { fetch(frame) }
+    }
+
+    fun openAccessSurvey() {
+        if (_state.value.here == null) return
+        _state.update { it.copy(accessSurvey = true) }
+    }
+
+    fun dismissAccessSurvey() {
+        _state.update { it.copy(accessSurvey = false) }
+    }
+
+    fun submitAccess(stepFree: AccessAnswer, ramp: AccessAnswer, restroom: AccessAnswer, notes: String?) {
+        val sheet = _state.value.here ?: return
+        val key = sheet.accessKey.ifBlank { AccessPlaces.cell(sheet.spot) }
+        if (!AccessPlaces.valid(key)) return
+        viewModelScope.launch {
+            try {
+                val summary = services.access.submit(
+                    placeKey = key,
+                    location = sheet.spot,
+                    stepFree = stepFree,
+                    ramp = ramp,
+                    restroom = restroom,
+                    notes = notes?.trim()?.ifEmpty { null },
+                )
+                _state.update { current ->
+                    current.copy(
+                        accessSurvey = false,
+                        here = current.here?.copy(access = summary, accessKey = summary.placeKey),
+                    )
+                }
+                val frame = lastFrame
+                if (frame != null && _state.value.accessibilityLayer) fetch(frame)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                _state.update { it.copy(notice = MapNotice.LOAD_FAILED) }
+            }
+        }
     }
 
     /** Map button. Uses the camera center when the person has not tapped a spot. */
@@ -510,6 +561,7 @@ class MapViewModel(
             } catch (_: Exception) {
                 null
             }
+            val access = if (drops != null) accessFor(spot) else null
             val place = try {
                 places.describe(spot)
             } catch (e: CancellationException) {
@@ -526,6 +578,8 @@ class MapViewModel(
                         place = place,
                         drops = drops.orEmpty(),
                         failed = drops == null,
+                        access = open.access ?: access,
+                        accessKey = open.access?.placeKey ?: access?.placeKey ?: AccessPlaces.cell(spot),
                     ),
                 )
             }
@@ -586,6 +640,7 @@ class MapViewModel(
             val features = services.drops.dropsInView(frame.box, slugs, frame.zoom)
             val walks = runCatching { services.walks.walksFor(centerOf(frame)) }.getOrDefault(emptyList())
             val campaigns = runCatching { services.campaigns.campaignsFor(frame.box) }.getOrDefault(emptyList())
+            val pins = if (_state.value.accessibilityLayer) accessPins(frame) else emptyList()
             if (lastFrame != frame) return
             _state.update {
                 it.copy(
@@ -594,6 +649,7 @@ class MapViewModel(
                     walk = mergeWalk(it.walk, walks.firstOrNull()),
                     campaigns = campaigns,
                     notice = null,
+                    accessPins = if (it.accessibilityLayer) pins else emptyList(),
                 )
             }
         } catch (e: CancellationException) {
@@ -604,6 +660,36 @@ class MapViewModel(
             _state.update { it.copy(loading = false, notice = MapNotice.LOAD_FAILED) }
         }
         if (lastFrame == frame) refreshAlerts(frame)
+    }
+
+    private suspend fun accessPins(frame: CameraFrame): List<AccessSummary> = try {
+        services.access.inView(frame.box)
+    } catch (e: CancellationException) {
+        throw e
+    } catch (_: Exception) {
+        emptyList()
+    }
+
+    /** The cell's own majority, or the nearest stored pin within 150 m. */
+    private suspend fun accessFor(spot: LatLng): AccessSummary? {
+        val own = try {
+            services.access.summary(AccessPlaces.cell(spot))
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            null
+        }
+        if (own != null) return own
+        val near = try {
+            services.access.inView(Geo.boundingBox(spot, 150.0))
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            emptyList()
+        }
+        return near
+            .filter { Geo.distanceMeters(spot, it.location) <= 150.0 }
+            .minByOrNull { Geo.distanceMeters(spot, it.location) }
     }
 
     private suspend fun refreshAlerts(frame: CameraFrame) {

@@ -75,6 +75,23 @@ sources:
     automated_access: allowed
     cost: 0
     category: historical_marker
+  - id: osm-accessibility
+    adapter: osm_accessibility
+    publisher: OpenStreetMap contributors
+    url: https://www.openstreetmap.org/copyright
+    license: ODbL 1.0
+    attribution: "© OpenStreetMap contributors. Data available under the Open Database License."
+    automated_access: allowed
+    cost: 0
+    # Kept out of the main open-data snapshot so a wheelchair tag is not deduped
+    # away from the building it describes. Checked as its own seed file.
+    snapshot: jamestown-ny-access.json
+
+# Project Sidewalk is optional. Turn enabled on only in a city that publishes
+# a dump (https://sidewalk-gallery.cs.washington.edu/). Jamestown does not.
+accessibility:
+  project_sidewalk:
+    enabled: false
 
 # A walk is ordered stops that name places already in the snapshot.
 # source + external_id match seed/open-data/jamestown-ny.json.
@@ -171,6 +188,10 @@ candidates:
     decision: link-only
     reason: "No open-data license was found. Link out only. Do not copy place text."
     url: https://www.atlasobscura.com/about
+  - id: project-sidewalk
+    decision: reject
+    reason: "Checked 2026-10-19. Project Sidewalk publishes open sidewalk labels (curb ramps, missing ramps, obstacles, surface problems) only for cities that have run a campaign. The gallery and the public city list do not include Jamestown, New York. The adapter project_sidewalk is in the importer. Set accessibility.project_sidewalk.enabled to true, with an https url, license, attribution, and a local GeoJSON file, only when a region has that dump. Do not guess labels."
+    url: https://sidewalk-gallery.cs.washington.edu/
   - id: jamestown-311
     decision: reject
     reason: "Checked 2026-10-18. Jamestown NY is not on the Open311 GeoReport server list (https://wiki.open311.org/GeoReport_v2/Servers/). No New York city is listed. jamestownny.gov has no open 311 or SeeClickFix service-request API. Police annual reports are PDFs of calls for service and are person-related, so they are not imported. data.ny.gov 311 Service Requests is New York City (erm2-nwe9), not Jamestown. The SeeClickFix issues API returned 403 and is not a free open feed. No civic feed is configured."

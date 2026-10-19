@@ -186,6 +186,25 @@ fun SettingsScreen(
                     modifier = Modifier.testTag(TestTags.SETTINGS_VOICE),
                 )
             }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(stringResource(R.string.settings_voice_auto), style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        stringResource(R.string.settings_voice_auto_body),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Switch(
+                    checked = state.voiceAutoPost,
+                    onCheckedChange = viewModel::setVoiceAutoPost,
+                    modifier = Modifier.testTag(TestTags.SETTINGS_VOICE_AUTO),
+                )
+            }
             Text(stringResource(R.string.settings_location_title), style = MaterialTheme.typography.titleMedium)
             Text(stringResource(R.string.settings_location_body), style = MaterialTheme.typography.bodyLarge)
             Text(

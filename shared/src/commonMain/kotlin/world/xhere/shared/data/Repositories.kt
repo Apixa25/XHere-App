@@ -3,6 +3,8 @@ package world.xhere.shared.data
 import kotlin.time.Instant
 import kotlin.uuid.Uuid
 import kotlinx.coroutines.flow.Flow
+import world.xhere.shared.access.AccessAnswer
+import world.xhere.shared.access.AccessSummary
 import world.xhere.shared.geo.BoundingBox
 import world.xhere.shared.geo.LatLng
 import world.xhere.shared.integrity.LocationIntegrityFlag
@@ -283,9 +285,37 @@ interface CampaignRepository {
     suspend fun setShowOnLeaderboard(show: Boolean)
 }
 
-/** Photo bytes go to Storage only after Exif/XMP is removed. */
+/** Photo bytes go to Storage only after Exif/XMP is removed. Voice clips are a separate short audio file. */
 interface MediaRepository {
     suspend fun uploadPhoto(bytes: ByteArray, mimeType: String): MediaUpload
+
+    /**
+     * A compressed clip, at most 30 seconds and 256 KB, in the private `voice-clips` bucket.
+     * The path starts with the caller's id, the same rule as photos.
+     */
+    suspend fun uploadVoiceClip(bytes: ByteArray, mimeType: String, durationS: Double): MediaUpload
+}
+
+/**
+ * 3-tap accessibility checks. The public read is the majority, the confidence,
+ * and the last confirmed time. Individual notes stay with the person who wrote them.
+ */
+interface AccessRepository {
+    suspend fun submit(
+        placeKey: String,
+        location: LatLng,
+        stepFree: AccessAnswer,
+        ramp: AccessAnswer,
+        restroom: AccessAnswer,
+        notes: String? = null,
+        dropId: Uuid? = null,
+    ): AccessSummary
+
+    /** Null when nobody has answered for this place. */
+    suspend fun summary(placeKey: String): AccessSummary?
+
+    /** One pin per place inside the box. OpenStreetMap rows are included when the region imported them. */
+    suspend fun inView(box: BoundingBox): List<AccessSummary>
 }
 
 /**
@@ -337,6 +367,7 @@ interface XHereServices {
     val live: LiveRepository
     val suggestions: SuggestionRepository
     val media: MediaRepository
+    val access: AccessRepository
     val reports: ReportRepository
     val blocks: BlockRepository
     val hidden: HiddenDropRepository

@@ -7,6 +7,13 @@ import kotlin.uuid.Uuid
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
+import world.xhere.shared.access.AccessAnswer
+import world.xhere.shared.access.AccessPlaces
+import world.xhere.shared.access.AccessRollup
+import world.xhere.shared.access.AccessSummary
+import world.xhere.shared.access.AccessVote
+import world.xhere.shared.access.OsmAccess
+import world.xhere.shared.data.AccessRepository
 import world.xhere.shared.data.AccountRepository
 import world.xhere.shared.data.CampaignRepository
 import world.xhere.shared.data.AuthRepository
@@ -69,6 +76,7 @@ import world.xhere.shared.model.DropStatus
 import world.xhere.shared.model.MapFeature
 import world.xhere.shared.media.ExifStrip
 import world.xhere.shared.model.MediaKind
+import world.xhere.shared.voice.VoiceClips
 import world.xhere.shared.model.MediaUpload
 import world.xhere.shared.model.ModerateDropAction
 import world.xhere.shared.model.QuestProgress
@@ -97,6 +105,7 @@ import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 
@@ -129,6 +138,7 @@ class InMemoryXHere(
     }
     override val suggestions: SuggestionRepository = SuggestionRepo()
     override val media: MediaRepository = MediaRepo()
+    override val access: AccessRepository = AccessRepo()
     override val reports: ReportRepository = ReportRepo()
     override val blocks: BlockRepository = BlockRepo()
     override val hidden: HiddenDropRepository = HiddenRepo()
@@ -496,6 +506,9 @@ class InMemoryXHere(
                 expiresAt = checked.expiresAt,
                 createdAt = clock(),
                 media = request.media.mapIndexed { index, item ->
+                    VoiceClips.problem(item)?.let { code ->
+                        throw XHereApiException(code, sqlState = XHereApiException.SQL_VALIDATION, detail = code)
+                    }
                     val capture = if (item.captureLat != null && item.captureLng != null) {
                         LatLng(item.captureLat, item.captureLng)
                     } else {
@@ -718,6 +731,115 @@ class InMemoryXHere(
                 byteSize = stripped.size.toLong(),
                 captureLat = capture?.latitude,
                 captureLng = capture?.longitude,
+            )
+        }
+
+        override suspend fun uploadVoiceClip(bytes: ByteArray, mimeType: String, durationS: Double): MediaUpload {
+            val profile = requireViewer()
+            val mime = mimeType.substringBefore(';').trim().lowercase()
+            VoiceClips.problem(mime, bytes.size.toLong(), durationS)?.let { code ->
+                throw XHereApiException(code, sqlState = XHereApiException.SQL_VALIDATION, detail = code)
+            }
+            val path = "${profile.id}/${Uuid.random()}.m4a"
+            store.mediaBytes[path] = bytes
+            return MediaUpload(
+                storageBucket = VoiceClips.BUCKET,
+                storagePath = path,
+                mediaKind = MediaKind.AUDIO,
+                mimeType = mime,
+                byteSize = bytes.size.toLong(),
+                durationS = durationS,
+            )
+        }
+    }
+
+    private inner class AccessRepo : AccessRepository {
+        override suspend fun submit(
+            placeKey: String,
+            location: LatLng,
+            stepFree: AccessAnswer,
+            ramp: AccessAnswer,
+            restroom: AccessAnswer,
+            notes: String?,
+            dropId: Uuid?,
+        ): AccessSummary {
+            val profile = requireViewer()
+            if (!AccessPlaces.valid(placeKey) || !Geo.isValid(location)) {
+                throw XHereApiException("invalid_location", sqlState = XHereApiException.SQL_VALIDATION, detail = placeKey)
+            }
+            val note = notes?.trim()?.take(280)?.ifBlank { null }
+            if (notes != null && notes.trim().length > 280) {
+                throw XHereApiException("invalid_note", sqlState = XHereApiException.SQL_VALIDATION, detail = "notes")
+            }
+            val row = StoredAccessCheck(
+                authorId = profile.id,
+                placeKey = placeKey,
+                dropId = dropId,
+                latitude = location.latitude,
+                longitude = location.longitude,
+                stepFree = stepFree,
+                ramp = ramp,
+                restroom = restroom,
+                notes = note,
+                updatedAt = clock(),
+            )
+            store.accessChecks.removeAll { it.authorId == profile.id && it.placeKey == placeKey }
+            store.accessChecks.add(row)
+            return summary(placeKey) ?: error("access summary missing")
+        }
+
+        override suspend fun summary(placeKey: String): AccessSummary? {
+            val mine = viewer?.id
+            val rows = store.accessChecks.filter { it.placeKey == placeKey }
+            if (rows.isEmpty()) return osmSummary(placeKey)
+            val anchor = rows.last()
+            return AccessRollup.summarize(
+                placeKey = placeKey,
+                votes = rows.map { AccessVote(it.stepFree, it.ramp, it.restroom, it.updatedAt) },
+                latitude = anchor.latitude,
+                longitude = anchor.longitude,
+                title = anchor.placeKey,
+                myNotes = rows.lastOrNull { it.authorId == mine }?.notes,
+            )
+        }
+
+        override suspend fun inView(box: BoundingBox): List<AccessSummary> {
+            if (!Geo.isValidBoundingBox(box)) return emptyList()
+            val keys = store.accessChecks.map { it.placeKey }.distinct()
+            val fromPeople = keys.mapNotNull { key -> summary(key) }
+                .filter { box.holds(it.location) }
+            val seen = fromPeople.map { it.placeKey }.toSet()
+            val fromOsm = store.drops.values.mapNotNull { drop ->
+                if (drop.category.slug != "access_place" || drop.source != world.xhere.shared.model.DropSource.OPEN_DATA) return@mapNotNull null
+                val key = "osm:${drop.shortId}"
+                if (key in seen || !box.holds(drop.displayLocation)) return@mapNotNull null
+                osmFromDrop(drop, key)
+            }
+            return (fromPeople + fromOsm).sortedBy { it.title }
+        }
+
+        private fun osmSummary(placeKey: String): AccessSummary? {
+            val drop = store.drops.values.firstOrNull { drop ->
+                drop.category.slug == "access_place" && "osm:${drop.shortId}" == placeKey
+            } ?: return null
+            return osmFromDrop(drop, placeKey)
+        }
+
+        private fun osmFromDrop(drop: StoredDrop, placeKey: String): AccessSummary? {
+            val tags = drop.attributes.mapNotNull { (key, value) ->
+                val text = (value as? kotlinx.serialization.json.JsonPrimitive)?.contentOrNull ?: return@mapNotNull null
+                val osmKey = when (key) {
+                    "toilets_wheelchair" -> "toilets:wheelchair"
+                    else -> key
+                }
+                osmKey to text
+            }.toMap()
+            return OsmAccess.summary(
+                placeKey,
+                tags,
+                drop.displayLocation.latitude,
+                drop.displayLocation.longitude,
+                drop.title,
             )
         }
     }
@@ -1357,6 +1479,8 @@ class MemoryStore(
     /** People who turned off campaign leaderboards. Everyone else is listed when they have a display name. */
     val leaderboardHidden: MutableSet<Uuid> = mutableSetOf()
     val mediaBytes: MutableMap<String, ByteArray> = linkedMapOf()
+    /** One accessibility answer per person per place. The map reads the rollup, not this list. */
+    val accessChecks: MutableList<StoredAccessCheck> = mutableListOf()
     /** One overwritten device fix per user. Not a trail, and not part of an export. */
     val checkpoints: MutableMap<Uuid, LocationCheckpoint> = linkedMapOf()
     /** Reason codes only. The moderator queue is the app surface. */
@@ -1543,6 +1667,19 @@ class StoredSuggestion(
     val createdAt: Instant,
 )
 
+class StoredAccessCheck(
+    val authorId: Uuid,
+    val placeKey: String,
+    val dropId: Uuid?,
+    val latitude: Double,
+    val longitude: Double,
+    val stepFree: AccessAnswer,
+    val ramp: AccessAnswer,
+    val restroom: AccessAnswer,
+    val notes: String?,
+    val updatedAt: Instant,
+)
+
 class StoredDrop(
     val id: Uuid,
     val shortId: String,
@@ -1580,6 +1717,9 @@ class StoredDrop(
  * `drops_in_view` / `drops_nearby` accept category slugs and group slugs in the same array
  * (`c.slug = any(...) or g.slug = any(...)`). An empty list matches nothing; null means no filter.
  */
+private fun BoundingBox.holds(point: LatLng): Boolean =
+    point.longitude in minLongitude..maxLongitude && point.latitude in minLatitude..maxLatitude
+
 private fun StoredDrop.passes(categories: List<String>?): Boolean {
     if (categories == null) return true
     return category.slug in categories || groupSlug in categories

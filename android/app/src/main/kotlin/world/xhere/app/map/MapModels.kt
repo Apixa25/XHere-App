@@ -121,6 +121,10 @@ data class HereSheet(
     val drops: List<DropCard> = emptyList(),
     val failed: Boolean = false,
     val clippings: List<Clipping> = emptyList(),
+    /** Majority for this place, or a nearby OpenStreetMap pin when nobody has checked the cell. */
+    val access: world.xhere.shared.access.AccessSummary? = null,
+    /** Place key the 3-tap survey writes. A cell when nothing is stored yet. */
+    val accessKey: String = "",
 )
 
 /**
@@ -256,6 +260,10 @@ data class MapUiState(
     val experienceLocal: ExperienceLocal = ExperienceLocal(),
     /** Set when Explore asks the map to show one card. */
     val focusedExperienceId: String? = null,
+    /** Wheelchair pins. Off until the person turns the Accessibility layer on. */
+    val accessibilityLayer: Boolean = false,
+    val accessPins: List<world.xhere.shared.access.AccessSummary> = emptyList(),
+    val accessSurvey: Boolean = false,
 )
 
 /** Straight line through the stops, plus a guide from the person to the next one. */

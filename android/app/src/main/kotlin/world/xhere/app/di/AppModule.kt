@@ -50,12 +50,22 @@ import world.xhere.app.session.SignOutNotice
 import world.xhere.app.settings.AndroidDataExporter
 import world.xhere.app.settings.DataExporter
 import world.xhere.app.settings.SettingsViewModel
+import world.xhere.app.voice.AndroidHereSpeaker
+import world.xhere.app.voice.AndroidSpeechCapture
+import world.xhere.app.voice.AndroidVoiceClipRecorder
 import world.xhere.app.voice.AndroidVoiceRadio
+import world.xhere.app.voice.GeminiNanoVoiceRefiner
+import world.xhere.app.voice.HereSpeaker
+import world.xhere.app.voice.SpeechCapture
 import world.xhere.app.voice.ThingsViewModel
 import world.xhere.app.voice.VoiceBattery
+import world.xhere.app.voice.VoiceClipRecorder
 import world.xhere.app.voice.VoicePreferences
+import world.xhere.app.voice.VoicePrefs
 import world.xhere.app.voice.VoiceRadio
+import world.xhere.app.voice.VoiceRefiner
 import world.xhere.app.voice.VoiceSession
+import world.xhere.app.voice.VoiceViewModel
 import world.xhere.shared.data.XHereServices
 import world.xhere.shared.data.fake.InMemoryXHere
 import world.xhere.shared.data.supabase.SupabaseXHereClient
@@ -102,6 +112,11 @@ val appModule = module {
     single<DropCapture> { CameraXDropCapture() }
     single<ImageLabeler> { MlKitImageLabeler() }
     single<SnapSuggester> { GeminiNanoSnapSuggester(androidContext(), LabelSnapSuggester(get())) }
+    single { VoicePrefs(androidContext()) }
+    single<SpeechCapture> { AndroidSpeechCapture(androidContext()) }
+    single<HereSpeaker> { AndroidHereSpeaker(androidContext()) }
+    single<VoiceClipRecorder> { AndroidVoiceClipRecorder(androidContext()) }
+    single<VoiceRefiner> { GeminiNanoVoiceRefiner(androidContext()) }
     viewModel { SessionViewModel(get(), get(), get()) }
     viewModel { DropViewModel(get(), get(), get(), get(), get()) }
     single { VoicePreferences(androidContext()) }
@@ -117,6 +132,7 @@ val appModule = module {
     }
     viewModel { ExploreViewModel(get(), get(), get(), get(), get(), conditions = get()) }
     viewModel { MapViewModel(get(), get(), get(), get(), get(), conditions = get(), experiences = get(), anchor = get()) }
+    viewModel { VoiceViewModel(get(), get(), get(), get(), get(), get(), get(), get()) }
     viewModel { ArViewModel(get(), get(), get()) }
     viewModel { (shortId: String) -> DropDetailViewModel(shortId, get(), get()) }
     viewModel { AuthViewModel(get(), get(), get(), get(), get(), PrefsAuthDraft(androidContext())) }
@@ -133,6 +149,7 @@ val appModule = module {
             signOutFailed = context.getString(R.string.settings_sign_out_failed),
             exporter = get(),
             experiences = get(),
+            voicePrefs = get(),
         )
     }
 }

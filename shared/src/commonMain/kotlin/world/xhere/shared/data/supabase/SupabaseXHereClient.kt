@@ -110,7 +110,14 @@ import world.xhere.shared.data.remote.toParams
 import world.xhere.shared.geo.BoundingBox
 import world.xhere.shared.integrity.LocationIntegrityFlag
 import world.xhere.shared.integrity.LocationSignal
+import io.ktor.client.request.put
+import world.xhere.shared.access.AccessSummary
+import world.xhere.shared.data.AccessRepository
+import world.xhere.shared.data.remote.AccessBoxParams
+import world.xhere.shared.data.remote.AccessPlaceParams
+import world.xhere.shared.data.remote.SubmitAccessParams
 import world.xhere.shared.media.ExifGps
+import world.xhere.shared.voice.VoiceClips
 import world.xhere.shared.geo.Geo
 import world.xhere.shared.history.Clipping
 import world.xhere.shared.history.HistoryPlace
@@ -195,6 +202,7 @@ class SupabaseXHereClient(
     override val live: LiveRepository = LiveRepo()
     override val suggestions: SuggestionRepository = SuggestionRepo()
     override val media: MediaRepository = MediaRepo()
+    override val access: AccessRepository = AccessRepo()
     override val reports: ReportRepository = ReportRepo()
     override val blocks: BlockRepository = BlockRepo()
     override val hidden: HiddenDropRepository = HiddenRepo()
@@ -678,6 +686,87 @@ class SupabaseXHereClient(
                 throw XHereApiException("upload_failed", detail = "photo upload failed", cause = e)
             }
         }
+
+        override suspend fun uploadVoiceClip(bytes: ByteArray, mimeType: String, durationS: Double): MediaUpload {
+            val mime = mimeType.substringBefore(';').trim().lowercase()
+            VoiceClips.problem(mime, bytes.size.toLong(), durationS)?.let { code ->
+                throw XHereApiException(code, sqlState = XHereApiException.SQL_VALIDATION, detail = code)
+            }
+            val userId = bearerUserId()
+            val path = "$userId/${Uuid.random()}.m4a"
+            try {
+                val response = edge.put(config.url.trimEnd('/') + "/storage/v1/object/${VoiceClips.BUCKET}/$path") {
+                    header(HttpHeaders.Authorization, "Bearer ${bearer() ?: ""}")
+                    header("apikey", config.anonKey)
+                    header("x-upsert", "false")
+                    contentType(ContentType.parse(mime))
+                    setBody(bytes)
+                }
+                if (!response.status.isSuccess()) {
+                    throw XHereApiException("upload_failed", detail = "voice clip upload failed")
+                }
+                return MediaUpload(
+                    storageBucket = VoiceClips.BUCKET,
+                    storagePath = path,
+                    mediaKind = world.xhere.shared.model.MediaKind.AUDIO,
+                    mimeType = mime,
+                    byteSize = bytes.size.toLong(),
+                    durationS = durationS,
+                )
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: XHereApiException) {
+                throw e
+            } catch (e: Throwable) {
+                throw XHereApiException("upload_failed", detail = "voice clip upload failed", cause = e)
+            }
+        }
+    }
+
+    private inner class AccessRepo : AccessRepository {
+        override suspend fun submit(
+            placeKey: String,
+            location: LatLng,
+            stepFree: world.xhere.shared.access.AccessAnswer,
+            ramp: world.xhere.shared.access.AccessAnswer,
+            restroom: world.xhere.shared.access.AccessAnswer,
+            notes: String?,
+            dropId: Uuid?,
+        ): AccessSummary = call {
+            decode(
+                supabase.postgrest.rpc(
+                    "submit_accessibility_check",
+                    SubmitAccessParams(
+                        placeKey = placeKey,
+                        lat = location.latitude,
+                        lng = location.longitude,
+                        stepFree = stepFree,
+                        ramp = ramp,
+                        restroom = restroom,
+                        notes = notes,
+                        dropId = dropId,
+                    ).rpcJson(),
+                ).data,
+            )
+        }
+
+        override suspend fun summary(placeKey: String): AccessSummary? = call {
+            val raw = supabase.postgrest.rpc("accessibility_summary", AccessPlaceParams(placeKey).rpcJson()).data
+            val element = XHereJson.parseToJsonElement(raw)
+            val body = if (element is JsonPrimitive && element.isString) {
+                XHereJson.parseToJsonElement(element.content)
+            } else {
+                element
+            }
+            if (body is JsonNull) null else XHereJson.decodeFromString(AccessSummary.serializer(), body.toString())
+        }
+
+        override suspend fun inView(box: BoundingBox): List<AccessSummary> = call {
+            supabase.postgrest.rpc(
+                "accessibility_in_view",
+                AccessBoxParams(box.minLongitude, box.minLatitude, box.maxLongitude, box.maxLatitude).rpcJson(),
+            ).decodeList<AccessSummary>()
+        }
     }
 
     private inner class ThingRepo : ThingRepository {
@@ -721,6 +810,14 @@ class SupabaseXHereClient(
     }
 
     private suspend fun bearer(): String? = supabase.auth.currentSessionOrNull()?.accessToken
+
+    private suspend fun bearerUserId(): String {
+        val id = supabase.auth.currentSessionOrNull()?.user?.id
+        if (id.isNullOrBlank()) {
+            throw XHereApiException("not_authenticated", sqlState = XHereApiException.SQL_PERMISSION)
+        }
+        return id
+    }
 
     private fun io.github.jan.supabase.auth.user.UserSession.toInfo(): SessionInfo = SessionInfo(
         userId = Uuid.parse(user?.id ?: throw XHereApiException("not_authenticated", sqlState = XHereApiException.SQL_PERMISSION)),

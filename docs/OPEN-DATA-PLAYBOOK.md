@@ -396,3 +396,19 @@ psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/seed/live/us-ny-jamestown.sq
 ```
 
 That calls `private.upsert_region_live` as the database owner. It does not insert a 311 snapshot, because Jamestown has no feed.
+
+### 9.5 Accessibility tags and Project Sidewalk
+
+`osm_accessibility` reads free OpenStreetMap tags `wheelchair=*`, `toilets:wheelchair=*`, and `ramp=*` (ODbL). Rows are `access_place` drops. A source may set `snapshot:` to a second seed file so those pins are not deduped against the building they describe. Jamestown uses `supabase/seed/open-data/jamestown-ny-access.sql`.
+
+Project Sidewalk is optional and off unless the city has a published dump. The region block is:
+
+```yaml
+accessibility:
+  project_sidewalk:
+    enabled: false
+    # url, license, attribution, and a source with adapter: project_sidewalk
+    # only when this city is in the Project Sidewalk gallery.
+```
+
+Jamestown's candidate `project-sidewalk` is `reject`. The gallery does not include it. Do not invent labels.

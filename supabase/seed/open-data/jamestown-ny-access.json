@@ -1,0 +1,784 @@
+[
+  {
+    "source_slug": "osm-accessibility",
+    "source_name": "OpenStreetMap contributors",
+    "source_home": "https://www.openstreetmap.org/copyright",
+    "external_id": "osm:node/7641125465",
+    "category_slug": "access_place",
+    "title": "Taco Bell",
+    "summary": "OpenStreetMap records wheelchair yes.",
+    "lat": 42.098263,
+    "lng": -79.303988,
+    "source_url": "https://www.openstreetmap.org/node/7641125465",
+    "license": "ODbL 1.0",
+    "attribution": "© OpenStreetMap contributors. Data available under the Open Database License.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "wheelchair": "yes",
+      "citation": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/7641125465"
+    }
+  },
+  {
+    "source_slug": "osm-accessibility",
+    "source_name": "OpenStreetMap contributors",
+    "source_home": "https://www.openstreetmap.org/copyright",
+    "external_id": "osm:node/8795207175",
+    "category_slug": "access_place",
+    "title": "Old Navy",
+    "summary": "OpenStreetMap records wheelchair yes.",
+    "lat": 42.095975,
+    "lng": -79.304689,
+    "source_url": "https://www.openstreetmap.org/node/8795207175",
+    "license": "ODbL 1.0",
+    "attribution": "© OpenStreetMap contributors. Data available under the Open Database License.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "wheelchair": "yes",
+      "citation": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/8795207175"
+    }
+  },
+  {
+    "source_slug": "osm-accessibility",
+    "source_name": "OpenStreetMap contributors",
+    "source_home": "https://www.openstreetmap.org/copyright",
+    "external_id": "osm:node/8795316287",
+    "category_slug": "access_place",
+    "title": "Planet Fitness",
+    "summary": "OpenStreetMap records wheelchair yes.",
+    "lat": 42.096288,
+    "lng": -79.3049,
+    "source_url": "https://www.openstreetmap.org/node/8795316287",
+    "license": "ODbL 1.0",
+    "attribution": "© OpenStreetMap contributors. Data available under the Open Database License.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "wheelchair": "yes",
+      "citation": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/8795316287"
+    }
+  },
+  {
+    "source_slug": "osm-accessibility",
+    "source_name": "OpenStreetMap contributors",
+    "source_home": "https://www.openstreetmap.org/copyright",
+    "external_id": "osm:node/8795319995",
+    "category_slug": "access_place",
+    "title": "Lena's Pizza",
+    "summary": "OpenStreetMap records wheelchair no.",
+    "lat": 42.10559,
+    "lng": -79.224355,
+    "source_url": "https://www.openstreetmap.org/node/8795319995",
+    "license": "ODbL 1.0",
+    "attribution": "© OpenStreetMap contributors. Data available under the Open Database License.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "wheelchair": "no",
+      "citation": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/8795319995"
+    }
+  },
+  {
+    "source_slug": "osm-accessibility",
+    "source_name": "OpenStreetMap contributors",
+    "source_home": "https://www.openstreetmap.org/copyright",
+    "external_id": "osm:node/8795325843",
+    "category_slug": "access_place",
+    "title": "Sherwin-Williams",
+    "summary": "OpenStreetMap records wheelchair yes.",
+    "lat": 42.112995,
+    "lng": -79.216533,
+    "source_url": "https://www.openstreetmap.org/node/8795325843",
+    "license": "ODbL 1.0",
+    "attribution": "© OpenStreetMap contributors. Data available under the Open Database License.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "wheelchair": "yes",
+      "citation": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/8795325843"
+    }
+  },
+  {
+    "source_slug": "osm-accessibility",
+    "source_name": "OpenStreetMap contributors",
+    "source_home": "https://www.openstreetmap.org/copyright",
+    "external_id": "osm:node/8795328881",
+    "category_slug": "access_place",
+    "title": "JCPenney",
+    "summary": "OpenStreetMap records wheelchair yes.",
+    "lat": 42.097503,
+    "lng": -79.303192,
+    "source_url": "https://www.openstreetmap.org/node/8795328881",
+    "license": "ODbL 1.0",
+    "attribution": "© OpenStreetMap contributors. Data available under the Open Database License.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "wheelchair": "yes",
+      "citation": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/8795328881"
+    }
+  },
+  {
+    "source_slug": "osm-accessibility",
+    "source_name": "OpenStreetMap contributors",
+    "source_home": "https://www.openstreetmap.org/copyright",
+    "external_id": "osm:node/9231396407",
+    "category_slug": "access_place",
+    "title": "Place access",
+    "summary": "OpenStreetMap records wheelchair yes.",
+    "lat": 42.097051,
+    "lng": -79.245684,
+    "source_url": "https://www.openstreetmap.org/node/9231396407",
+    "license": "ODbL 1.0",
+    "attribution": "© OpenStreetMap contributors. Data available under the Open Database License.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "wheelchair": "yes",
+      "citation": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/9231396407"
+    }
+  },
+  {
+    "source_slug": "osm-accessibility",
+    "source_name": "OpenStreetMap contributors",
+    "source_home": "https://www.openstreetmap.org/copyright",
+    "external_id": "osm:node/12333279447",
+    "category_slug": "access_place",
+    "title": "Place access",
+    "summary": "OpenStreetMap records wheelchair yes.",
+    "lat": 42.096356,
+    "lng": -79.235538,
+    "source_url": "https://www.openstreetmap.org/node/12333279447",
+    "license": "ODbL 1.0",
+    "attribution": "© OpenStreetMap contributors. Data available under the Open Database License.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "wheelchair": "yes",
+      "citation": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/12333279447"
+    }
+  },
+  {
+    "source_slug": "osm-accessibility",
+    "source_name": "OpenStreetMap contributors",
+    "source_home": "https://www.openstreetmap.org/copyright",
+    "external_id": "osm:node/12333279477",
+    "category_slug": "access_place",
+    "title": "Jamestown High School Main",
+    "summary": "OpenStreetMap records wheelchair no.",
+    "lat": 42.096344,
+    "lng": -79.23605,
+    "source_url": "https://www.openstreetmap.org/node/12333279477",
+    "license": "ODbL 1.0",
+    "attribution": "© OpenStreetMap contributors. Data available under the Open Database License.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "wheelchair": "no",
+      "citation": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/12333279477"
+    }
+  },
+  {
+    "source_slug": "osm-accessibility",
+    "source_name": "OpenStreetMap contributors",
+    "source_home": "https://www.openstreetmap.org/copyright",
+    "external_id": "osm:node/12346181496",
+    "category_slug": "access_place",
+    "title": "Heritage Park - Rehabilitation Jamestown",
+    "summary": "OpenStreetMap records wheelchair limited.",
+    "lat": 42.090132,
+    "lng": -79.23788,
+    "source_url": "https://www.openstreetmap.org/node/12346181496",
+    "license": "ODbL 1.0",
+    "attribution": "© OpenStreetMap contributors. Data available under the Open Database License.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "wheelchair": "limited",
+      "citation": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/12346181496"
+    }
+  },
+  {
+    "source_slug": "osm-accessibility",
+    "source_name": "OpenStreetMap contributors",
+    "source_home": "https://www.openstreetmap.org/copyright",
+    "external_id": "osm:node/12427719717",
+    "category_slug": "access_place",
+    "title": "Place access",
+    "summary": "OpenStreetMap records wheelchair no.",
+    "lat": 42.11788,
+    "lng": -79.242738,
+    "source_url": "https://www.openstreetmap.org/node/12427719717",
+    "license": "ODbL 1.0",
+    "attribution": "© OpenStreetMap contributors. Data available under the Open Database License.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "wheelchair": "no",
+      "citation": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/12427719717"
+    }
+  },
+  {
+    "source_slug": "osm-accessibility",
+    "source_name": "OpenStreetMap contributors",
+    "source_home": "https://www.openstreetmap.org/copyright",
+    "external_id": "osm:node/12446167797",
+    "category_slug": "access_place",
+    "title": "J. Edwards Insurance Agency",
+    "summary": "OpenStreetMap records wheelchair yes.",
+    "lat": 42.094227,
+    "lng": -79.256247,
+    "source_url": "https://www.openstreetmap.org/node/12446167797",
+    "license": "ODbL 1.0",
+    "attribution": "© OpenStreetMap contributors. Data available under the Open Database License.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "wheelchair": "yes",
+      "citation": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/12446167797"
+    }
+  },
+  {
+    "source_slug": "osm-accessibility",
+    "source_name": "OpenStreetMap contributors",
+    "source_home": "https://www.openstreetmap.org/copyright",
+    "external_id": "osm:node/12458962994",
+    "category_slug": "access_place",
+    "title": "Place access",
+    "summary": "OpenStreetMap records wheelchair yes.",
+    "lat": 42.097638,
+    "lng": -79.291991,
+    "source_url": "https://www.openstreetmap.org/node/12458962994",
+    "license": "ODbL 1.0",
+    "attribution": "© OpenStreetMap contributors. Data available under the Open Database License.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "wheelchair": "yes",
+      "citation": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/12458962994"
+    }
+  },
+  {
+    "source_slug": "osm-accessibility",
+    "source_name": "OpenStreetMap contributors",
+    "source_home": "https://www.openstreetmap.org/copyright",
+    "external_id": "osm:node/12609696363",
+    "category_slug": "access_place",
+    "title": "Place access",
+    "summary": "OpenStreetMap records wheelchair no.",
+    "lat": 42.108465,
+    "lng": -79.223863,
+    "source_url": "https://www.openstreetmap.org/node/12609696363",
+    "license": "ODbL 1.0",
+    "attribution": "© OpenStreetMap contributors. Data available under the Open Database License.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "wheelchair": "no",
+      "citation": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/12609696363"
+    }
+  },
+  {
+    "source_slug": "osm-accessibility",
+    "source_name": "OpenStreetMap contributors",
+    "source_home": "https://www.openstreetmap.org/copyright",
+    "external_id": "osm:node/12647796815",
+    "category_slug": "access_place",
+    "title": "Honest John's Pizzeria",
+    "summary": "OpenStreetMap records wheelchair yes.",
+    "lat": 42.112848,
+    "lng": -79.216776,
+    "source_url": "https://www.openstreetmap.org/node/12647796815",
+    "license": "ODbL 1.0",
+    "attribution": "© OpenStreetMap contributors. Data available under the Open Database License.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "wheelchair": "yes",
+      "citation": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/12647796815"
+    }
+  },
+  {
+    "source_slug": "osm-accessibility",
+    "source_name": "OpenStreetMap contributors",
+    "source_home": "https://www.openstreetmap.org/copyright",
+    "external_id": "osm:node/13513577579",
+    "category_slug": "access_place",
+    "title": "Nouveau Salon and Day Spa",
+    "summary": "OpenStreetMap records wheelchair yes, accessible restroom yes.",
+    "lat": 42.097521,
+    "lng": -79.240562,
+    "source_url": "https://www.openstreetmap.org/node/13513577579",
+    "license": "ODbL 1.0",
+    "attribution": "© OpenStreetMap contributors. Data available under the Open Database License.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "wheelchair": "yes",
+      "toilets_wheelchair": "yes",
+      "citation": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/13513577579"
+    }
+  },
+  {
+    "source_slug": "osm-accessibility",
+    "source_name": "OpenStreetMap contributors",
+    "source_home": "https://www.openstreetmap.org/copyright",
+    "external_id": "osm:node/13947893601",
+    "category_slug": "access_place",
+    "title": "Place access",
+    "summary": "OpenStreetMap records wheelchair no.",
+    "lat": 42.096068,
+    "lng": -79.235697,
+    "source_url": "https://www.openstreetmap.org/node/13947893601",
+    "license": "ODbL 1.0",
+    "attribution": "© OpenStreetMap contributors. Data available under the Open Database License.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "wheelchair": "no",
+      "citation": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/13947893601"
+    }
+  },
+  {
+    "source_slug": "osm-accessibility",
+    "source_name": "OpenStreetMap contributors",
+    "source_home": "https://www.openstreetmap.org/copyright",
+    "external_id": "osm:node/14134853409",
+    "category_slug": "access_place",
+    "title": "Place access",
+    "summary": "OpenStreetMap records wheelchair limited.",
+    "lat": 42.078014,
+    "lng": -79.221282,
+    "source_url": "https://www.openstreetmap.org/node/14134853409",
+    "license": "ODbL 1.0",
+    "attribution": "© OpenStreetMap contributors. Data available under the Open Database License.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "wheelchair": "limited",
+      "citation": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/14134853409"
+    }
+  },
+  {
+    "source_slug": "osm-accessibility",
+    "source_name": "OpenStreetMap contributors",
+    "source_home": "https://www.openstreetmap.org/copyright",
+    "external_id": "osm:way/820257510",
+    "category_slug": "access_place",
+    "title": "Johnny's Lunch",
+    "summary": "OpenStreetMap records wheelchair yes.",
+    "lat": 42.097688,
+    "lng": -79.291927,
+    "source_url": "https://www.openstreetmap.org/way/820257510",
+    "license": "ODbL 1.0",
+    "attribution": "© OpenStreetMap contributors. Data available under the Open Database License.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "wheelchair": "yes",
+      "citation": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/way/820257510"
+    }
+  },
+  {
+    "source_slug": "osm-accessibility",
+    "source_name": "OpenStreetMap contributors",
+    "source_home": "https://www.openstreetmap.org/copyright",
+    "external_id": "osm:way/820275321",
+    "category_slug": "access_place",
+    "title": "Tanglewood Manor",
+    "summary": "OpenStreetMap records wheelchair yes.",
+    "lat": 42.09772,
+    "lng": -79.272156,
+    "source_url": "https://www.openstreetmap.org/way/820275321",
+    "license": "ODbL 1.0",
+    "attribution": "© OpenStreetMap contributors. Data available under the Open Database License.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "wheelchair": "yes",
+      "citation": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/way/820275321"
+    }
+  },
+  {
+    "source_slug": "osm-accessibility",
+    "source_name": "OpenStreetMap contributors",
+    "source_home": "https://www.openstreetmap.org/copyright",
+    "external_id": "osm:way/820279321",
+    "category_slug": "access_place",
+    "title": "Domino's",
+    "summary": "OpenStreetMap records wheelchair yes.",
+    "lat": 42.106611,
+    "lng": -79.222904,
+    "source_url": "https://www.openstreetmap.org/way/820279321",
+    "license": "ODbL 1.0",
+    "attribution": "© OpenStreetMap contributors. Data available under the Open Database License.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "wheelchair": "yes",
+      "citation": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/way/820279321"
+    }
+  },
+  {
+    "source_slug": "osm-accessibility",
+    "source_name": "OpenStreetMap contributors",
+    "source_home": "https://www.openstreetmap.org/copyright",
+    "external_id": "osm:way/820279506",
+    "category_slug": "access_place",
+    "title": "Hectors Powersports",
+    "summary": "OpenStreetMap records wheelchair yes.",
+    "lat": 42.111412,
+    "lng": -79.217533,
+    "source_url": "https://www.openstreetmap.org/way/820279506",
+    "license": "ODbL 1.0",
+    "attribution": "© OpenStreetMap contributors. Data available under the Open Database License.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "wheelchair": "yes",
+      "citation": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/way/820279506"
+    }
+  },
+  {
+    "source_slug": "osm-accessibility",
+    "source_name": "OpenStreetMap contributors",
+    "source_home": "https://www.openstreetmap.org/copyright",
+    "external_id": "osm:way/820284152",
+    "category_slug": "access_place",
+    "title": "Landmark Restaurant",
+    "summary": "OpenStreetMap records wheelchair yes.",
+    "lat": 42.096401,
+    "lng": -79.248417,
+    "source_url": "https://www.openstreetmap.org/way/820284152",
+    "license": "ODbL 1.0",
+    "attribution": "© OpenStreetMap contributors. Data available under the Open Database License.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "wheelchair": "yes",
+      "citation": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/way/820284152"
+    }
+  },
+  {
+    "source_slug": "osm-accessibility",
+    "source_name": "OpenStreetMap contributors",
+    "source_home": "https://www.openstreetmap.org/copyright",
+    "external_id": "osm:way/820285722",
+    "category_slug": "access_place",
+    "title": "Boost Mobile",
+    "summary": "OpenStreetMap records wheelchair yes.",
+    "lat": 42.08383,
+    "lng": -79.230456,
+    "source_url": "https://www.openstreetmap.org/way/820285722",
+    "license": "ODbL 1.0",
+    "attribution": "© OpenStreetMap contributors. Data available under the Open Database License.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "wheelchair": "yes",
+      "citation": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/way/820285722"
+    }
+  },
+  {
+    "source_slug": "osm-accessibility",
+    "source_name": "OpenStreetMap contributors",
+    "source_home": "https://www.openstreetmap.org/copyright",
+    "external_id": "osm:way/820285736",
+    "category_slug": "access_place",
+    "title": "Burger King",
+    "summary": "OpenStreetMap records wheelchair yes.",
+    "lat": 42.082507,
+    "lng": -79.229551,
+    "source_url": "https://www.openstreetmap.org/way/820285736",
+    "license": "ODbL 1.0",
+    "attribution": "© OpenStreetMap contributors. Data available under the Open Database License.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "wheelchair": "yes",
+      "citation": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/way/820285736"
+    }
+  },
+  {
+    "source_slug": "osm-accessibility",
+    "source_name": "OpenStreetMap contributors",
+    "source_home": "https://www.openstreetmap.org/copyright",
+    "external_id": "osm:way/820286527",
+    "category_slug": "access_place",
+    "title": "Jamestown Bowling Co",
+    "summary": "OpenStreetMap records wheelchair yes.",
+    "lat": 42.07691,
+    "lng": -79.227251,
+    "source_url": "https://www.openstreetmap.org/way/820286527",
+    "license": "ODbL 1.0",
+    "attribution": "© OpenStreetMap contributors. Data available under the Open Database License.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "wheelchair": "yes",
+      "citation": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/way/820286527"
+    }
+  },
+  {
+    "source_slug": "osm-accessibility",
+    "source_name": "OpenStreetMap contributors",
+    "source_home": "https://www.openstreetmap.org/copyright",
+    "external_id": "osm:way/820286670",
+    "category_slug": "access_place",
+    "title": "AJ Texas Hots",
+    "summary": "OpenStreetMap records wheelchair yes.",
+    "lat": 42.07783,
+    "lng": -79.227465,
+    "source_url": "https://www.openstreetmap.org/way/820286670",
+    "license": "ODbL 1.0",
+    "attribution": "© OpenStreetMap contributors. Data available under the Open Database License.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "wheelchair": "yes",
+      "citation": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/way/820286670"
+    }
+  },
+  {
+    "source_slug": "osm-accessibility",
+    "source_name": "OpenStreetMap contributors",
+    "source_home": "https://www.openstreetmap.org/copyright",
+    "external_id": "osm:way/945235600",
+    "category_slug": "access_place",
+    "title": "Jamestown Rt 60 and I-86",
+    "summary": "OpenStreetMap records wheelchair yes.",
+    "lat": 42.122425,
+    "lng": -79.240447,
+    "source_url": "https://www.openstreetmap.org/way/945235600",
+    "license": "ODbL 1.0",
+    "attribution": "© OpenStreetMap contributors. Data available under the Open Database License.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "wheelchair": "yes",
+      "citation": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/way/945235600"
+    }
+  },
+  {
+    "source_slug": "osm-accessibility",
+    "source_name": "OpenStreetMap contributors",
+    "source_home": "https://www.openstreetmap.org/copyright",
+    "external_id": "osm:way/1334563770",
+    "category_slug": "access_place",
+    "title": "Place access",
+    "summary": "OpenStreetMap records wheelchair no.",
+    "lat": 42.101241,
+    "lng": -79.230016,
+    "source_url": "https://www.openstreetmap.org/way/1334563770",
+    "license": "ODbL 1.0",
+    "attribution": "© OpenStreetMap contributors. Data available under the Open Database License.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "wheelchair": "no",
+      "citation": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/way/1334563770"
+    }
+  },
+  {
+    "source_slug": "osm-accessibility",
+    "source_name": "OpenStreetMap contributors",
+    "source_home": "https://www.openstreetmap.org/copyright",
+    "external_id": "osm:way/1334837223",
+    "category_slug": "access_place",
+    "title": "National Comedy Center",
+    "summary": "OpenStreetMap records wheelchair yes.",
+    "lat": 42.094682,
+    "lng": -79.243653,
+    "source_url": "https://www.openstreetmap.org/way/1334837223",
+    "license": "ODbL 1.0",
+    "attribution": "© OpenStreetMap contributors. Data available under the Open Database License.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "wheelchair": "yes",
+      "citation": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/way/1334837223"
+    }
+  },
+  {
+    "source_slug": "osm-accessibility",
+    "source_name": "OpenStreetMap contributors",
+    "source_home": "https://www.openstreetmap.org/copyright",
+    "external_id": "osm:way/1348805999",
+    "category_slug": "access_place",
+    "title": "Place access",
+    "summary": "OpenStreetMap records wheelchair no.",
+    "lat": 42.09823,
+    "lng": -79.270378,
+    "source_url": "https://www.openstreetmap.org/way/1348805999",
+    "license": "ODbL 1.0",
+    "attribution": "© OpenStreetMap contributors. Data available under the Open Database License.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "wheelchair": "no",
+      "citation": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/way/1348805999"
+    }
+  },
+  {
+    "source_slug": "osm-accessibility",
+    "source_name": "OpenStreetMap contributors",
+    "source_home": "https://www.openstreetmap.org/copyright",
+    "external_id": "osm:way/1350128857",
+    "category_slug": "access_place",
+    "title": "Lillian Dickson Playground",
+    "summary": "OpenStreetMap records wheelchair limited.",
+    "lat": 42.103977,
+    "lng": -79.230834,
+    "source_url": "https://www.openstreetmap.org/way/1350128857",
+    "license": "ODbL 1.0",
+    "attribution": "© OpenStreetMap contributors. Data available under the Open Database License.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "wheelchair": "limited",
+      "citation": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/way/1350128857"
+    }
+  },
+  {
+    "source_slug": "osm-accessibility",
+    "source_name": "OpenStreetMap contributors",
+    "source_home": "https://www.openstreetmap.org/copyright",
+    "external_id": "osm:way/1360686672",
+    "category_slug": "access_place",
+    "title": "Place access",
+    "summary": "OpenStreetMap records wheelchair yes.",
+    "lat": 42.100717,
+    "lng": -79.240269,
+    "source_url": "https://www.openstreetmap.org/way/1360686672",
+    "license": "ODbL 1.0",
+    "attribution": "© OpenStreetMap contributors. Data available under the Open Database License.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "wheelchair": "yes",
+      "citation": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/way/1360686672"
+    }
+  },
+  {
+    "source_slug": "osm-accessibility",
+    "source_name": "OpenStreetMap contributors",
+    "source_home": "https://www.openstreetmap.org/copyright",
+    "external_id": "osm:way/1371363115",
+    "category_slug": "access_place",
+    "title": "Place access",
+    "summary": "OpenStreetMap records wheelchair yes.",
+    "lat": 42.09328,
+    "lng": -79.238727,
+    "source_url": "https://www.openstreetmap.org/way/1371363115",
+    "license": "ODbL 1.0",
+    "attribution": "© OpenStreetMap contributors. Data available under the Open Database License.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "wheelchair": "yes",
+      "citation": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/way/1371363115"
+    }
+  },
+  {
+    "source_slug": "osm-accessibility",
+    "source_name": "OpenStreetMap contributors",
+    "source_home": "https://www.openstreetmap.org/copyright",
+    "external_id": "osm:way/1387811240",
+    "category_slug": "access_place",
+    "title": "Preschool Playhouse",
+    "summary": "OpenStreetMap records wheelchair yes.",
+    "lat": 42.098914,
+    "lng": -79.238915,
+    "source_url": "https://www.openstreetmap.org/way/1387811240",
+    "license": "ODbL 1.0",
+    "attribution": "© OpenStreetMap contributors. Data available under the Open Database License.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "wheelchair": "yes",
+      "citation": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/way/1387811240"
+    }
+  },
+  {
+    "source_slug": "osm-accessibility",
+    "source_name": "OpenStreetMap contributors",
+    "source_home": "https://www.openstreetmap.org/copyright",
+    "external_id": "osm:way/1433554558",
+    "category_slug": "access_place",
+    "title": "Place access",
+    "summary": "OpenStreetMap records wheelchair yes, ramp yes.",
+    "lat": 42.092355,
+    "lng": -79.288414,
+    "source_url": "https://www.openstreetmap.org/way/1433554558",
+    "license": "ODbL 1.0",
+    "attribution": "© OpenStreetMap contributors. Data available under the Open Database License.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "wheelchair": "yes",
+      "ramp": "yes",
+      "citation": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/way/1433554558"
+    }
+  },
+  {
+    "source_slug": "osm-accessibility",
+    "source_name": "OpenStreetMap contributors",
+    "source_home": "https://www.openstreetmap.org/copyright",
+    "external_id": "osm:way/1472859374",
+    "category_slug": "access_place",
+    "title": "Place access",
+    "summary": "OpenStreetMap records wheelchair yes.",
+    "lat": 42.097898,
+    "lng": -79.238358,
+    "source_url": "https://www.openstreetmap.org/way/1472859374",
+    "license": "ODbL 1.0",
+    "attribution": "© OpenStreetMap contributors. Data available under the Open Database License.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "wheelchair": "yes",
+      "citation": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/way/1472859374"
+    }
+  },
+  {
+    "source_slug": "osm-accessibility",
+    "source_name": "OpenStreetMap contributors",
+    "source_home": "https://www.openstreetmap.org/copyright",
+    "external_id": "osm:way/1548006664",
+    "category_slug": "access_place",
+    "title": "Place access",
+    "summary": "OpenStreetMap records wheelchair yes.",
+    "lat": 42.109682,
+    "lng": -79.224579,
+    "source_url": "https://www.openstreetmap.org/way/1548006664",
+    "license": "ODbL 1.0",
+    "attribution": "© OpenStreetMap contributors. Data available under the Open Database License.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "wheelchair": "yes",
+      "citation": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/way/1548006664"
+    }
+  },
+  {
+    "source_slug": "osm-accessibility",
+    "source_name": "OpenStreetMap contributors",
+    "source_home": "https://www.openstreetmap.org/copyright",
+    "external_id": "osm:way/1548006665",
+    "category_slug": "access_place",
+    "title": "Place access",
+    "summary": "OpenStreetMap records wheelchair yes.",
+    "lat": 42.109624,
+    "lng": -79.224433,
+    "source_url": "https://www.openstreetmap.org/way/1548006665",
+    "license": "ODbL 1.0",
+    "attribution": "© OpenStreetMap contributors. Data available under the Open Database License.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "wheelchair": "yes",
+      "citation": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/way/1548006665"
+    }
+  }
+]

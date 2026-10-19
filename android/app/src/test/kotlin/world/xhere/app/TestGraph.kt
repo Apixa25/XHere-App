@@ -54,10 +54,18 @@ import world.xhere.app.session.SignOutNotice
 import world.xhere.app.settings.DataExporter
 import world.xhere.app.settings.SettingsViewModel
 import world.xhere.app.voice.FakeVoiceRadio
+import world.xhere.app.voice.HereSpeaker
+import world.xhere.app.voice.RecordedClip
+import world.xhere.app.voice.RulesVoiceRefiner
+import world.xhere.app.voice.SpeechCapture
 import world.xhere.app.voice.ThingsViewModel
+import world.xhere.app.voice.VoiceClipRecorder
 import world.xhere.app.voice.VoicePreferences
+import world.xhere.app.voice.VoicePrefs
 import world.xhere.app.voice.VoiceRadio
+import world.xhere.app.voice.VoiceRefiner
 import world.xhere.app.voice.VoiceSession
+import world.xhere.app.voice.VoiceViewModel
 import world.xhere.shared.SupabaseConfig
 import world.xhere.shared.data.XHereServices
 import world.xhere.shared.data.fake.InMemoryXHere
@@ -95,6 +103,8 @@ object TestGraph {
     lateinit var services: InMemoryXHere
     lateinit var google: FakeGoogleIdTokenSource
     lateinit var location: ScriptedDeviceLocation
+    lateinit var speech: ScriptedSpeech
+    lateinit var speaker: ScriptedSpeaker
     lateinit var sharer: RecordingDropSharer
     lateinit var exporter: RecordingDataExporter
     lateinit var links: IncomingLinks
@@ -112,12 +122,16 @@ fun testModule() = module {
     )
     val google = FakeGoogleIdTokenSource()
     val location = ScriptedDeviceLocation()
+    val speech = ScriptedSpeech()
+    val speaker = ScriptedSpeaker()
     val sharer = RecordingDropSharer()
     val exporter = RecordingDataExporter()
     val links = IncomingLinks()
     TestGraph.services = services
     TestGraph.google = google
     TestGraph.location = location
+    TestGraph.speech = speech
+    TestGraph.speaker = speaker
     TestGraph.sharer = sharer
     TestGraph.exporter = exporter
     TestGraph.links = links
@@ -175,6 +189,11 @@ fun testModule() = module {
     single<DropCapture> { FakeDropCapture() }
     single<ImageLabeler> { FakeImageLabeler() }
     single<SnapSuggester> { LabelSnapSuggester(get()) }
+    single { VoicePrefs(androidContext()) }
+    single<SpeechCapture> { speech }
+    single<HereSpeaker> { speaker }
+    single<VoiceClipRecorder> { SilentVoiceClipRecorder() }
+    single<VoiceRefiner> { RulesVoiceRefiner() }
     val conditions = ScriptedConditions()
     val ar = ScriptedArRuntime()
     TestGraph.conditions = conditions
@@ -201,6 +220,7 @@ fun testModule() = module {
             anchor = get(),
         )
     }
+    viewModel { VoiceViewModel(get(), get(), get(), get(), get(), get(), get(), get()) }
     viewModel { ArViewModel(get(), get(), get()) }
     viewModel { DropViewModel(get(), get(), get(), get(), get()) }
     viewModel { ProfileViewModel(get()) }
@@ -214,6 +234,7 @@ fun testModule() = module {
             signOutFailed = context.getString(R.string.settings_sign_out_failed),
             exporter = get(),
             experiences = get(),
+            voicePrefs = get(),
         )
     }
 }
@@ -297,9 +318,28 @@ class ScriptedArRuntime : ArRuntime {
 }
 
 /** Foreground fixes the detail tests can push. Permission stays off until a test allows it. */
+class ScriptedSpeech : SpeechCapture {
+    var next: String? = null
+    override suspend fun listen(): String? = next
+}
+
+class ScriptedSpeaker : HereSpeaker {
+    var last: String? = null
+    override fun speak(text: String) {
+        last = text
+    }
+
+    override fun stop() = Unit
+}
+
+class SilentVoiceClipRecorder : VoiceClipRecorder {
+    override suspend fun record(): RecordedClip? = null
+    override fun stop() = Unit
+}
+
 class ScriptedDeviceLocation : DeviceLocation {
     private val permitted = java.util.concurrent.atomic.AtomicBoolean(false)
-    private val updates = MutableSharedFlow<LocationReading>(extraBufferCapacity = 16)
+    private val updates = MutableSharedFlow<LocationReading>(replay = 1, extraBufferCapacity = 16)
     private val collectors = java.util.concurrent.atomic.AtomicInteger(0)
 
     val collectionCount: Int get() = collectors.get()
@@ -312,6 +352,7 @@ class ScriptedDeviceLocation : DeviceLocation {
 
     fun reset() {
         permitted.set(false)
+        updates.resetReplayCache()
     }
 
     /** A real device fix with no extra signals, so existing tests still count. */
