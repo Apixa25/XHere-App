@@ -193,6 +193,7 @@ set local request.jwt.claims to '{"sub": "10000000-0000-4000-8000-000000000004",
 select lives_ok(format('select public.report_thing(%L::uuid, ''other'')', current_setting('t.thing')), 'flag 4');
 set local request.jwt.claims to '{"sub": "10000000-0000-4000-8000-000000000005", "role": "authenticated"}';
 select lives_ok(format('select public.report_thing(%L::uuid, ''misinformation'')', current_setting('t.thing')), 'flag 5');
+reset role;
 select is(
   (select status from public.things where id = current_setting('t.thing')::uuid),
   'removed',
@@ -201,11 +202,14 @@ select is(
 
 reset role;
 set local role service_role;
-select is_null(
-  public.public_api_thing(current_setting('t.quiet')) ->> 'title',
+select ok(
+  public.public_api_thing(current_setting('t.quiet')) is null,
   'the open lookup hides an unlisted thing'
 );
-select is_null(public.public_api_thing(current_setting('t.voice')), 'a removed thing is not on the open lookup');
+select ok(
+  public.public_api_thing(current_setting('t.voice')) is null,
+  'a removed thing is not on the open lookup'
+);
 
 set local role authenticated;
 set local request.jwt.claims to '{"sub": "11111111-1111-4111-8111-111111111111", "role": "authenticated"}';

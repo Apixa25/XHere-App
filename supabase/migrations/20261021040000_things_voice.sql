@@ -980,6 +980,11 @@ revoke execute on function
   private.thing_prepare(text, text, text, uuid, text, double precision, double precision, jsonb, text, uuid)
 from public, anon, authenticated;
 
+-- The media check and the protect trigger run as the person saving the row.
+-- They do not read other tables. private stays off the API schema list.
+grant execute on function private.thing_media_ok(jsonb) to anon, authenticated;
+grant execute on function private.protect_thing_row() to anon, authenticated;
+
 revoke execute on function
   public.create_thing(text, text, text, uuid, text, double precision, double precision, jsonb, text),
   public.update_thing(uuid, text, text, text, uuid, text, double precision, double precision, jsonb, text),
