@@ -24,53 +24,56 @@ select ok(
 set local role authenticated;
 set local request.jwt.claims to '';
 select throws_ok(
-  $$ select public.submit_accessibility_check('cell:42.097:-79.244', 42.097, -79.244, 'yes', 'yes', 'yes') $$,
+  $$ select public.submit_accessibility_check('cell:40.000:-100.000', 40.0, -100.0, 'yes', 'yes', 'yes') $$,
   '42501', 'not_authenticated', 'a check needs a signed-in person'
 );
 
 set local request.jwt.claims to '{"sub": "11111111-1111-4111-8111-111111111111", "role": "authenticated"}';
 select is(
   public.submit_accessibility_check(
-    'cell:42.097:-79.244', 42.097, -79.244, 'yes', 'yes', 'yes', 'ramp by the side door'
+    'cell:40.000:-100.000', 40.0, -100.0, 'yes', 'yes', 'yes', 'ramp by the side door'
   ) ->> 'status',
   'accessible',
   'one yes check is accessible'
 );
 select is(
-  (public.accessibility_summary('cell:42.097:-79.244') ->> 'my_notes'),
+  (public.accessibility_summary('cell:40.000:-100.000') ->> 'my_notes'),
   'ramp by the side door',
   'the author sees their own note'
 );
 
 set local request.jwt.claims to '{"sub": "22222222-2222-4222-8222-222222222222", "role": "authenticated"}';
 select is(
-  public.submit_accessibility_check('cell:42.097:-79.244', 42.097, -79.244, 'no', 'no', 'no') ->> 'status',
+  public.submit_accessibility_check('cell:40.000:-100.000', 40.0, -100.0, 'no', 'no', 'no') ->> 'status',
   'unknown',
   'a tie is not a majority'
 );
 select ok(
-  (public.accessibility_summary('cell:42.097:-79.244') ->> 'my_notes') is null,
+  (public.accessibility_summary('cell:40.000:-100.000') ->> 'my_notes') is null,
   'someone else does not see the note'
 );
 
 set local request.jwt.claims to '{"sub": "33333333-3333-4333-8333-333333333333", "role": "authenticated"}';
 select is(
-  public.submit_accessibility_check('cell:42.097:-79.244', 42.0971, -79.2441, 'yes', 'yes', 'no') ->> 'status',
+  public.submit_accessibility_check('cell:40.000:-100.000', 40.0001, -100.0001, 'yes', 'yes', 'no') ->> 'status',
   'partial',
   'two yes and one no on the restroom is partial'
 );
 select is(
-  (public.accessibility_summary('cell:42.097:-79.244') ->> 'sample_size')::integer,
+  (public.accessibility_summary('cell:40.000:-100.000') ->> 'sample_size')::integer,
   3,
   'three people are in the sample'
 );
 select ok(
-  (public.accessibility_summary('cell:42.097:-79.244') ->> 'last_confirmed_at') is not null,
+  (public.accessibility_summary('cell:40.000:-100.000') ->> 'last_confirmed_at') is not null,
   'the last confirmed time is the newest check'
 );
-select is(
-  jsonb_array_length(public.accessibility_in_view(-79.30, 42.05, -79.20, 42.14)),
-  1,
+select ok(
+  exists (
+    select 1
+    from jsonb_array_elements(public.accessibility_in_view(-100.1, 39.9, -99.9, 40.1)) as item
+    where item ->> 'place_key' = 'cell:40.000:-100.000'
+  ),
   'the place is inside the map box'
 );
 select is(
@@ -80,7 +83,7 @@ select is(
 );
 
 select throws_ok(
-  $$ select public.submit_accessibility_check('cell:42.097:-79.244', 42.097, -79.244, 'yes', 'yes', 'yes', repeat('n', 281)) $$,
+  $$ select public.submit_accessibility_check('cell:40.000:-100.000', 40.0, -100.0, 'yes', 'yes', 'yes', repeat('n', 281)) $$,
   '22023', 'invalid_note', 'notes stop at 280 characters'
 );
 
@@ -97,7 +100,7 @@ select throws_ok(
 set local request.jwt.claims to '{"sub": "11111111-1111-4111-8111-111111111111", "role": "authenticated"}';
 select throws_ok(
   $$ select public.create_drop(
-       'note', 42.097, -79.244, 'Too long', null, '{}'::jsonb, '{}', null, null, false,
+       'note', 40.0, -100.0, 'Too long', null, '{}'::jsonb, '{}', null, null, false,
        jsonb_build_array(jsonb_build_object(
          'storage_bucket', 'voice-clips',
          'storage_path', '11111111-1111-4111-8111-111111111111/long.m4a',
@@ -112,7 +115,7 @@ select throws_ok(
 
 select ok(
   (public.create_drop(
-     'note', 42.097, -79.245, 'Short clip', null, '{}'::jsonb, '{}', null, null, false,
+     'note', 40.0, -100.05, 'Short clip', null, '{}'::jsonb, '{}', null, null, false,
      jsonb_build_array(jsonb_build_object(
        'storage_bucket', 'voice-clips',
        'storage_path', '11111111-1111-4111-8111-111111111111/short.m4a',

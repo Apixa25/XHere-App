@@ -18,7 +18,7 @@ create type public.access_answer as enum ('yes', 'no', 'unknown');
 
 insert into public.categories (
   group_id, slug, label, description, icon, color, attributes_schema,
-  default_reveal_m, max_reveal_m, is_builtin, sort, posting_notice
+  default_reveal_m, max_reveal_m, is_builtin, sort, posting_notice, suggestion_hints
 )
 select g.id,
        'access_place',
@@ -37,10 +37,17 @@ select g.id,
        200,
        true,
        5,
-       'Say what you can see. Do not describe people.'
+       'Say what you can see. Do not describe people.',
+       'step free entrance ramp wheelchair accessible restroom'
 from public.category_groups g
 where g.slug = 'infrastructure'
   and not exists (select 1 from public.categories c where c.slug = 'access_place');
+
+update public.categories
+set embedding = private.hash_embed(
+  replace(slug, '_', ' ') || ' ' || label || ' ' || coalesce(description, '') || ' ' || coalesce(suggestion_hints, '')
+)
+where slug = 'access_place' and embedding is null;
 
 create table public.accessibility_checks (
   id uuid primary key default gen_random_uuid(),
@@ -61,6 +68,7 @@ create table public.accessibility_checks (
 
 create index accessibility_checks_geog_idx on public.accessibility_checks using gist (geog);
 create index accessibility_checks_place_idx on public.accessibility_checks (place_key);
+create index accessibility_checks_drop_idx on public.accessibility_checks (drop_id);
 
 comment on table public.accessibility_checks is
   'One person, one place. The public read is the majority, not this row.';
@@ -399,11 +407,12 @@ language plpgsql
 set search_path = ''
 as $$
 begin
-  if new.media_kind <> 'audio' then
+  -- Older drops may still attach audio in drop-media. The 30 second cap
+  -- applies only to clips stored in the voice-clips bucket.
+  if new.media_kind <> 'audio' or new.storage_bucket is distinct from 'voice-clips' then
     return new;
   end if;
-  if new.storage_bucket <> 'voice-clips'
-     or new.mime_type not in ('audio/mp4', 'audio/aac', 'audio/3gpp', 'audio/amr') then
+  if new.mime_type not in ('audio/mp4', 'audio/aac', 'audio/3gpp', 'audio/amr') then
     raise exception 'invalid_media' using errcode = '22023',
       detail = 'audio uses the voice-clips bucket and a compressed type';
   end if;
@@ -422,6 +431,8 @@ $$;
 create trigger drop_media_voice_limits
   before insert or update on public.drop_media
   for each row execute function private.drop_media_voice_limits();
+
+revoke all on function private.drop_media_voice_limits() from public, anon, authenticated;
 
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values (
