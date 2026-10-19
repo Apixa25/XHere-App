@@ -57,6 +57,7 @@ create trigger profiles_guard_is_demo
 -- need to execute it. It returns the row unchanged unless is_demo moved, and
 -- it is not a client RPC. private is not in the API schema list.
 grant execute on function private.guard_profile_is_demo() to anon, authenticated, service_role;
+revoke execute on function private.guard_profile_is_demo() from public;
 
 -- ---------------------------------------------------------------------------
 -- The standing gate. Same signature as the founding migration.
