@@ -184,6 +184,16 @@ class HereCardTest {
             api.places.remember(LatLng(10.0, 20.0), "   ", null)
         }
         assertEquals("invalid_place", blank.code)
+        val markup = assertFailsWith<XHereApiException> {
+            api.places.remember(LatLng(10.0, 20.0), "<script>alert(1)</script>", null)
+        }
+        assertEquals("invalid_place", markup.code)
+        val link = assertFailsWith<XHereApiException> {
+            api.places.remember(LatLng(10.0, 20.0), "See https://evil.example", null)
+        }
+        assertEquals("invalid_place", link.code)
+        api.places.remember(LatLng(10.0, 20.0), "O'Brien Street", "São Paulo")
+        assertEquals("O'Brien Street", api.places.cachedLabel(LatLng(10.0, 20.0))?.name)
         val signedOut = InMemoryXHere(api.store, viewer = null, clock = { Fixtures.now })
         assertEquals(
             "not_authenticated",

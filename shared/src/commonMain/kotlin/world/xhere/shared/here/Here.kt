@@ -23,7 +23,12 @@ object Here {
     const val LIMIT: Int = 40
     const val MAX_LIMIT: Int = 80
 
-    /** Nominatim's published maximum is 1 request per second. This leaves a gap. */
+    /**
+     * Nominatim's published maximum is 1 request per second. This leaves a gap.
+     * The database also pauses the same signed-in user for 10 seconds after a
+     * successful claim, so one account cannot hold the project slot. A false
+     * claim means skip the lookup.
+     */
     const val NOMINATIM_MIN_INTERVAL_MS: Long = 1_100
 
     const val ATTRIBUTION: String = "© OpenStreetMap contributors"

@@ -561,19 +561,19 @@ class InMemoryXHere(
                 throw XHereApiException.fromViolation(world.xhere.shared.rules.RuleViolation("invalid_location"))
             }
             val cleanName = name.trim()
-            if (cleanName.length !in 1..160 || cleanName.any { it.isISOControl() }) {
+            if (!acceptablePlaceText(cleanName, 160)) {
                 throw XHereApiException(
                     "invalid_place",
                     sqlState = XHereApiException.SQL_VALIDATION,
-                    detail = "place name must be 1..160 characters without control characters",
+                    detail = "place name must be 1..160 letters, numbers, spaces, or place punctuation",
                 )
             }
             val cleanAddress = address?.trim()?.ifEmpty { null }
-            if (cleanAddress != null && (cleanAddress.length > 300 || cleanAddress.any { it.isISOControl() })) {
+            if (cleanAddress != null && !acceptablePlaceText(cleanAddress, 300)) {
                 throw XHereApiException(
                     "invalid_place",
                     sqlState = XHereApiException.SQL_VALIDATION,
-                    detail = "address must be at most 300 characters without control characters",
+                    detail = "address must be at most 300 letters, numbers, spaces, or place punctuation",
                 )
             }
             val key = Here.cellKey(location)
@@ -1362,3 +1362,15 @@ private fun LatLng.inBox(box: BoundingBox): Boolean =
     latitude in box.minLatitude..box.maxLatitude && longitude in box.minLongitude..box.maxLongitude
 
 private const val MAX_PHOTO_BYTES: Int = 10 * 1024 * 1024
+
+/** Same shape as `private.place_label_text_ok`: a place name, not markup or a link. */
+private fun acceptablePlaceText(value: String, max: Int): Boolean {
+    if (value.length !in 1..max) return false
+    if (value.any { it.isISOControl() }) return false
+    if (value.none { it.isLetterOrDigit() }) return false
+    if (value.contains("http://", ignoreCase = true) || value.contains("https://", ignoreCase = true)) return false
+    val punctuation = ".,'’‘“”«»/()&#:+;°ºª_·–—-"
+    return value.all { character ->
+        character.isLetterOrDigit() || character.isWhitespace() || character in punctuation
+    }
+}

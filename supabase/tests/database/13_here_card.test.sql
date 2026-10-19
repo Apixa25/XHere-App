@@ -271,6 +271,11 @@ reset role;
 update public.place_labels
 set fetched_at = now() - interval '91 days'
 where cell_lat = round(51.5::numeric, 3) and cell_lng = round((-0.12)::numeric, 3);
+-- The label is 91 days old. The writer's 10 second pause is not, so clear
+-- that pause the same way: this refresh is the 90-day path.
+update private.place_label_quota
+set next_allowed_at = '-infinity'::timestamptz
+where user_id = '22222222-2222-4222-8222-222222222222';
 set local role authenticated;
 set local request.jwt.claims to '{"sub": "22222222-2222-4222-8222-222222222222", "role": "authenticated"}';
 select public.remember_place_label(51.5, -0.12, 'Westminster Bridge Road', 'London');
