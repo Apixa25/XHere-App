@@ -1400,14 +1400,15 @@ begin
   end if;
 
   return query
-  with hits as (
+  with scored as (
     select d as drop_row,
            extensions.st_distance(d.display_geog, v_point) as dist,
            case
              when d.source <> 'user' or d.author_id is null then 0
              when d.display_anonymous and c.allow_anonymous_display then 0
              else private.tier_rank_bonus_m(p.tier)
-           end as bonus
+           end as bonus,
+           d.created_at as posted_at
     from public.drops d
     join public.categories c on c.id = d.category_id
     join public.category_groups g on g.id = c.group_id
@@ -1415,7 +1416,11 @@ begin
     where extensions.st_dwithin(d.display_geog, v_point, p_radius_m)
       and (p_categories is null or c.slug = any (p_categories) or g.slug = any (p_categories))
       and private.can_view_drop(d, v_uid)
-    order by dist - bonus, d.created_at desc
+  ),
+  hits as (
+    select scored.drop_row, scored.dist, scored.bonus, scored.posted_at
+    from scored
+    order by scored.dist - scored.bonus, scored.posted_at desc
     limit least(greatest(coalesce(p_limit, 200), 1), 500)
   )
   select card.*
