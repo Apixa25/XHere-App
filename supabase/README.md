@@ -6,7 +6,7 @@ Postgres / PostGIS schema, Row-Level Security, RPCs, Edge Functions, and pgTAP t
 - `migrations/`: SQL migrations (**M1**), applied in filename order.
 - `seed.sql`: **local demo data** (4 demo users and 15 drops in Jamestown, New York). `supabase db reset` loads it, then `seed/open-data/jamestown-ny.sql` (the public-record places), then `seed/walks/jamestown-ny.sql` (the pilot walk), then `seed/live/us-ny-jamestown.sql` (which free weather provider covers that box), then `seed/campaigns/jamestown-ny.sql` (the pilot founding cap and Map Jamestown campaign). `supabase db push` does not load those files. The demo seed was applied by hand to the pilot project; see [Demo seed on the pilot](#demo-seed-on-the-pilot). The open-data file, the walk, the live seed, and the campaign are applied with the steps in [Open-data seed (hosted)](#open-data-seed-hosted).
 - `tests/database/`: pgTAP tests (**M1**), run by `supabase test db`.
-- `functions/`: Supabase Edge Functions. **M5** adds `suggest-category` and `strip-exif`. Later milestones add open-data proxies.
+- `functions/`: Supabase Edge Functions. **M5** adds `suggest-category` and `strip-exif`. `public-api` is the read-only "what's here?" HTTP API (`verify_jwt = false`). CI tests it and does not deploy it.
 
 ## Hosted project
 
@@ -72,6 +72,7 @@ supabase stop --no-backup
 deno test --allow-net supabase/functions
 deno check supabase/functions/suggest-category/index.ts
 deno check supabase/functions/strip-exif/index.ts
+deno check supabase/functions/public-api/index.ts
 ```
 
 Postgres listens on `127.0.0.1:54322` (user `postgres`, password `postgres`, local only). If `supabase start` fails with a `DbSetupError` because containers can't reach each other (common in nested Docker/VMs), Docker's bridge traffic is probably being dropped by iptables. Running `sudo sysctl -w net.bridge.bridge-nf-call-iptables=0 net.bridge.bridge-nf-call-ip6tables=0` fixes it.
@@ -106,6 +107,7 @@ Postgres listens on `127.0.0.1:54322` (user `postgres`, password `postgres`, loc
 | `20261019233041_live_conditions.sql` | Live conditions: `right_now` (1h / 4h / 24h), `civic_issue`, `region_live` plus `region_live_at`, and `expires_at` on open-data upserts. Not tied to a city |
 | `20261020023000_exclude_demo_from_standing.sql` | `profiles.is_demo` (default false). Clients cannot write it. `service_role` can, and an admin calls `set_account_demo`. Demo accounts stay on the map and are left out of founding ranks, campaign totals, and leaderboards. Recomputes founding for regions that already have a cap or a badge |
 | `20261020031500_location_integrity.sql` | Location integrity: mock-location and plausibility checks, `counts_for_credit` / `location_trust`, one private checkpoint, soft flags. The standing predicate still skips demo accounts. Not applied on the hosted project from this repo's agents |
+| `20261020050000_public_read_api.sql` | Public read API SQL used only by the `public-api` Edge Function (`service_role`). Teasers and public records, demo and `location_trust = reduced` excluded, per-address quota in `private.public_api_quota`. Not applied on the hosted project from this repo's agents |
 | `20261020052000_reputation_tiers.sql` | M11 reputation. Points on `profiles.points` from `reputation_ledger`, tiers New / Local (the `regular` value) / Trusted / Guide, five badges on the existing shelf, trust-weighted `drops_nearby` and `here_card`, and two extra reports before a Trusted or Guide drop is held. Demo accounts do not earn. `spoof_flag` and `counts_for_credit = false` are left out of the score. No city rows and no seed |
 
 The taxonomy lives in a migration rather than `seed.sql` so a hosted project gets it too. Categories are rows, so adding one doesn't need a new migration type. Every change bumps `categories.version`, and each drop records the version it was validated against (`category_versions`).
@@ -128,6 +130,27 @@ What it keeps:
 
 Play Integrity is not called. The standard API has no per-request charge (a daily quota, then `TOO_MANY_REQUESTS`), but a real verdict needs a Play-linked Cloud project and server-side token decryption. Play Console is still a later setup step, so the client does not send an "I passed" boolean. Add it only when that project exists.
 
+## Public read API (hosted)
+
+Not applied from this repo's agents, and not applied by CI. The contract is [docs/api/README.md](../docs/api/README.md). From a machine linked to `jpeuldzegtbqfezijhuy`, after the history repair in [Before `supabase db push`](#before-supabase-db-push):
+
+```bash
+supabase link --project-ref jpeuldzegtbqfezijhuy
+supabase db push
+supabase functions deploy public-api --no-verify-jwt
+```
+
+`supabase db push` applies `20261020050000_public_read_api.sql` and any other migration the host does not have yet (including `20261020023000_exclude_demo_from_standing.sql`, `20261020031500_location_integrity.sql`, and `20261020052000_reputation_tiers.sql` if those are still pending). It does not load `seed.sql`. Do not paste the migration into the dashboard SQL editor. It does not change Auth.
+
+`supabase functions deploy public-api` publishes the Edge Function. `[functions.public-api] verify_jwt = false` in `config.toml` is the same setting as `--no-verify-jwt`. The platform injects `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`. Do not put that key in the repo, the app, or the website. Callers send the publishable key in the `apikey` header. The function ignores a user JWT.
+
+After deploy, a signed-out read is:
+
+```bash
+curl -sS "https://jpeuldzegtbqfezijhuy.supabase.co/functions/v1/public-api/v1/here?lat=42.095&lon=-79.244&radius=300" \
+  -H "apikey: $SUPABASE_ANON_KEY"
+```
+
 ## Security model
 
 - Clients never `insert` drops, confirmations, or reports directly. Writes go through `security definer` RPCs that validate against the category's rules. Table grants only allow narrow column updates on your own rows (profile fields; a drop's title, body, tags, and anonymity).
@@ -135,7 +158,7 @@ Play Integrity is not called. The standard API has no per-request charge (a dail
 - RLS is enabled on every table, including `private.tip_lines` (no client policy; the security-definer `create_drop` path still reads it).
 - Functions use `set search_path = ''`. `private` functions are not executable by `PUBLIC`/`anon` (the pgTAP suite checks this).
 - Errors raise a stable slug as the message with an SQLSTATE: `42501` auth/permission, `22023` validation, `P0002` not found, `PT429` rate limited (PostgREST returns HTTP 429).
-- `here_card` is signed-in only. The Android app shows the map after sign-in and onboarding (`Gate.SignedOut` is the auth screen in `XHereApp`). The website (PLAN §1.5) is a landing page and share teasers, not a browsable map. Signed-out reads stay `drops_in_view` and `drop_teaser`. There is no anon Here Card, because a signed-out caller would only be offered public records and the app has no signed-out map to put them on.
+- `here_card` is signed-in only. The Android app shows the map after sign-in and onboarding (`Gate.SignedOut` is the auth screen in `XHereApp`). The website (PLAN §1.5) is a landing page and share teasers, not a browsable map. Signed-out map reads stay `drops_in_view` and `drop_teaser`. The public read API is a separate `service_role` projection (`public_api_here`, `public_api_drop`, `public_api_categories`, `public_api_walks`) behind the `public-api` Edge Function. It is not an anon Here Card: user drops stay teasers, and demo or reduced-trust rows are left out.
 
 ## RPCs
 
@@ -175,6 +198,11 @@ Play Integrity is not called. The standard API has no per-request charge (a dail
 | `my_reputation()` | user | Points, tier, the Local/Trusted/Guide thresholds, and the point schedule. Signed-in only. The level-up sheet reads this |
 | `set_leaderboard_visibility(show)` | user | The only way to change `profiles.show_on_leaderboard`. Hiding the name does not change the community total |
 | `set_account_demo(user_id, demo)` | admin, service role | The only client path that changes `profiles.is_demo`. Drops stay. Founding ranks in the regions that person touched are recomputed |
+| `public_api_here(lat, lon, radius_m)` | service role | Public records and user teasers within 1..1000 m. The Edge Function is the only caller. A user JWT does not reveal a body |
+| `public_api_drop(id)` | service role | One public item by short id or uuid. Hidden, pending, expired, demo, and reduced-trust rows are null |
+| `public_api_categories()` | service role | Active group and category labels. No embeddings and no filter patterns |
+| `public_api_walks(lat, lon)` | service role | Active walks whose box contains the point. Stops must still be public records. No personal progress |
+| `public_api_take(ip_hash)` | service role | 30 requests per 60 seconds for one SHA-256 client hash. The address is not stored |
 
 ## Edge Functions
 
@@ -182,12 +210,13 @@ Play Integrity is not called. The standard API has no per-request charge (a dail
 |---|---|
 | `suggest-category` | POST `{text, labels, lat, lng, hour, recent_slugs}`. Calls `suggest_categories` for hash-v1. Calls `match_categories` only when `XHERE_EMBEDDING_MODEL=gte-small` and the on-platform gte-small session is actually available. A caller who is not signed in (no user JWT, or the RPC returns 401/403) gets **401** `{"error":"not_authenticated"}`, the same JSON as `strip-exif`. |
 | `strip-exif` | POST raw JPEG, PNG, or WebP (10 MB max). Strips Exif/XMP, then stores `drop-media/<user id>/<uuid>.<ext>` with the caller's JWT. No service-role key. |
+| `public-api` | GET `/v1/here`, `/v1/drops/{id}`, `/v1/categories`, `/v1/walks`. `verify_jwt = false`. Reads with the service role through `public_api_*`. 30 requests per minute per hashed address. CI does not deploy it. |
 
 Moderator/admin is `profiles.role`. There's no UI to grant it yet. On a hosted project, the first admin is set once with SQL from the dashboard: `update public.profiles set role = 'admin' where handle = '...';`. Since M7 that edit is itself logged (`set_role` in `moderation_actions`), and the audit log rejects updates and deletes.
 
 ## Tests
 
-`tests/database/*.test.sql` (pgTAP): schema/privileges, RLS, nearby/reveal/blur/expiry/blocks, `create_drop` validation, crime (`incident_report`) rules, confirmations, moderation/cron, and the M5 suggestion log, hash embeddings, and fixture score (`07_suggestions.test.sql`, 19 assertions), the M6 reveal fixes, and M7 safety/compliance (`09_safety_compliance.test.sql`: Safety pre-moderation, auto-hide threshold, blocks both ways, hide-for-me, moderator-only access, append-only audit log, export) plus `10_tip_lines.test.sql` (incident reports only inside a tip-line area), `11_advisor_followups.test.sql` (the `(select auth.uid())` policies, one SELECT policy on the reference tables, the foreign-key indexes, tip-line RLS, and the same read/write access as before), `12_open_data.test.sql` (upsert/dedupe, attribution on a far-away card, confirmations rejected, the import is not the caller's drop or export), `13_here_card.test.sql` (32 assertions: reveal stays on the viewer point, public records stay readable, the place cache, and the Nominatim slot), `13_walks_quests.test.sql` (the global starter quest, the Jamestown walk's public-record stops, reveal-radius check-off, and progress that a client cannot insert), `14_here_card_abuse.test.sql` (36 assertions: one user cannot hold the Nominatim slot, place labels stay on the 0.001° grid with length and character limits, first write wins, and the per-user write cap), `14_live_conditions.test.sql` (right-now windows, civic-issue expiry, and per-region weather config), `15_founding_campaigns.test.sql` (Founding Local for the first N people in a region, a time-boxed campaign, a display-name leaderboard with opt-out, and the Jamestown pilot config), `15_location_integrity.test.sql` (mock fixes, impossible travel, withheld reveals, and reduced-trust drops that do not count toward founding or campaigns), `16_demo_accounts.test.sql` (a demo drop does not take a founding slot or a leaderboard place, and the seeded Jamestown accounts are marked), and `16_reputation.test.sql` (points, tiers, badges, the spoof and credit hooks, and trust-weighted nearby order). Each file runs in a transaction and rolls back. `supabase/functions/**/*_test.ts` is the Deno suite for the two Edge Functions, including the same 32-phrase fixture set and a 401 for a signed-out suggestion.
+`tests/database/*.test.sql` (pgTAP): schema/privileges, RLS, nearby/reveal/blur/expiry/blocks, `create_drop` validation, crime (`incident_report`) rules, confirmations, moderation/cron, and the M5 suggestion log, hash embeddings, and fixture score (`07_suggestions.test.sql`, 19 assertions), the M6 reveal fixes, and M7 safety/compliance (`09_safety_compliance.test.sql`: Safety pre-moderation, auto-hide threshold, blocks both ways, hide-for-me, moderator-only access, append-only audit log, export) plus `10_tip_lines.test.sql` (incident reports only inside a tip-line area), `11_advisor_followups.test.sql` (the `(select auth.uid())` policies, one SELECT policy on the reference tables, the foreign-key indexes, tip-line RLS, and the same read/write access as before), `12_open_data.test.sql` (upsert/dedupe, attribution on a far-away card, confirmations rejected, the import is not the caller's drop or export), `13_here_card.test.sql` (32 assertions: reveal stays on the viewer point, public records stay readable, the place cache, and the Nominatim slot), `13_walks_quests.test.sql` (the global starter quest, the Jamestown walk's public-record stops, reveal-radius check-off, and progress that a client cannot insert), `14_here_card_abuse.test.sql` (36 assertions: one user cannot hold the Nominatim slot, place labels stay on the 0.001° grid with length and character limits, first write wins, and the per-user write cap), `14_live_conditions.test.sql` (right-now windows, civic-issue expiry, and per-region weather config), `15_founding_campaigns.test.sql` (Founding Local for the first N people in a region, a time-boxed campaign, a display-name leaderboard with opt-out, and the Jamestown pilot config), `15_location_integrity.test.sql` (mock fixes, impossible travel, withheld reveals, and reduced-trust drops that do not count toward founding or campaigns), `16_demo_accounts.test.sql` (a demo drop does not take a founding slot or a leaderboard place, and the seeded Jamestown accounts are marked), `16_reputation.test.sql` (points, tiers, badges, the spoof and credit hooks, and trust-weighted nearby order), and `17_public_read_api.test.sql` (signed-out teasers, public-record attribution, demo and reduced-trust rows omitted, and the per-address quota). Each file runs in a transaction and rolls back. `supabase/functions/**/*_test.ts` is the Deno suite for the Edge Functions, including the same 32-phrase fixture set, a 401 for a signed-out suggestion, and the public-api handler.
 
 ## Open-data seed (hosted)
 
@@ -200,7 +229,7 @@ supabase link --project-ref jpeuldzegtbqfezijhuy
 supabase db push
 ```
 
-`db push` applies every migration that is not on the project yet. That includes `20261018001600_open_data.sql`, `20261018194500_impact_feedback.sql` when impact feedback is not already there, `20261018210000_open_data_card.sql` (provenance on the card after impact feedback), `20261018235000_walks_and_quests.sql` (the walk and quest tables, the RPCs, and the global starter quest), `20261019041827_here_card.sql` (the Here Card read, the place-name cache, and the Nominatim slot), `20261019180000_here_card_rpc_hardening.sql` (per-user Nominatim and place-label limits), `20261019184521_founding_and_campaigns.sql` (Founding Local and campaigns; no city rows), `20261019233041_live_conditions.sql` (right now, civic issues, and per-region weather config), `20261020023000_exclude_demo_from_standing.sql` (demo accounts stay off founding ranks and campaign boards), `20261020031500_location_integrity.sql` (location integrity; see [Location integrity (hosted)](#location-integrity-hosted)), and `20261020052000_reputation_tiers.sql` (reputation points, tiers, and badges; no seed). Do not paste those files into the SQL editor. They do not change Auth. Then load the snapshot, and after that the walk. The walk seed only names places, so the open-data file has to be applied first. The live seed can run in either order. The campaign seed is last. `DATABASE_URL` is the Postgres connection string from the dashboard (Project Settings → Database). It is not in git. The SQL runs as the database owner and calls `private.upsert_open_data_items` and `private.upsert_region_live`. The anon key cannot run either. The live seed does not insert a Jamestown 311 feed. None was found (see `docs/OPEN-DATA-PLAYBOOK.md` §9.2).
+`db push` applies every migration that is not on the project yet. That includes `20261018001600_open_data.sql`, `20261018194500_impact_feedback.sql` when impact feedback is not already there, `20261018210000_open_data_card.sql` (provenance on the card after impact feedback), `20261018235000_walks_and_quests.sql` (the walk and quest tables, the RPCs, and the global starter quest), `20261019041827_here_card.sql` (the Here Card read, the place-name cache, and the Nominatim slot), `20261019180000_here_card_rpc_hardening.sql` (per-user Nominatim and place-label limits), `20261019184521_founding_and_campaigns.sql` (Founding Local and campaigns; no city rows), `20261019233041_live_conditions.sql` (right now, civic issues, and per-region weather config), `20261020023000_exclude_demo_from_standing.sql` (demo accounts stay off founding ranks and campaign boards), `20261020031500_location_integrity.sql` (location integrity; see [Location integrity (hosted)](#location-integrity-hosted)), `20261020050000_public_read_api.sql` (the public read API; see [Public read API (hosted)](#public-read-api-hosted)), and `20261020052000_reputation_tiers.sql` (reputation points, tiers, and badges; no seed). Do not paste those files into the SQL editor. They do not change Auth. Then load the snapshot, and after that the walk. The walk seed only names places, so the open-data file has to be applied first. The live seed can run in either order. The campaign seed is last. `DATABASE_URL` is the Postgres connection string from the dashboard (Project Settings → Database). It is not in git. The SQL runs as the database owner and calls `private.upsert_open_data_items` and `private.upsert_region_live`. The anon key cannot run either. The live seed does not insert a Jamestown 311 feed. None was found (see `docs/OPEN-DATA-PLAYBOOK.md` §9.2).
 
 ```bash
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/seed/open-data/jamestown-ny.sql

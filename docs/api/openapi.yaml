@@ -1,0 +1,491 @@
+openapi: 3.1.0
+info:
+  title: XHere public read API
+  version: "1.0.0"
+  summary: Read-only "what's here?" for a point, with attribution and share-alike licenses.
+  description: |
+    Signed-out content only. Public records include the stored summary, license,
+    and attribution. User drops are the share-page teaser: no hidden text, no
+    media, and a handle only when the share page would show it. Coordinates are
+    the display point (PLAN.md section 5). Demo accounts and
+    location_trust=reduced rows are omitted. ODbL and CC BY-SA items are
+    share-alike.
+
+    The Edge Function is `public-api`. CI does not deploy it. See docs/api/README.md.
+  license:
+    name: Mixed — each item carries its own license
+    identifier: LicenseRef-XHere-Item-License
+servers:
+  - url: https://{project_ref}.supabase.co/functions/v1/public-api
+    description: Hosted function, after a manual deploy. Not published by CI.
+    variables:
+      project_ref:
+        default: jpeuldzegtbqfezijhuy
+        description: Supabase project ref.
+tags:
+  - name: read
+    description: Read-only routes. GET and OPTIONS only.
+paths:
+  /v1:
+    get:
+      tags: [read]
+      operationId: listEndpoints
+      summary: List the v1 routes
+      responses:
+        "200":
+          description: Route list and terms.
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/CacheControl"
+            X-RateLimit-Limit:
+              $ref: "#/components/headers/RateLimit"
+            X-RateLimit-Remaining:
+              $ref: "#/components/headers/RateRemaining"
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/TermsEnvelope"
+                  - type: object
+                    properties:
+                      api:
+                        const: xhere
+                      version:
+                        const: v1
+                      endpoints:
+                        type: array
+                        items:
+                          type: object
+                          required: [method, path]
+                          properties:
+                            method:
+                              const: GET
+                            path:
+                              type: string
+                            query:
+                              type: array
+                              items:
+                                type: string
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /v1/here:
+    get:
+      tags: [read]
+      operationId: here
+      summary: What is public near this point
+      parameters:
+        - $ref: "#/components/parameters/lat"
+        - $ref: "#/components/parameters/lon"
+        - $ref: "#/components/parameters/lng"
+        - name: radius
+          in: query
+          required: false
+          description: Whole meters. Default 300. Maximum 1000.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 1000
+            default: 300
+      responses:
+        "200":
+          description: Public records and user teasers inside the radius, at most 40.
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/CacheControl"
+            X-RateLimit-Limit:
+              $ref: "#/components/headers/RateLimit"
+            X-RateLimit-Remaining:
+              $ref: "#/components/headers/RateRemaining"
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/TermsEnvelope"
+                  - type: object
+                    required: [lat, lon, radius_m, items, live]
+                    properties:
+                      lat:
+                        type: number
+                      lon:
+                        type: number
+                      radius_m:
+                        type: integer
+                      items:
+                        type: array
+                        maxItems: 40
+                        items:
+                          $ref: "#/components/schemas/Item"
+                      live:
+                        oneOf:
+                          - $ref: "#/components/schemas/LiveRegion"
+                          - type: "null"
+        "400":
+          $ref: "#/components/responses/BadQuery"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /v1/drops/{id}:
+    get:
+      tags: [read]
+      operationId: dropById
+      summary: One share-page teaser or public record
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: 12-character short id, or a uuid.
+          schema:
+            type: string
+      responses:
+        "200":
+          description: The public item.
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/CacheControl"
+            X-RateLimit-Limit:
+              $ref: "#/components/headers/RateLimit"
+            X-RateLimit-Remaining:
+              $ref: "#/components/headers/RateRemaining"
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/TermsEnvelope"
+                  - type: object
+                    required: [item]
+                    properties:
+                      item:
+                        $ref: "#/components/schemas/Item"
+        "400":
+          $ref: "#/components/responses/BadQuery"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /v1/categories:
+    get:
+      tags: [read]
+      operationId: categories
+      summary: Active groups and categories
+      responses:
+        "200":
+          description: Labels and reveal rules. No embeddings or filter patterns.
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/CacheControl"
+            X-RateLimit-Limit:
+              $ref: "#/components/headers/RateLimit"
+            X-RateLimit-Remaining:
+              $ref: "#/components/headers/RateRemaining"
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/TermsEnvelope"
+                  - type: object
+                    required: [groups, categories]
+                    properties:
+                      groups:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/CategoryGroup"
+                      categories:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/Category"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /v1/walks:
+    get:
+      tags: [read]
+      operationId: walks
+      summary: Walks whose box contains this point
+      parameters:
+        - $ref: "#/components/parameters/lat"
+        - $ref: "#/components/parameters/lon"
+        - $ref: "#/components/parameters/lng"
+      responses:
+        "200":
+          description: Walks and their public-record stops. No personal progress.
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/CacheControl"
+            X-RateLimit-Limit:
+              $ref: "#/components/headers/RateLimit"
+            X-RateLimit-Remaining:
+              $ref: "#/components/headers/RateRemaining"
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/TermsEnvelope"
+                  - type: object
+                    required: [lat, lon, walks]
+                    properties:
+                      lat:
+                        type: number
+                      lon:
+                        type: number
+                      walks:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/Walk"
+        "400":
+          $ref: "#/components/responses/BadQuery"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+components:
+  parameters:
+    lat:
+      name: lat
+      in: query
+      required: true
+      schema:
+        type: number
+        minimum: -90
+        maximum: 90
+    lon:
+      name: lon
+      in: query
+      required: true
+      description: Longitude. If omitted, `lng` is read instead.
+      schema:
+        type: number
+        minimum: -180
+        maximum: 180
+    lng:
+      name: lng
+      in: query
+      required: false
+      description: Alias of lon, used only when lon is absent.
+      schema:
+        type: number
+        minimum: -180
+        maximum: 180
+  headers:
+    CacheControl:
+      schema:
+        type: string
+      description: public max-age on success, no-store on validation and rate-limit errors.
+    RateLimit:
+      schema:
+        type: integer
+    RateRemaining:
+      schema:
+        type: integer
+  responses:
+    BadQuery:
+      description: The query failed validation.
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: "#/components/schemas/TermsEnvelope"
+              - type: object
+                required: [error]
+                properties:
+                  error:
+                    type: string
+                    enum: [invalid_query, invalid_location, invalid_radius, invalid_id]
+                  detail:
+                    type: string
+    NotFound:
+      description: No public item for that id.
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: "#/components/schemas/TermsEnvelope"
+              - type: object
+                required: [error]
+                properties:
+                  error:
+                    const: not_found
+    RateLimited:
+      description: 30 requests per 60 seconds for this client address.
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: "#/components/schemas/TermsEnvelope"
+              - type: object
+                required: [error, limit, retry_after_seconds]
+                properties:
+                  error:
+                    const: rate_limited
+                  limit:
+                    type: integer
+                  retry_after_seconds:
+                    type: integer
+  schemas:
+    TermsEnvelope:
+      type: object
+      required: [terms]
+      properties:
+        terms:
+          $ref: "#/components/schemas/Terms"
+    Terms:
+      type: object
+      required: [note, share_alike, privacy]
+      properties:
+        note:
+          type: string
+          description: Share-alike obligations for ODbL and CC BY-SA, and the teaser rule for user drops.
+        share_alike:
+          type: array
+          items:
+            type: string
+          examples:
+            - ["ODbL-1.0", "CC-BY-SA-4.0"]
+        privacy:
+          type: string
+    Licensed:
+      type: object
+      required: [attribution, license, share_alike]
+      properties:
+        attribution:
+          type: string
+        license:
+          type: string
+        share_alike:
+          type: boolean
+          description: True when license is ODbL or CC BY-SA.
+    Item:
+      allOf:
+        - $ref: "#/components/schemas/Licensed"
+        - type: object
+          required: [id, short_id, kind, title, lat, lon, approximate, summary]
+          properties:
+            id:
+              type: string
+              format: uuid
+            short_id:
+              type: string
+            kind:
+              type: string
+              enum: [public_record, user_teaser]
+            title:
+              type: string
+            category_slug:
+              type: string
+            category_label:
+              type: string
+            group_slug:
+              type: string
+            group_label:
+              type: string
+            lat:
+              type: number
+            lon:
+              type: number
+            approximate:
+              type: boolean
+            location_precision_m:
+              type: integer
+            reveal_radius_m:
+              type: integer
+            distance_m:
+              type: [number, "null"]
+            status:
+              type: string
+              enum: [active, confirmed]
+            summary:
+              type: [string, "null"]
+              description: One-line text for a public record. Null for a user teaser.
+            source_slug:
+              type: [string, "null"]
+            source_name:
+              type: [string, "null"]
+            source_url:
+              type: [string, "null"]
+            external_id:
+              type: [string, "null"]
+            author_handle:
+              type: [string, "null"]
+              description: Set only for a non-sensitive, non-anonymous user teaser.
+    CategoryGroup:
+      allOf:
+        - $ref: "#/components/schemas/Licensed"
+        - type: object
+          required: [slug, label]
+          properties:
+            slug:
+              type: string
+            label:
+              type: string
+            description:
+              type: [string, "null"]
+            icon:
+              type: [string, "null"]
+    Category:
+      allOf:
+        - $ref: "#/components/schemas/Licensed"
+        - type: object
+          required: [slug, label, group_slug, sensitive, default_reveal_m, location_precision_m]
+          properties:
+            slug:
+              type: string
+            label:
+              type: string
+            description:
+              type: [string, "null"]
+            icon:
+              type: [string, "null"]
+            group_slug:
+              type: string
+            group_label:
+              type: string
+            sensitive:
+              type: boolean
+            default_reveal_m:
+              type: integer
+            location_precision_m:
+              type: integer
+    LiveRegion:
+      allOf:
+        - $ref: "#/components/schemas/Licensed"
+        - type: object
+          required: [region_id]
+          properties:
+            region_id:
+              type: string
+            name:
+              type: [string, "null"]
+            country:
+              type: [string, "null"]
+            weather_provider:
+              type: [string, "null"]
+              description: nws, none, or null. Alert text is not included.
+    Walk:
+      allOf:
+        - $ref: "#/components/schemas/Licensed"
+        - type: object
+          required: [slug, title, stops]
+          properties:
+            id:
+              type: string
+            region_id:
+              type: string
+            slug:
+              type: string
+            title:
+              type: string
+            description:
+              type: string
+            distance_m:
+              type: integer
+            duration_min:
+              type: integer
+            stops:
+              type: array
+              items:
+                allOf:
+                  - $ref: "#/components/schemas/Item"
+                  - type: object
+                    required: [position]
+                    properties:
+                      position:
+                        type: integer
