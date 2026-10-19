@@ -337,7 +337,14 @@
     <string name="ar_drop_here">Drop here in AR</string>
     <string name="ar_waiting">Point the camera around so the street can be recognized.</string>
     <string name="ar_coarse">AR needs a precise location. Allow precise location, then come back.</string>
-    <string name="ar_unauthorized">This build is not authorized for Geospatial yet. A release build needs its signing certificate added in Google Cloud.</string>
+    <string name="ar_unauthorized">This build is not authorized for Geospatial. Google checks package world.xhere.app and this APK\'s signing certificate in Cloud project xhere-512103. A debug SHA-1 that does not match, or a release or Play signing SHA-1 that was never added, fails this way. The certificate is in the log.</string>
+    <string name="ar_needs_install">Look around needs Google Play Services for AR. It is missing from this phone, or the installed copy is too old. Install or update it, then tap AR again.</string>
+    <string name="ar_install_declined">Play Services for AR was not installed. Look around needs it. Tap AR again when you want the install prompt.</string>
+    <string name="ar_services_missing">Google Play Services for AR cannot run on this phone, so the camera view cannot start.</string>
+    <string name="ar_still_checking">ARCore is still checking this phone. It reported that the check is still running, or the check timed out. Tap AR again in a moment.</string>
+    <string name="ar_waiting_fix">Look around needs a precise location fix before it can ask whether this street is covered. Turn location on, then tap AR again.</string>
+    <string name="ar_try_again">Try again</string>
+    <string name="ar_ok">OK</string>
     <string name="ar_unavailable">Street-level AR is not available at this spot.</string>
     <string name="ar_failed">The camera view stopped. Close it and try again.</string>
     <string name="ar_camera_denied">Look around needs the camera and precise location. Allow both, or open Settings if you already said no.</string>

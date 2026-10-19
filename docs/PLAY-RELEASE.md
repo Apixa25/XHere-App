@@ -57,7 +57,7 @@ Before a release build can open the AR camera, add another Android OAuth client 
 3. SHA-1: the upload keystore (`keytool -list -v -keystore release.jks -alias xhere`). A debug build keeps using the debug certificate that is already registered.
 4. If Play App Signing is on, the phone verifies the **App signing key**, not the upload key. Add that certificate's SHA-1 as well (Play Console → App signing → App signing key certificate). This is a different value from the SHA-256 you copy into `assetlinks.json`.
 
-Until those SHA-1s exist, a release or Play install still installs, and the AR button stays hidden (or the session reports that it is not authorized). Non-AR phones install either way: `com.google.ar.core` is `optional`.
+Until those SHA-1s exist, a release or Play install still installs. The AR button stays on the map. Tapping it reports that the build is not authorized, and logcat (`XHereAr`) includes this APK's SHA-1 plus `VpsAvailability.ERROR_NOT_AUTHORIZED` for project `xhere-512103`. Non-AR phones install either way: `com.google.ar.core` is `optional`.
 
 Play Services for AR is a separate install on the device (on the order of 50 MB). It is not packaged in the XHere APK. The in-app notice before the camera is required by Google. It names Play Services for AR and says Google processes camera and location sensor data for that session.
 

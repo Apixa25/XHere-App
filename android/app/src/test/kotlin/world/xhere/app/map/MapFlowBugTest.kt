@@ -22,6 +22,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import world.xhere.app.ar.ArFrame
+import world.xhere.app.ar.ArAdvice
 import world.xhere.app.ar.ArRuntime
 import world.xhere.app.ar.ArStatus
 import world.xhere.app.ar.ArSupport
@@ -176,6 +177,9 @@ private class GateAr : ArRuntime {
         _support.value = ArSupport.READY
         return true
     }
+
+    override suspend fun advise(latitude: Double?, longitude: Double?, activity: android.app.Activity?): ArAdvice =
+        if (allow) ArAdvice.OPEN else ArAdvice.STILL_CHECKING
 
     override fun setTargets(targets: List<ArTarget>) = Unit
 

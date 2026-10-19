@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -287,6 +288,62 @@ private fun StatusLine(status: ArStatus, modifier: Modifier) {
     Surface(modifier = modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp)) {
         Text(text, modifier = Modifier.padding(12.dp), style = MaterialTheme.typography.bodyMedium)
     }
+}
+
+@Composable
+internal fun ArGuidanceDialog(
+    advice: ArAdvice,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.ar_title)) },
+        text = {
+            Text(
+                text = stringResource(advice.explanation()),
+                modifier = Modifier.testTag(TestTags.AR_GUIDANCE),
+            )
+        },
+        confirmButton = {
+            TextButton(
+                onClick = onConfirm,
+                modifier = Modifier.testTag(TestTags.AR_GUIDANCE_ACTION),
+            ) {
+                Text(stringResource(advice.actionLabel()))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.ar_close)) }
+        },
+    )
+}
+
+internal fun ArAdvice.explanation(): Int = when (this) {
+    ArAdvice.OPEN -> R.string.ar_title
+    ArAdvice.NEEDS_INSTALL -> R.string.ar_needs_install
+    ArAdvice.INSTALL_DECLINED -> R.string.ar_install_declined
+    ArAdvice.NEEDS_PERMISSION -> R.string.ar_camera_denied
+    ArAdvice.NOT_HERE -> R.string.ar_unavailable
+    ArAdvice.SERVICES_MISSING -> R.string.ar_services_missing
+    ArAdvice.NOT_AUTHORIZED -> R.string.ar_unauthorized
+    ArAdvice.STILL_CHECKING -> R.string.ar_still_checking
+    ArAdvice.WAITING_FOR_FIX -> R.string.ar_waiting_fix
+}
+
+internal fun ArAdvice.actionLabel(): Int = when (this) {
+    ArAdvice.NEEDS_PERMISSION -> R.string.ar_camera_settings
+    ArAdvice.NEEDS_INSTALL, ArAdvice.INSTALL_DECLINED, ArAdvice.STILL_CHECKING, ArAdvice.WAITING_FOR_FIX -> R.string.ar_try_again
+    else -> R.string.ar_ok
+}
+
+internal fun Context.findActivity(): android.app.Activity? {
+    var current = this
+    while (current is android.content.ContextWrapper) {
+        if (current is android.app.Activity) return current
+        current = current.baseContext
+    }
+    return null
 }
 
 private fun openUrl(context: Context, url: String) {

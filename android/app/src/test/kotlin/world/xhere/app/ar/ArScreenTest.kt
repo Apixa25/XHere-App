@@ -23,6 +23,7 @@ import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 import world.xhere.app.FreshSessionRule
+import world.xhere.app.ar.ArAdvice
 import world.xhere.app.MainActivity
 import world.xhere.app.TestGraph
 import world.xhere.app.TestXHereApplication
@@ -45,13 +46,50 @@ class ArScreenTest {
     val rule = createAndroidComposeRule<MainActivity>()
 
     @Test
-    fun arButtonStaysHiddenWhenGeospatialIsUnavailable() {
+    fun arButtonStaysVisibleAndExplainsWhenGeospatialIsUnavailable() {
+        TestGraph.ar.nextSupport = ArSupport.UNAVAILABLE
         TestGraph.location.setPermission(true)
+        shadowOf(ApplicationProvider.getApplicationContext<Application>()).grantPermissions(
+            Manifest.permission.CAMERA,
+            Manifest.permission.ACCESS_FINE_LOCATION,
+        )
         rule.openMap()
-        rule.waitUntil(timeoutMillis = 5_000) { TestGraph.location.collectionCount >= 1 }
-        TestGraph.location.emit(LatLng(42.093017, -79.23920))
-        rule.waitUntil(timeoutMillis = 5_000) { TestGraph.ar.checks >= 1 }
-        rule.onNodeWithTag(TestTags.MAP_AR).assertDoesNotExist()
+        rule.onNodeWithTag(TestTags.MAP_AR).assertIsDisplayed()
+        rule.onNodeWithTag(TestTags.MAP_AR).performClick()
+        rule.waitForTag(TestTags.AR_GUIDANCE)
+        rule.onNodeWithTag(TestTags.AR_GUIDANCE).assertTextContains("not available at this spot", substring = true)
+        rule.onNodeWithTag(TestTags.AR_PRIVACY).assertDoesNotExist()
+        rule.onNodeWithTag(TestTags.AR_CAMERA).assertDoesNotExist()
+    }
+
+    @Test
+    fun arButtonExplainsAMissingInstallAnUnauthorizedBuildAndACheckThatIsStillRunning() {
+        shadowOf(ApplicationProvider.getApplicationContext<Application>()).grantPermissions(
+            Manifest.permission.CAMERA,
+            Manifest.permission.ACCESS_FINE_LOCATION,
+        )
+        TestGraph.ar.nextAdvice = ArAdvice.NEEDS_INSTALL
+        rule.openMap()
+        rule.onNodeWithTag(TestTags.MAP_AR).performClick()
+        rule.waitForTag(TestTags.AR_GUIDANCE)
+        rule.onNodeWithTag(TestTags.AR_GUIDANCE).assertTextContains("Play Services for AR", substring = true)
+
+        TestGraph.ar.nextAdvice = ArAdvice.STILL_CHECKING
+        rule.onNodeWithTag(TestTags.AR_GUIDANCE_ACTION).performClick()
+        rule.waitForTag(TestTags.AR_GUIDANCE)
+        rule.onNodeWithTag(TestTags.AR_GUIDANCE).assertTextContains("still checking", substring = true)
+
+        TestGraph.ar.nextAdvice = ArAdvice.SERVICES_MISSING
+        rule.onNodeWithTag(TestTags.AR_GUIDANCE_ACTION).performClick()
+        rule.waitForTag(TestTags.AR_GUIDANCE)
+        rule.onNodeWithTag(TestTags.AR_GUIDANCE).assertTextContains("cannot run", substring = true)
+        rule.onNodeWithTag(TestTags.AR_GUIDANCE_ACTION).performClick()
+
+        TestGraph.ar.nextAdvice = ArAdvice.NOT_AUTHORIZED
+        rule.onNodeWithTag(TestTags.MAP_AR).performClick()
+        rule.waitForTag(TestTags.AR_GUIDANCE)
+        rule.onNodeWithTag(TestTags.AR_GUIDANCE).assertTextContains("xhere-512103", substring = true)
+        rule.onNodeWithTag(TestTags.AR_PRIVACY).assertDoesNotExist()
     }
 
     @Test

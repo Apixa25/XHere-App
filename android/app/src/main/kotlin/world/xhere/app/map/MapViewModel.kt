@@ -740,9 +740,11 @@ class MapViewModel(
     }
 
     /**
-     * Show the AR button only when this phone can run Geospatial and VPS
-     * covers the fix. A failure hides the button. The check does not open
-     * the camera. It repeats after the person moves [AR_RECHECK_M].
+     * Quiet probe for [MapUiState.arReady]. The Look around button stays
+     * visible either way. A still-checking result (UNKNOWN_CHECKING or
+     * UNKNOWN_TIMED_OUT) is not cached, so the next fix tries again.
+     * A settled miss waits until the person moves [AR_RECHECK_M].
+     * The check does not open the camera and does not call requestInstall.
      */
     private fun refreshAr(point: LatLng) {
         if (!Geo.isValid(point)) return
@@ -770,7 +772,9 @@ class MapViewModel(
             _state.update { it.copy(arReady = false) }
             false
         }
-        if (updated) {
+        if (!updated || ar.support.value == ArSupport.UNKNOWN) {
+            arCheckedAt = null
+        } else {
             _state.update { it.copy(arReady = ar.support.value == ArSupport.READY) }
         }
         val next = arPending
