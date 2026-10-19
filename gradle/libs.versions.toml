@@ -19,6 +19,8 @@ junit = "4.13.2"
 maplibre = "13.7.1"
 camerax = "1.4.2"
 mlkitImageLabeling = "17.0.9"
+mlkitGenAiPrompt = "1.0.0-beta4"
+mlkitGenAiImageDescription = "1.0.0-beta1"
 # Crash reports. The SDK stays off unless SENTRY_DSN is set at build time.
 # No Sentry account is created in CI. The free developer plan is enough at this scale.
 sentry = "8.61.0"
@@ -68,6 +70,8 @@ androidx-camera-camera2 = { module = "androidx.camera:camera-camera2", version.r
 androidx-camera-lifecycle = { module = "androidx.camera:camera-lifecycle", version.ref = "camerax" }
 androidx-camera-view = { module = "androidx.camera:camera-view", version.ref = "camerax" }
 mlkit-image-labeling = { module = "com.google.mlkit:image-labeling", version.ref = "mlkitImageLabeling" }
+mlkit-genai-prompt = { module = "com.google.mlkit:genai-prompt", version.ref = "mlkitGenAiPrompt" }
+mlkit-genai-image-description = { module = "com.google.mlkit:genai-image-description", version.ref = "mlkitGenAiImageDescription" }
 sentry-android-core = { module = "io.sentry:sentry-android-core", version.ref = "sentry" }
 arcore = { module = "com.google.ar:core", version.ref = "arcore" }
 play-services-location = { module = "com.google.android.gms:play-services-location", version.ref = "playServicesLocation" }

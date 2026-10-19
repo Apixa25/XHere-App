@@ -16,6 +16,7 @@ export const CATALOG: CatalogEntry[] = [
   { slug: "historical_fact", label: "Historical fact", description: "Something that happened here, ideally with a source.", hints: "history historical museum happened year source archive" },
   { slug: "story", label: "Story", description: "A personal or local story tied to this spot.", hints: "story tale personal memory anecdote grandmother" },
   { slug: "memorial", label: "Memorial", description: "Remembering a person or event connected to this place.", hints: "memorial plaque remember remembrance candle" },
+  { slug: "historical_marker", label: "Historical marker", description: "A plaque, roadside marker, or historic information board.", hints: "historical marker roadside plaque inscription board" },
   { slug: "viewpoint", label: "Viewpoint", description: "A view worth stopping for.", hints: "viewpoint view overlook vista scenic lake panorama overlook scenic vista" },
   { slug: "trail_note", label: "Trail note", description: "Conditions, turns, and tips on a trail.", hints: "trail hike path muddy turn conditions hiking" },
   { slug: "wildlife", label: "Wildlife sighting", description: "An animal or plant seen here recently.", hints: "wildlife animal bird owl deer fox plant sighting owl owl" },

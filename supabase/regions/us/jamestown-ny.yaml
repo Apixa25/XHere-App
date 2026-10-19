@@ -66,6 +66,15 @@ sources:
     historic: true
     heritage: true
     tourism: [artwork, attraction, museum, viewpoint, gallery]
+  - id: osm-historical-markers
+    adapter: osm_historical_markers
+    publisher: OpenStreetMap contributors
+    url: https://www.openstreetmap.org/copyright
+    license: ODbL 1.0
+    attribution: "© OpenStreetMap contributors. Historical markers under the Open Database License. HMdb text is not copied; a marker may link out to HMdb."
+    automated_access: allowed
+    cost: 0
+    category: historical_marker
 
 # A walk is ordered stops that name places already in the snapshot.
 # source + external_id match seed/open-data/jamestown-ny.json.

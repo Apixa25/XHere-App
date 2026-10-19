@@ -186,6 +186,8 @@ data class DropMedia(
     val height: Int? = null,
     @SerialName("duration_s") val durationS: Double? = null,
     @SerialName("taken_here") val takenHere: Boolean = false,
+    /** Spoken name of the image. Null when the photo was posted without one. */
+    @SerialName("alt_text") val altText: String? = null,
 )
 
 /** One item in `create_drop`'s `p_media` array. The server assigns the row id. */
@@ -199,6 +201,8 @@ data class MediaUpload(
     val width: Int? = null,
     val height: Int? = null,
     @SerialName("duration_s") val durationS: Double? = null,
+    /** Sent with create_drop and stored on drop_media. At most 300 characters. */
+    @SerialName("alt_text") val altText: String? = null,
     /** Read from the photo before Exif is stripped. The server does not store these. */
     @SerialName("capture_lat") val captureLat: Double? = null,
     @SerialName("capture_lng") val captureLng: Double? = null,

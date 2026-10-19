@@ -115,6 +115,7 @@ class MapDiscoveryTest {
         rule.onNodeWithText("Story", substring = true).assertIsDisplayed()
         rule.onNodeWithTag(TestTags.subcategory("story")).performClick()
         rule.onNodeWithTag(TestTags.subcategory("memorial")).performClick()
+        rule.onNodeWithTag(TestTags.subcategory("historical_marker")).performClick()
         rule.onNodeWithTag(TestTags.SUBCATEGORY_APPLY).performClick()
         rule.awaitQuery(JamestownDemo.downtown, JamestownDemo.STREET_ZOOM, listOf("historical_fact"))
         rule.waitForTag(TestTags.marker("fenton"))

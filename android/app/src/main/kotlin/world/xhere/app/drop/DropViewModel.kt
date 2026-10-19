@@ -33,18 +33,22 @@ import world.xhere.shared.safety.SafetyDirectory
 import world.xhere.shared.safety.SafetyFlow
 import world.xhere.shared.safety.SafetyResources
 import world.xhere.shared.suggest.CategorySuggestion
+import world.xhere.shared.suggest.SnapDraft
+import world.xhere.shared.suggest.SnapSource
 import world.xhere.shared.suggest.SuggestionQuery
 
 /**
  * Quick drop (PLAN §7 M5): a photo or a line of text, three category chips,
  * then post. A category with no required fields and no sensitive notice posts
- * on the chip tap, so a photo drop is shutter, then chip.
+ * on the chip tap for a text drop. A photo suggestion fills the form and waits
+ * for Post. It never posts by itself.
  */
 class DropViewModel(
     private val services: XHereServices,
     private val capture: DropCapture,
     private val labeler: ImageLabeler,
     private val location: DeviceLocation,
+    private val suggester: SnapSuggester,
 ) : ViewModel() {
     private val _state = MutableStateFlow(DropUiState())
     val state: StateFlow<DropUiState> = _state.asStateFlow()
@@ -52,6 +56,7 @@ class DropViewModel(
     private val recent = mutableListOf<String>()
     private var photo: MediaUpload? = null
     private var labels: List<String> = emptyList()
+    private var preview: ByteArray? = null
     private var lastQuery = SuggestionQuery()
     private var filters: List<ContentFilter> = emptyList()
     private var tier: UserTier = UserTier.NEW
@@ -104,8 +109,19 @@ class DropViewModel(
             _state.update { it.copy(busy = true, error = null) }
             try {
                 photo = services.media.uploadPhoto(bytes, mimeType)
-                labels = labeler.labels(bytes, mimeType)
-                loadSuggestions()
+                preview = bytes
+                val taxonomy = services.taxonomy.load()
+                filters = taxonomy.filters
+                runCatching { services.profiles.currentProfile().tier }.onSuccess { tier = it }
+                val outcome = suggester.suggest(bytes, mimeType, taxonomy.categories)
+                labels = outcome.labels.ifEmpty { labeler.labels(bytes, mimeType) }
+                val draft = outcome.draft
+                val category = draft?.let { picked -> taxonomy.categories.firstOrNull { it.slug == picked.categorySlug && it.active } }
+                if (draft != null && category != null) {
+                    applySnap(draft, category, taxonomy.categories)
+                } else {
+                    loadSuggestions()
+                }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: XHereApiException) {
@@ -114,6 +130,14 @@ class DropViewModel(
                 _state.update { it.copy(busy = false, error = "That photo couldn't be saved. Try another one.") }
             }
         }
+    }
+
+    fun onDescription(value: String) {
+        _state.update { it.copy(description = value.take(280), error = null) }
+    }
+
+    fun onAltText(value: String) {
+        _state.update { it.copy(altText = value.take(300), error = null) }
     }
 
     fun continueWithText() {
@@ -133,10 +157,11 @@ class DropViewModel(
         val fields = AttributeFields.fromSchema(category.attributesSchema)
         val values = prefill(fields)
         val ready = !category.sensitive && requiredSatisfied(fields, values)
+        val holdForPost = _state.value.snap != null
         _state.update {
             val ttl = if (slug == "right_now") it.ttl ?: RightNowDuration.FOUR_HOURS else it.ttl
             it.copy(
-                phase = if (ready) it.phase else DropPhase.FORM,
+                phase = if (ready && !holdForPost) it.phase else DropPhase.FORM,
                 selectedSlug = slug,
                 fields = fields,
                 values = values,
@@ -148,7 +173,7 @@ class DropViewModel(
                 safety = safetyPanel(category, it.categories, it.text),
             )
         }
-        if (ready) post()
+        if (ready && !holdForPost) post()
     }
 
     private fun safetyPanel(category: Category, categories: List<Category>, text: String): SafetyPanel? {
@@ -204,7 +229,7 @@ class DropViewModel(
                         revealRadiusM = null,
                         expiresAt = expiresFor(slug, snapshot.ttl),
                         displayAnonymous = false,
-                        media = listOfNotNull(photo),
+                        media = listOfNotNull(photo?.copy(altText = altFor(snapshot))),
                         acknowledgeGuidelines = snapshot.guidelinesChecked,
                         signal = here.signal,
                     ),
@@ -243,10 +268,37 @@ class DropViewModel(
     fun another() {
         photo = null
         labels = emptyList()
+        preview = null
         _state.value = DropUiState(
             categories = _state.value.categories,
             pinnedLabel = _state.value.pinnedLabel,
         )
+    }
+
+    private fun applySnap(draft: SnapDraft, category: Category, categories: List<Category>) {
+        val fields = AttributeFields.fromSchema(category.attributesSchema)
+        val values = prefill(fields)
+        _state.update { current ->
+            current.copy(
+                phase = DropPhase.FORM,
+                busy = false,
+                text = current.text.trim().ifEmpty { draft.title },
+                description = draft.description,
+                altText = draft.altText,
+                previewBytes = preview,
+                snap = SnapUi(source = draft.source, suggestedSlug = draft.categorySlug),
+                categories = categories,
+                suggestions = listOf(CategorySuggestion(category.slug, category.label, 1.0)),
+                selectedSlug = category.slug,
+                fields = fields,
+                values = values,
+                sensitive = category.sensitive,
+                postingNotice = category.postingNotice,
+                guidelinesChecked = false,
+                error = null,
+                safety = safetyPanel(category, categories, current.text.trim().ifEmpty { draft.title }),
+            )
+        }
     }
 
     private suspend fun loadSuggestions() {
@@ -309,9 +361,14 @@ class DropViewModel(
     }
 
     private fun bodyFor(snapshot: DropUiState, title: String): String? {
+        val described = snapshot.description.trim()
+        if (described.isNotEmpty() && described != title) return described
         val typed = snapshot.text.trim()
         return if (typed.isNotEmpty() && typed != title) typed else null
     }
+
+    private fun altFor(snapshot: DropUiState): String? =
+        snapshot.altText.trim().take(300).ifBlank { null }
 
     private fun prefill(fields: List<world.xhere.shared.form.AttributeField>): Map<String, String> {
         val now = Clock.System.now().toString()
@@ -373,6 +430,17 @@ data class DropUiState(
     val reducedTrust: Boolean = false,
     /** Place name and coordinates when the composer was opened from a Here Card. */
     val pinnedLabel: String? = null,
+    /** Set after a photo suggestion. The form stays editable and does not post itself. */
+    val snap: SnapUi? = null,
+    val description: String = "",
+    val altText: String = "",
+    val previewBytes: ByteArray? = null,
+)
+
+/** A suggestion sitting in the composer. [suggestedSlug] is the category it picked. */
+data class SnapUi(
+    val source: SnapSource,
+    val suggestedSlug: String,
 )
 
 /**

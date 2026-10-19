@@ -31,6 +31,8 @@ import world.xhere.app.ar.ArSupport
 import world.xhere.app.ar.ArTarget
 import world.xhere.app.ar.ArViewModel
 import world.xhere.app.ar.ResolvedAnchor
+import world.xhere.app.drop.LabelSnapSuggester
+import world.xhere.app.drop.SnapSuggester
 import world.xhere.app.location.DeviceLocation
 import world.xhere.app.map.FilterPresetStore
 import world.xhere.app.map.MapCanvas
@@ -158,6 +160,7 @@ fun testModule() = module {
     single<MapCanvas> { PreviewMapCanvas() }
     single<DropCapture> { FakeDropCapture() }
     single<ImageLabeler> { FakeImageLabeler() }
+    single<SnapSuggester> { LabelSnapSuggester(get()) }
     val conditions = ScriptedConditions()
     val ar = ScriptedArRuntime()
     TestGraph.conditions = conditions
@@ -166,7 +169,7 @@ fun testModule() = module {
     single<ArRuntime> { ar }
     viewModel { MapViewModel(get(), get(), get(), get(), get(), debounceMs = 0, conditions = get()) }
     viewModel { ArViewModel(get(), get(), get()) }
-    viewModel { DropViewModel(get(), get(), get(), get()) }
+    viewModel { DropViewModel(get(), get(), get(), get(), get()) }
     viewModel { ProfileViewModel(get()) }
     viewModel {
         val context = androidContext()

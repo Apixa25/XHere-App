@@ -1,9 +1,11 @@
 package world.xhere.app.drop
 
 import android.Manifest
+import android.graphics.BitmapFactory
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -11,6 +13,7 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -25,11 +28,15 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -178,6 +185,7 @@ fun DropScreen(
                 }
             }
         }
+        state.snap?.let { snap -> SnapSuggestionFields(state, snap, viewModel) }
         if (state.phase == DropPhase.FORM || (state.phase == DropPhase.CHOOSE && state.selectedSlug != null && state.fields.isNotEmpty())) {
             state.postingNotice?.let { notice ->
                 Text(
@@ -262,6 +270,66 @@ fun DropScreen(
             }
         }
     }
+}
+
+@Composable
+private fun SnapSuggestionFields(state: DropUiState, snap: SnapUi, viewModel: DropViewModel) {
+    val banner = if (snap.source == world.xhere.shared.suggest.SnapSource.GEMINI_NANO) {
+        stringResource(R.string.drop_snap_gemini)
+    } else {
+        stringResource(R.string.drop_snap_labels)
+    }
+    Text(
+        text = banner,
+        style = MaterialTheme.typography.titleMedium,
+        modifier = Modifier.testTag(TestTags.DROP_SNAP_BANNER),
+    )
+    val bytes = state.previewBytes
+    val spoken = state.altText.ifBlank { stringResource(R.string.drop_photo) }
+    if (bytes != null) {
+        val bitmap = remember(bytes) {
+            runCatching { BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.asImageBitmap() }.getOrNull()
+        }
+        if (bitmap != null) {
+            Image(
+                bitmap = bitmap,
+                contentDescription = spoken,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(180.dp)
+                    .testTag(TestTags.DROP_PHOTO),
+                contentScale = ContentScale.Crop,
+            )
+        }
+    }
+    OutlinedTextField(
+        value = state.text,
+        onValueChange = viewModel::onText,
+        label = { Text(stringResource(R.string.drop_snap_title)) },
+        supportingText = { Text(stringResource(R.string.drop_snap_editable)) },
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag(TestTags.DROP_SNAP_TITLE),
+    )
+    OutlinedTextField(
+        value = state.description,
+        onValueChange = viewModel::onDescription,
+        label = { Text(stringResource(R.string.drop_snap_description)) },
+        supportingText = { Text(stringResource(R.string.drop_snap_editable)) },
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag(TestTags.DROP_SNAP_DESCRIPTION),
+    )
+    OutlinedTextField(
+        value = state.altText,
+        onValueChange = viewModel::onAltText,
+        label = { Text(stringResource(R.string.drop_snap_alt)) },
+        supportingText = { Text(stringResource(R.string.drop_snap_editable)) },
+        modifier = Modifier
+            .fillMaxWidth()
+            .semantics { contentDescription = spoken }
+            .testTag(TestTags.DROP_SNAP_ALT),
+    )
 }
 
 @Composable
