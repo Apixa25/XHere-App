@@ -2,7 +2,7 @@
 -- The rules are global. Jamestown is the seeded pilot, not a special case.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(42);
+select plan(43);
 
 insert into auth.users (id, email) values
   ('11111111-1111-4111-8111-111111111111', 'alice@example.test'),
@@ -142,8 +142,8 @@ begin
   select
     case when p_source = 'user' then p_author else null end,
     c.id, c.version, p_title,
-    format('POINT(%s %s)', p_lng, p_lat),
-    format('POINT(%s %s)', p_lng, p_lat),
+    format('POINT(%s %s)', p_lng, p_lat)::extensions.geography,
+    format('POINT(%s %s)', p_lng, p_lat)::extensions.geography,
     100, p_status, p_source, p_at
   from public.categories c
   where c.slug = 'note'
@@ -152,9 +152,11 @@ begin
 end;
 $$;
 
-select public._test_plant('11111111-1111-4111-8111-111111111111', 'Alice first', now() - interval '40 minutes');
-select public._test_plant('22222222-2222-4222-8222-222222222222', 'Bob', now() - interval '30 minutes');
-select public._test_plant('33333333-3333-4333-8333-333333333333', 'Eve', now() - interval '20 minutes');
+do $$ begin
+  perform public._test_plant('11111111-1111-4111-8111-111111111111', 'Alice first', now() - interval '40 minutes');
+  perform public._test_plant('22222222-2222-4222-8222-222222222222', 'Bob', now() - interval '30 minutes');
+  perform public._test_plant('33333333-3333-4333-8333-333333333333', 'Eve', now() - interval '20 minutes');
+end $$;
 
 select is(
   (select array_agg(ub.user_id order by (ub.meta ->> 'rank')::integer)
@@ -165,7 +167,9 @@ select is(
   'the first two people earn Founding Local'
 );
 
-select public._test_plant('11111111-1111-4111-8111-111111111111', 'Alice again', now() - interval '19 minutes');
+do $$ begin
+  perform public._test_plant('11111111-1111-4111-8111-111111111111', 'Alice again', now() - interval '19 minutes');
+end $$;
 select is(
   (select count(*)::integer from public.user_badges ub
    join public.badges b on b.id = ub.badge_id
@@ -188,20 +192,26 @@ select ok(
   'a handle never appears on the board'
 );
 
-select public._test_plant(null, 'Imported hall', now() - interval '18 minutes', 'active', 'open_data');
+do $$ begin
+  perform public._test_plant(null, 'Imported hall', now() - interval '18 minutes', 'active', 'open_data');
+end $$;
 select is(
   (select (public.campaigns_for_map(9, 9, 11, 11) -> 0 ->> 'drop_count')::integer),
   4,
   'an imported public record does not count'
 );
-select public._test_plant('22222222-2222-4222-8222-222222222222', 'Bob far away', now() - interval '17 minutes', 'active', 'user', 50, 10);
+do $$ begin
+  perform public._test_plant('22222222-2222-4222-8222-222222222222', 'Bob far away', now() - interval '17 minutes', 'active', 'user', 50, 10);
+end $$;
 select is(
   (select (public.campaigns_for_map(9, 9, 11, 11) -> 0 ->> 'drop_count')::integer),
   4,
   'a drop outside the region box does not count'
 );
 
-select public._test_plant('44444444-4444-4444-8444-444444444444', 'Frank waiting', now() - interval '35 minutes', 'pending_review');
+do $$ begin
+  perform public._test_plant('44444444-4444-4444-8444-444444444444', 'Frank waiting', now() - interval '35 minutes', 'pending_review');
+end $$;
 select is(
   (select array_agg(ub.user_id order by (ub.meta ->> 'rank')::integer)
    from public.user_badges ub
@@ -237,7 +247,9 @@ select is(
   'removed drops leave the campaign total'
 );
 
-select public._test_plant('55555555-5555-4555-8555-555555555555', 'Carol early', now() - interval '2 days');
+do $$ begin
+  perform public._test_plant('55555555-5555-4555-8555-555555555555', 'Carol early', now() - interval '2 days');
+end $$;
 select is(
   (select array_agg(ub.user_id order by (ub.meta ->> 'rank')::integer)
    from public.user_badges ub
@@ -252,11 +264,13 @@ select is(
   'that same drop is outside the campaign window'
 );
 
-select public._test_plant(
-  '66666666-6666-4666-8666-666666666666',
-  'Dave at the bell',
-  (select ends_at from public.campaigns where slug = 'map-testbox')
-);
+do $$ begin
+  perform public._test_plant(
+    '66666666-6666-4666-8666-666666666666',
+    'Dave at the bell',
+    (select ends_at from public.campaigns where slug = 'map-testbox')
+  );
+end $$;
 select is(
   (select (public.campaigns_for_map(9, 9, 11, 11) -> 0 ->> 'drop_count')::integer),
   3,
@@ -271,9 +285,11 @@ select is(
   'and it does not bump someone out of the first two'
 );
 
-select public._test_plant('77777777-7777-4777-8777-777777777777', 'Blank one', now() - interval '10 minutes');
-select public._test_plant('77777777-7777-4777-8777-777777777777', 'Blank two', now() - interval '9 minutes');
-select public._test_plant('77777777-7777-4777-8777-777777777777', 'Blank three', now() - interval '8 minutes');
+do $$ begin
+  perform public._test_plant('77777777-7777-4777-8777-777777777777', 'Blank one', now() - interval '10 minutes');
+  perform public._test_plant('77777777-7777-4777-8777-777777777777', 'Blank two', now() - interval '9 minutes');
+  perform public._test_plant('77777777-7777-4777-8777-777777777777', 'Blank three', now() - interval '8 minutes');
+end $$;
 select is(
   (select (public.campaigns_for_map(9, 9, 11, 11) -> 0 ->> 'drop_count')::integer),
   6,
@@ -291,7 +307,7 @@ select ok(
 
 set local role authenticated;
 set local request.jwt.claims to '{"sub": "22222222-2222-4222-8222-222222222222", "role": "authenticated"}';
-select public.set_leaderboard_visibility(false);
+select is(public.set_leaderboard_visibility(false), false, 'opting out from the board');
 select is(
   (select (elem ->> 'my_drops')::integer
    from jsonb_array_elements(public.my_campaigns()) elem
@@ -336,16 +352,18 @@ reset role;
 
 set local role authenticated;
 set local request.jwt.claims to '{"sub": "44444444-4444-4444-8444-444444444444", "role": "authenticated"}';
-select set_config(
-  't.named',
-  public.create_drop('note', 10.2, 10.2, 'Named bench') ->> 'short_id',
-  true
-);
-select set_config(
-  't.quiet',
-  public.create_drop('note', 10.3, 10.3, 'Quiet bench', null, '{}'::jsonb, '{}'::text[], null, null, true) ->> 'short_id',
-  true
-);
+do $$ begin
+  perform set_config(
+    't.named',
+    public.create_drop('note', 10.2, 10.2, 'Named bench') ->> 'short_id',
+    true
+  );
+  perform set_config(
+    't.quiet',
+    public.create_drop('note', 10.3, 10.3, 'Quiet bench', null, '{}'::jsonb, '{}'::text[], null, null, true) ->> 'short_id',
+    true
+  );
+end $$;
 select is(
   (public.drop_teaser(current_setting('t.quiet'))).author_badges,
   '[]'::jsonb,
