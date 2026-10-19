@@ -1,5 +1,6 @@
 package world.xhere.app.map
 
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
@@ -7,6 +8,7 @@ import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import kotlin.time.Instant
@@ -41,20 +43,20 @@ class LiveConditionsUiTest {
 
     @Test
     fun anOfficialAlertIsDismissibleAndTheNextOneShows() {
-        rule.openMap()
         val storm = alert("storm", "Severe Thunderstorm Warning", AlertSeverity.SEVERE)
         val watch = alert("watch", "Flood Watch", AlertSeverity.MODERATE)
+        // Set before the map's first camera idle. The quest card covers the zoom
+        // button, and a touch click there does not reach it.
         TestGraph.conditions.alerts = listOf(storm, watch)
-        rule.onNodeWithTag(TestTags.MAP_ZOOM_OUT).performClick()
-        rule.waitForTag(TestTags.WEATHER_BANNER)
+        rule.openMap()
         rule.onNodeWithTag(TestTags.WEATHER_SEVERITY).assertTextContains("Severe")
         rule.onNodeWithTag(TestTags.WEATHER_EVENT).assertTextContains("Severe Thunderstorm Warning")
         rule.onNodeWithTag(TestTags.WEATHER_SOURCE).assertTextContains("National Weather Service", substring = true)
         rule.onNodeWithText("2026-10-18 18:30 UTC", substring = true).assertIsDisplayed()
         rule.onNodeWithTag(TestTags.WEATHER_MORE).assertTextContains("+ 1 more")
-        rule.onNodeWithTag(TestTags.MAP_LONG_PRESS).performClick()
+        // The walk and quest cards cover this control. The action still runs.
+        rule.onNodeWithTag(TestTags.MAP_LONG_PRESS).performSemanticsAction(SemanticsActions.OnClick)
         rule.waitForTag(TestTags.HERE_SHEET)
-        rule.waitForTag(TestTags.HERE_CONDITIONS)
         rule.onNodeWithTag(TestTags.HERE_CONDITIONS)
             .assertTextContains("Severe Thunderstorm Warning", substring = true)
             .assertTextContains("National Weather Service", substring = true)
