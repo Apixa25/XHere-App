@@ -514,7 +514,7 @@ class InMemoryXHere(
 
         override suspend fun createDrop(request: CreateDropRequest): CreateDropResult {
             val profile = requireViewer()
-            if (request.categorySlug.startsWith("civic_")) {
+            if (request.categorySlug in Civic.RESERVED_SLUGS) {
                 throw XHereApiException(
                     "civic_not_a_user_drop",
                     sqlState = XHereApiException.SQL_PERMISSION,

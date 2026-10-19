@@ -86,6 +86,12 @@ object Civic {
     const val REGION_M = 25_000
     const val GROUP = "town_hall"
 
+    /**
+     * These four slugs are importer-only. `civic_issue` is the existing Open311
+     * category and stays postable.
+     */
+    val RESERVED_SLUGS = setOf("civic_agenda", "civic_hearing", "civic_permit", "civic_notice")
+
     fun icon(type: CivicType): String = when (type) {
         CivicType.AGENDA_ITEM -> "📋"
         CivicType.HEARING -> "📣"

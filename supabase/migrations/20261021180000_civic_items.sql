@@ -59,7 +59,8 @@ declare
   v_slug text;
 begin
   select c.slug into v_slug from public.categories c where c.id = new.category_id;
-  if v_slug like 'civic\_%' escape '\' then
+  -- civic_issue stays a user and Open311 category. Only the Town Hall slugs are reserved.
+  if v_slug in ('civic_agenda', 'civic_hearing', 'civic_permit', 'civic_notice') then
     raise exception 'civic_not_a_user_drop' using errcode = '42501',
       detail = 'Town Hall records come from a public source, not a person.';
   end if;
@@ -121,7 +122,7 @@ begin
     left join public.nearby_category_counts(p_lat, p_lng, 500) n on n.slug = c.slug
     where c.active
       and c.embedding is not null
-      and c.slug not like 'civic\_%' escape '\'
+      and c.slug not in ('civic_agenda', 'civic_hearing', 'civic_permit', 'civic_notice')
   ),
   best as (
     select coalesce(max(scored.cosine), 0) as best_cosine,
@@ -206,6 +207,7 @@ comment on table public.civic_notices is
   'Inbox row when a followed address matches a new Town Hall record. Shown with impact notices.';
 
 create index civic_notices_recipient_idx on public.civic_notices (recipient_id, created_at desc);
+create index civic_notices_item_idx on public.civic_notices (civic_item_id);
 
 alter table public.civic_items enable row level security;
 alter table public.civic_follows enable row level security;
