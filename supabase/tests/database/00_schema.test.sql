@@ -159,7 +159,7 @@ select ok(
 -- Jobs and the new-user trigger
 select is(
   (select array_agg(j.jobname::text order by j.jobname) from cron.job j where j.jobname like 'xhere-%'),
-  array['xhere-expire-drops', 'xhere-purge-deleted-accounts', 'xhere-purge-location-integrity', 'xhere-recompute-tiers'],
+  array['xhere-expire-drops', 'xhere-purge-deleted-accounts', 'xhere-purge-deleted-media', 'xhere-purge-location-integrity', 'xhere-recompute-tiers'],
   'pg_cron jobs are scheduled'
 );
 
