@@ -6,7 +6,8 @@
 --
 -- Drops are created through public.create_drop, so the seed also proves the
 -- category rules accept realistic posts. The demo accounts have no password
--- and cannot sign in.
+-- and cannot sign in. is_demo is set before any drop, so the drops stay on
+-- the map without taking a Founding Local rank or a campaign place.
 
 insert into auth.users (id, email, aud, role, email_confirmed_at, raw_user_meta_data) values
   ('d0000000-0000-4000-8000-000000000001', 'guide.demo@example.com',   'authenticated', 'authenticated', now(), '{"demo": true}'),
@@ -14,13 +15,13 @@ insert into auth.users (id, email, aud, role, email_confirmed_at, raw_user_meta_
   ('d0000000-0000-4000-8000-000000000003', 'regular.demo@example.com', 'authenticated', 'authenticated', now(), '{"demo": true}'),
   ('d0000000-0000-4000-8000-000000000004', 'new.demo@example.com',     'authenticated', 'authenticated', now(), '{"demo": true}');
 
-update public.profiles set handle = 'demo_guide', display_name = 'Demo Guide', tier = 'guide', home_area = 'Jamestown, NY'
+update public.profiles set handle = 'demo_guide', display_name = 'Demo Guide', tier = 'guide', home_area = 'Jamestown, NY', is_demo = true
   where id = 'd0000000-0000-4000-8000-000000000001';
-update public.profiles set handle = 'demo_trusted', display_name = 'Demo Trusted', tier = 'trusted', role = 'moderator', home_area = 'Jamestown, NY'
+update public.profiles set handle = 'demo_trusted', display_name = 'Demo Trusted', tier = 'trusted', role = 'moderator', home_area = 'Jamestown, NY', is_demo = true
   where id = 'd0000000-0000-4000-8000-000000000002';
-update public.profiles set handle = 'demo_regular', display_name = 'Demo Regular', tier = 'regular'
+update public.profiles set handle = 'demo_regular', display_name = 'Demo Regular', tier = 'regular', is_demo = true
   where id = 'd0000000-0000-4000-8000-000000000003';
-update public.profiles set handle = 'demo_new', display_name = 'Demo New'
+update public.profiles set handle = 'demo_new', display_name = 'Demo New', is_demo = true
   where id = 'd0000000-0000-4000-8000-000000000004';
 
 -- Guide: history, nature, art, food, infrastructure, secrets
