@@ -38,6 +38,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlin.time.Clock
 import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
 import world.xhere.app.R
@@ -115,24 +116,34 @@ fun MapScreen(
             onMapLongClick = viewModel::onMapLongPress,
             modifier = Modifier.fillMaxSize(),
         )
-        CategoryChipBar(
-            groups = state.groups,
-            presets = state.presets,
-            selection = state.selection,
-            onSelectAll = viewModel::selectAll,
-            onSelectPreset = viewModel::selectPreset,
-            onSelectGroup = viewModel::selectGroup,
-            onLongPressGroup = viewModel::showSubcategories,
-            onSave = viewModel::showSavePreset,
-            modifier = Modifier.align(Alignment.TopCenter),
-        )
-        WeatherAlertBanner(
-            alerts = state.alerts,
-            onDismiss = viewModel::dismissAlert,
+        Column(
             modifier = Modifier
                 .align(Alignment.TopCenter)
-                .padding(top = 72.dp),
-        )
+                .fillMaxWidth(),
+        ) {
+            CategoryChipBar(
+                groups = state.groups,
+                presets = state.presets,
+                selection = state.selection,
+                onSelectAll = viewModel::selectAll,
+                onSelectPreset = viewModel::selectPreset,
+                onSelectGroup = viewModel::selectGroup,
+                onLongPressGroup = viewModel::showSubcategories,
+                onSave = viewModel::showSavePreset,
+            )
+            state.campaigns.firstOrNull()?.let { campaign ->
+                CampaignCard(
+                    campaign = campaign,
+                    now = Clock.System.now(),
+                    compact = true,
+                    modifier = Modifier.padding(horizontal = 12.dp),
+                )
+            }
+            WeatherAlertBanner(
+                alerts = state.alerts,
+                onDismiss = viewModel::dismissAlert,
+            )
+        }
         Column(
             modifier = Modifier
                 .align(Alignment.BottomCenter)

@@ -46,6 +46,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import world.xhere.shared.SupabaseConfig
 import world.xhere.shared.data.AccountRepository
+import world.xhere.shared.data.CampaignRepository
 import world.xhere.shared.data.AuthRepository
 import world.xhere.shared.data.BlockRepository
 import world.xhere.shared.data.DropRepository
@@ -65,7 +66,9 @@ import world.xhere.shared.data.TaxonomyRepository
 import world.xhere.shared.data.WalkRepository
 import world.xhere.shared.data.XHereApiException
 import world.xhere.shared.data.XHereServices
+import world.xhere.shared.data.remote.CampaignsForMapParams
 import world.xhere.shared.data.remote.CategoryRow
+import world.xhere.shared.data.remote.LeaderboardVisibilityParams
 import world.xhere.shared.data.remote.CheckInParams
 import world.xhere.shared.data.remote.ConfirmDropParams
 import world.xhere.shared.data.remote.DismissQuestParams
@@ -100,6 +103,8 @@ import world.xhere.shared.here.Here
 import world.xhere.shared.http.platformHttpEngine
 import world.xhere.shared.json.ExportJson
 import world.xhere.shared.json.XHereJson
+import world.xhere.shared.model.BadgeShelf
+import world.xhere.shared.model.CampaignProgress
 import world.xhere.shared.model.CheckInResult
 import world.xhere.shared.model.BlockedUser
 import world.xhere.shared.model.CategoryGroup
@@ -171,6 +176,7 @@ class SupabaseXHereClient(
     override val hidden: HiddenDropRepository = HiddenRepo()
     override val impact: ImpactRepository = ImpactRepo()
     override val walks: WalkRepository = WalkRepo()
+    override val campaigns: CampaignRepository = CampaignRepo()
     override val account: AccountRepository = AccountRepo()
     override val moderation: ModerationRepository = ModerationRepo()
 
@@ -461,6 +467,31 @@ class SupabaseXHereClient(
 
         override suspend fun dismissQuest(questId: Uuid) = call {
             supabase.postgrest.rpc("dismiss_quest", DismissQuestParams(questId).rpcJson())
+            Unit
+        }
+    }
+
+    private inner class CampaignRepo : CampaignRepository {
+        override suspend fun campaignsFor(box: BoundingBox): List<CampaignProgress> = call {
+            if (!Geo.isValidBoundingBox(box)) {
+                throw invalid("invalid_location", "box")
+            }
+            decode(supabase.postgrest.rpc(
+                "campaigns_for_map",
+                CampaignsForMapParams(box.minLongitude, box.minLatitude, box.maxLongitude, box.maxLatitude).rpcJson(),
+            ).data)
+        }
+
+        override suspend fun myCampaigns(): List<CampaignProgress> = call {
+            decode(supabase.postgrest.rpc("my_campaigns").data)
+        }
+
+        override suspend fun myBadges(): BadgeShelf = call {
+            decode(supabase.postgrest.rpc("my_badges").data)
+        }
+
+        override suspend fun setShowOnLeaderboard(show: Boolean) = call {
+            supabase.postgrest.rpc("set_leaderboard_visibility", LeaderboardVisibilityParams(show).rpcJson())
             Unit
         }
     }

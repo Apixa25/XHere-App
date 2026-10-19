@@ -108,6 +108,21 @@ walks:
         external_id: "nrhp:100011762"
         title: First Presbyterian Church, Jamestown, New York
 
+# Founding Locals and the time-boxed map campaign.
+# Applied by seed/campaigns/jamestown-ny.sql. Another region copies this block.
+# starts_at null means the seed starts the clock when it is applied.
+programs:
+  founding:
+    cap: 25
+  campaign:
+    slug: map-jamestown
+    title: Map Jamestown
+    description: "Add real drops in Jamestown over 14 days. Public records already on the map do not count."
+    goal_drops: 200
+    duration_days: 14
+    starts_at: null
+    leaderboard_size: 8
+
 candidates:
   - id: hmdb
     decision: link-only

@@ -24,6 +24,9 @@ data class SettingsUiState(
     val error: String? = null,
     val isModerator: Boolean = false,
     val export: ExportStatus? = null,
+    /** From `my_badges`. The switch stays off the screen until that read returns. */
+    val showOnLeaderboard: Boolean = true,
+    val leaderboardReady: Boolean = false,
 )
 
 /**
@@ -47,8 +50,31 @@ class SettingsViewModel(
         viewModelScope.launch {
             val email = runCatching { services.auth.currentSession()?.email }.getOrNull()
             val profile = runCatching { services.profiles.currentProfile() }.getOrNull()
+            val shelf = runCatching { services.campaigns.myBadges() }.getOrNull()
             _state.update {
-                it.copy(email = email, handle = profile?.handle, isModerator = profile?.canModerate() == true)
+                it.copy(
+                    email = email,
+                    handle = profile?.handle,
+                    isModerator = profile?.canModerate() == true,
+                    showOnLeaderboard = shelf?.showOnLeaderboard ?: it.showOnLeaderboard,
+                    leaderboardReady = shelf != null,
+                )
+            }
+        }
+    }
+
+    /** Hides or shows the display name on every campaign board. The drop still counts. */
+    fun setShowOnLeaderboard(show: Boolean) {
+        if (!_state.value.leaderboardReady || _state.value.showOnLeaderboard == show) return
+        val previous = _state.value.showOnLeaderboard
+        _state.update { it.copy(showOnLeaderboard = show) }
+        viewModelScope.launch {
+            try {
+                services.campaigns.setShowOnLeaderboard(show)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                _state.update { it.copy(showOnLeaderboard = previous) }
             }
         }
     }

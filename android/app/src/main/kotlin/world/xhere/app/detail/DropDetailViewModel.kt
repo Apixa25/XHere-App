@@ -20,6 +20,7 @@ import world.xhere.shared.data.XHereApiException
 import world.xhere.shared.data.XHereServices
 import world.xhere.shared.geo.Geo
 import world.xhere.shared.geo.LatLng
+import world.xhere.shared.model.BadgeAward
 import world.xhere.shared.model.ConfirmationVerdict
 import world.xhere.shared.model.DropCard
 import world.xhere.shared.model.DropSource
@@ -49,6 +50,8 @@ data class DetailUiState(
     val categoryLabel: String = "",
     val icon: String = "📍",
     val authorHandle: String? = null,
+    /** Empty when the drop is anonymous, a public record, or the author has no badge here. */
+    val authorBadges: List<BadgeAward> = emptyList(),
     val approximate: Boolean = false,
     val revealRadiusM: Int = 0,
     val confirmBar: Int = 3,
@@ -323,6 +326,7 @@ class DropDetailViewModel(
                 categoryLabel = category?.label ?: current.categorySlug,
                 icon = category?.icon ?: group?.icon ?: "📍",
                 authorHandle = current.authorHandle,
+                authorBadges = if (publicRecord) emptyList() else current.authorBadges,
                 approximate = current.locationPrecisionM > 0,
                 revealRadiusM = current.revealRadiusM,
                 confirmBar = category?.confirmationsToConfirm ?: 3,

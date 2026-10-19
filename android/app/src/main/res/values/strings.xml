@@ -84,6 +84,15 @@
     <string name="quest_celebrate_title">You finished %1$s</string>
     <string name="quest_celebrate_body">That\'s the first quest.</string>
     <string name="guide_celebration_ok">Nice</string>
+    <string name="campaign_progress">%1$d of %2$d drops</string>
+    <string name="campaign_mine">You added %1$d</string>
+    <string name="campaign_mine_zero">You haven\'t added one yet</string>
+    <string name="campaign_days">%1$d days left</string>
+    <string name="campaign_ends_today">Ends today</string>
+    <string name="campaign_board_empty">No names on the board yet.</string>
+    <string name="campaign_opted_out">Your name is hidden on this board.</string>
+    <string name="settings_leaderboard">Show my name on campaign leaderboards</string>
+    <string name="settings_leaderboard_body">The board shows a display name only. Hiding your name does not change the community total.</string>
     <string name="drop_title">A drop takes about three taps</string>
     <string name="drop_body">Photo or a line of text, a suggested category, then post.</string>
     <string name="drop_fab">Drop something here</string>

@@ -6,6 +6,7 @@ import world.xhere.shared.geo.LatLng
 import world.xhere.shared.here.Here
 import world.xhere.shared.here.isPublicRecord
 import world.xhere.shared.live.WeatherAlert
+import world.xhere.shared.model.CampaignProgress
 import world.xhere.shared.model.CategoryGroup
 import world.xhere.shared.model.DropCard
 import world.xhere.shared.model.DropSource
@@ -91,6 +92,8 @@ data class TeaserUi(
     val attribution: String? = null,
     val viewCount: Long = 0,
     val confirmCount: Int = 0,
+    /** Icon and name, for example "🌱 Founding Local". Empty on a public record or an anonymous drop. */
+    val foundingLabel: String? = null,
 )
 
 /**
@@ -158,6 +161,8 @@ data class MapUiState(
     val quests: List<QuestProgress> = emptyList(),
     val celebrateWalk: Boolean = false,
     val celebrateQuest: Boolean = false,
+    /** Live campaigns whose region overlaps the camera. Empty outside every campaign. */
+    val campaigns: List<CampaignProgress> = emptyList(),
 )
 
 /** Straight line through the stops, plus a guide from the person to the next one. */
@@ -222,6 +227,11 @@ internal fun DropCard.toTeaser(taxonomy: Taxonomy?, distanceM: Double?): TeaserU
         attribution = attribution,
         viewCount = viewCount,
         confirmCount = confirmCount,
+        foundingLabel = if (source == DropSource.OPEN_DATA) {
+            null
+        } else {
+            authorBadges.firstOrNull()?.let { "${it.icon} ${it.name}" }
+        },
     )
 }
 

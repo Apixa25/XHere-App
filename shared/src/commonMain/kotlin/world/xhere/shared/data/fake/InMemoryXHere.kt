@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
 import world.xhere.shared.data.AccountRepository
+import world.xhere.shared.data.CampaignRepository
 import world.xhere.shared.data.AuthRepository
 import world.xhere.shared.data.BlockRepository
 import world.xhere.shared.data.DropRepository
@@ -31,6 +32,9 @@ import world.xhere.shared.geo.Geo
 import world.xhere.shared.geo.LatLng
 import world.xhere.shared.here.Here
 import world.xhere.shared.json.ExportJson
+import world.xhere.shared.model.BadgeAward
+import world.xhere.shared.model.BadgeShelf
+import world.xhere.shared.model.CampaignProgress
 import world.xhere.shared.model.CheckInResult
 import world.xhere.shared.model.AppRole
 import world.xhere.shared.model.BlockedUser
@@ -117,6 +121,7 @@ class InMemoryXHere(
     override val hidden: HiddenDropRepository = HiddenRepo()
     override val impact: ImpactRepository = ImpactRepo()
     override val walks: WalkRepository = WalkRepo()
+    override val campaigns: CampaignRepository = CampaignRepo()
     override val account: AccountRepository = AccountRepo()
     override val moderation: ModerationRepository = ModerationRepo()
 
@@ -135,6 +140,18 @@ class InMemoryXHere(
      * One signed-in viewer per drop. The author and a signed-out caller do not count.
      * A repeat open does not count again. Matches `private.record_drop_view`.
      */
+    private fun card(
+        drop: StoredDrop,
+        viewerId: Uuid?,
+        distance: Double?,
+        verdict: ConfirmationVerdict?,
+        revealDistance: Double? = distance,
+    ): DropCard {
+        val anonymous = drop.displayAnonymous && drop.category.allowAnonymousDisplay
+        val badges = store.awardsFor(drop.authorId, drop.trueLocation, anonymous, clock())
+        return drop.toCard(viewerId, distance, verdict, revealDistance, badges)
+    }
+
     private fun recordView(drop: StoredDrop) {
         val viewerId = viewer?.id ?: return
         if (drop.authorId == viewerId) return
@@ -236,7 +253,7 @@ class InMemoryXHere(
                 .filter { it.second <= radiusM }
                 .sortedWith(compareBy({ it.second }, { -it.first.createdAt.toEpochMilliseconds() }))
                 .take(capped)
-                .map { (drop, distance) -> drop.toCard(viewer?.id, distance, store.verdict(drop.id, viewer?.id)) }
+                .map { (drop, distance) -> card(drop, viewer?.id, distance, store.verdict(drop.id, viewer?.id)) }
         }
 
         override suspend fun hereCard(spot: LatLng, viewer: LatLng?, radiusM: Int, limit: Int): List<DropCard> {
@@ -262,7 +279,7 @@ class InMemoryXHere(
                 .take(capped)
                 .map { (drop, distance) ->
                     val revealDistance = viewer?.let { Geo.distanceMeters(it, drop.displayLocation) }
-                    drop.toCard(viewerId, distance, store.verdict(drop.id, viewerId), revealDistance)
+                    card(drop, viewerId, distance, store.verdict(drop.id, viewerId), revealDistance)
                 }
         }
 
@@ -276,7 +293,7 @@ class InMemoryXHere(
             }
             val distance = location?.let { Geo.distanceMeters(it, drop.displayLocation) }
             recordView(drop)
-            return drop.toCard(viewer?.id, distance, store.verdict(drop.id, viewer?.id))
+            return card(drop, viewer?.id, distance, store.verdict(drop.id, viewer?.id))
         }
 
         override suspend fun dropTeaser(shortId: String): DropCard {
@@ -286,7 +303,7 @@ class InMemoryXHere(
                 throw XHereApiException("drop_not_found", sqlState = XHereApiException.SQL_NOT_FOUND)
             }
             // Share teasers do not count a view. Anonymous refreshes must not inflate "seen by".
-            val card = drop.toCard(viewer?.id, distance = null, store.verdict(drop.id, viewer?.id))
+            val card = card(drop, viewer?.id, distance = null, store.verdict(drop.id, viewer?.id))
             // A public record is already public, so its summary and attribution stay.
             // A user drop stays locked, even for the author. drop_detail is what reveals it.
             if (card.source == world.xhere.shared.model.DropSource.OPEN_DATA) return card
@@ -847,6 +864,36 @@ class InMemoryXHere(
         )
     }
 
+    private inner class CampaignRepo : CampaignRepository {
+        override suspend fun campaignsFor(box: BoundingBox): List<CampaignProgress> {
+            if (!Geo.isValidBoundingBox(box)) {
+                throw XHereApiException(
+                    "invalid_location",
+                    sqlState = XHereApiException.SQL_VALIDATION,
+                )
+            }
+            return store.campaignsFor(box, viewer, clock())
+        }
+
+        override suspend fun myCampaigns(): List<CampaignProgress> {
+            requireViewer()
+            return store.liveCampaigns(viewer, clock())
+        }
+
+        override suspend fun myBadges(): BadgeShelf {
+            val profile = requireViewer()
+            return BadgeShelf(
+                badges = store.badgesOf(profile.id, clock()),
+                showOnLeaderboard = store.showsOnLeaderboard(profile.id),
+            )
+        }
+
+        override suspend fun setShowOnLeaderboard(show: Boolean) {
+            val profile = requireViewer()
+            if (show) store.leaderboardHidden.remove(profile.id) else store.leaderboardHidden.add(profile.id)
+        }
+    }
+
     private inner class AccountRepo : AccountRepository {
         override suspend fun deleteMyAccount() {
             val profile = requireViewer()
@@ -1100,6 +1147,10 @@ class MemoryStore(
     val quests: MutableList<StoredQuest> = mutableListOf()
     val questDismissals: MutableSet<Pair<Uuid, Uuid>> = linkedSetOf()
     val impactNotices: MutableList<ImpactNotice> = mutableListOf()
+    /** Region programs (founding cap and campaign). Empty until a config is installed. */
+    val programs: MutableList<StoredProgram> = mutableListOf()
+    /** People who turned off campaign leaderboards. Everyone else is listed when they have a display name. */
+    val leaderboardHidden: MutableSet<Uuid> = mutableSetOf()
     val mediaBytes: MutableMap<String, ByteArray> = linkedMapOf()
     /** OpenStreetMap place names, keyed by the 0.001° cell. Not a user trail. */
     val placeLabels: MutableMap<String, StoredPlaceLabel> = linkedMapOf()
@@ -1310,6 +1361,7 @@ private fun StoredDrop.toCard(
     distance: Double?,
     myVerdict: ConfirmationVerdict?,
     revealDistance: Double? = distance,
+    authorBadges: List<BadgeAward> = emptyList(),
 ): DropCard {
     val publicRecord = source == world.xhere.shared.model.DropSource.OPEN_DATA
     val mine = viewerId != null && authorId == viewerId && !publicRecord
@@ -1346,6 +1398,7 @@ private fun StoredDrop.toCard(
         attribution = attribution,
         viewCount = viewCount,
         myVerdict = myVerdict,
+        authorBadges = authorBadges,
     )
 }
 

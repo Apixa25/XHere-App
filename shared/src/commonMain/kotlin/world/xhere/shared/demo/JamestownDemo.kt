@@ -228,6 +228,7 @@ object JamestownDemo {
             attribution = "National Park Service, National Register of Historic Places. Public domain.",
         )
         JamestownHistoryWalk.install(store)
+        JamestownCampaign.install(store)
         return store
     }
 

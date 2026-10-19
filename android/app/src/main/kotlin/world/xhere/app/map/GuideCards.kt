@@ -19,8 +19,10 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import kotlin.math.min
+import kotlin.time.Instant
 import world.xhere.app.R
 import world.xhere.app.ui.TestTags
+import world.xhere.shared.model.CampaignProgress
 import world.xhere.shared.model.QuestProgress
 import world.xhere.shared.model.Walk
 import world.xhere.shared.walks.WalkGuide
@@ -117,6 +119,143 @@ internal fun WalkCard(
                     Text(
                         text = stringResource(R.string.walk_progress, done, stops.size),
                         modifier = Modifier.testTag(TestTags.WALK_PROGRESS),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Community progress for one live campaign. The map uses the compact card.
+ * The profile uses the same card with the description and the full short board.
+ * Names are display names. A person who opted out still sees their own count.
+ */
+@Composable
+internal fun CampaignCard(
+    campaign: CampaignProgress,
+    now: Instant,
+    compact: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    val days = (campaign.endsAt - now).inWholeDays
+    val progress = stringResource(R.string.campaign_progress, campaign.dropCount, campaign.goalDrops)
+    val mine = if (campaign.myDrops == 0) {
+        stringResource(R.string.campaign_mine_zero)
+    } else {
+        stringResource(R.string.campaign_mine, campaign.myDrops)
+    }
+    val daysLabel = if (days <= 0L) {
+        stringResource(R.string.campaign_ends_today)
+    } else {
+        stringResource(R.string.campaign_days, days.coerceAtMost(Int.MAX_VALUE.toLong()).toInt())
+    }
+    val board = campaign.leaderboard.joinToString(" · ") { "${it.displayName} ${it.drops}" }
+        .ifBlank { stringResource(R.string.campaign_board_empty) }
+    Surface(
+        shape = MaterialTheme.shapes.large,
+        color = MaterialTheme.colorScheme.secondaryContainer,
+        shadowElevation = 4.dp,
+        modifier = modifier
+            .fillMaxWidth()
+            .testTag(TestTags.CAMPAIGN_CARD),
+    ) {
+        if (compact) {
+            // Two lines so the banner sits under the chips and leaves the
+            // map's pan control, tap spot, and markers free to receive clicks.
+            Column(
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                verticalArrangement = Arrangement.spacedBy(0.dp),
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = campaign.title,
+                        modifier = Modifier
+                            .weight(1f)
+                            .testTag(TestTags.CAMPAIGN_TITLE),
+                        style = MaterialTheme.typography.labelLarge,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Text(
+                        text = progress,
+                        modifier = Modifier.testTag(TestTags.CAMPAIGN_PROGRESS),
+                        style = MaterialTheme.typography.labelLarge,
+                        maxLines = 1,
+                    )
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = mine,
+                        modifier = Modifier
+                            .weight(1f)
+                            .testTag(TestTags.CAMPAIGN_MINE),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Text(
+                        text = board,
+                        modifier = Modifier
+                            .weight(1f)
+                            .testTag(TestTags.CAMPAIGN_BOARD),
+                        style = MaterialTheme.typography.labelMedium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
+        } else {
+            Column(
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                Text(
+                    text = campaign.title,
+                    modifier = Modifier.testTag(TestTags.CAMPAIGN_TITLE),
+                    style = MaterialTheme.typography.titleSmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    text = campaign.description,
+                    style = MaterialTheme.typography.bodyMedium,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                LinearProgressIndicator(
+                    progress = { campaign.fraction },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Text(
+                    text = progress,
+                    modifier = Modifier.testTag(TestTags.CAMPAIGN_PROGRESS),
+                    style = MaterialTheme.typography.labelLarge,
+                )
+                Text(
+                    text = mine,
+                    modifier = Modifier.testTag(TestTags.CAMPAIGN_MINE),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    text = daysLabel,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    text = board,
+                    modifier = Modifier.testTag(TestTags.CAMPAIGN_BOARD),
+                    style = MaterialTheme.typography.labelMedium,
+                    maxLines = 4,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                if (!campaign.showOnLeaderboard) {
+                    Text(
+                        text = stringResource(R.string.campaign_opted_out),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
