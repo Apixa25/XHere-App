@@ -64,6 +64,8 @@ class XHereApiException(
             "expires_in_past",
             "expires_too_far",
             "invalid_media",
+            "voice_too_long",
+            "voice_too_large",
             "photo_required",
             "guidelines_not_acknowledged",
             "category_not_found",

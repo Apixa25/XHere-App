@@ -27,6 +27,9 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -48,6 +51,8 @@ import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
 import org.koin.core.parameter.parametersOf
 import world.xhere.app.R
+import world.xhere.app.access.AccessSummaryLine
+import world.xhere.app.access.AccessSurveySheet
 import world.xhere.app.reputation.TierChip
 import world.xhere.app.location.ForegroundLocation
 import world.xhere.app.map.formatMeters
@@ -56,6 +61,8 @@ import world.xhere.app.safety.ReportForm
 import world.xhere.app.safety.SafetyFooter
 import world.xhere.app.ui.TestTags
 import world.xhere.app.ui.hapticClick
+import world.xhere.shared.access.AccessSurvey
+import world.xhere.shared.access.SurveyDraft
 import world.xhere.shared.geo.Geo
 import world.xhere.shared.model.ConfirmationVerdict
 import world.xhere.shared.model.ReportReason
@@ -71,6 +78,8 @@ fun DropDetailScreen(
     sharer: DropSharer = koinInject(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    var surveying by remember { mutableStateOf(false) }
+    var accessDraft by remember { mutableStateOf(SurveyDraft()) }
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     DisposableEffect(lifecycle, viewModel) {
         val observer = LifecycleEventObserver { _, event ->
@@ -140,13 +149,45 @@ fun DropDetailScreen(
                     modifier = Modifier.testTag(TestTags.DETAIL_TITLE),
                 )
             }
-            else -> DetailBody(
-                state = state,
-                onStillTrue = hapticClick { viewModel.confirm(ConfirmationVerdict.STILL_TRUE) },
-                onNotTrue = hapticClick { viewModel.confirm(ConfirmationVerdict.NOT_TRUE) },
-                onShare = { sharer.share(state.shareUrl) },
-                onUseLocation = { permission.launch(ForegroundLocation.permissions) },
-            )
+            else -> {
+                DetailBody(
+                    state = state,
+                    onStillTrue = hapticClick { viewModel.confirm(ConfirmationVerdict.STILL_TRUE) },
+                    onNotTrue = hapticClick { viewModel.confirm(ConfirmationVerdict.NOT_TRUE) },
+                    onShare = { sharer.share(state.shareUrl) },
+                    onUseLocation = { permission.launch(ForegroundLocation.permissions) },
+                    onAccess = {
+                        accessDraft = SurveyDraft()
+                        surveying = true
+                    },
+                )
+                if (surveying) {
+                    AccessSurveySheet(
+                        draft = accessDraft,
+                        busy = state.accessBusy,
+                        onAnswer = { accessDraft = AccessSurvey.answer(accessDraft, it) },
+                        onNotes = { accessDraft = AccessSurvey.notes(accessDraft, it) },
+                        onSave = {
+                            val draft = accessDraft
+                            val step = draft.stepFree
+                            val ramp = draft.ramp
+                            val restroom = draft.restroom
+                            if (step != null && ramp != null && restroom != null) {
+                                viewModel.submitAccess(step, ramp, restroom, draft.notes)
+                                surveying = false
+                            }
+                        },
+                        onDismiss = { surveying = false },
+                    )
+                }
+                if (state.accessFailed) {
+                    Text(
+                        text = stringResource(R.string.access_failed),
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.testTag(TestTags.ACCESS_FAILED),
+                    )
+                }
+            }
         }
         if (!state.loading && !state.missing && !state.gone) {
             SafetyActions(
@@ -255,6 +296,7 @@ private fun DetailBody(
     onNotTrue: () -> Unit,
     onShare: () -> Unit,
     onUseLocation: () -> Unit,
+    onAccess: () -> Unit,
 ) {
     Text(state.icon, style = MaterialTheme.typography.headlineLarge)
     Text(
@@ -283,6 +325,7 @@ private fun DetailBody(
         style = MaterialTheme.typography.headlineSmall,
         modifier = Modifier.testTag(TestTags.DETAIL_TITLE),
     )
+    AccessSummaryLine(summary = state.access, onCheck = onAccess)
     if (!state.publicRecord) {
         Text(
             text = stringResource(R.string.detail_impact, state.viewCount, state.confirmCount),

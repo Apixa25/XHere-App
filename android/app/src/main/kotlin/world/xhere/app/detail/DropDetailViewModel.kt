@@ -19,6 +19,9 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
 import world.xhere.app.location.DeviceLocation
 import world.xhere.app.location.LocationReading
+import world.xhere.shared.access.AccessAnswer
+import world.xhere.shared.access.AccessPlaces
+import world.xhere.shared.access.AccessSummary
 import world.xhere.shared.data.XHereApiException
 import world.xhere.shared.data.XHereServices
 import world.xhere.shared.geo.Geo
@@ -102,6 +105,10 @@ data class DetailUiState(
     val inscription: String? = null,
     /** HMdb link only. Marker text is never copied from HMdb. */
     val hmdbUrl: String? = null,
+    /** Majority for this drop, or the OpenStreetMap place when the drop is an imported pin. */
+    val access: AccessSummary? = null,
+    val accessBusy: Boolean = false,
+    val accessFailed: Boolean = false,
 )
 
 /**
@@ -125,6 +132,8 @@ class DropDetailViewModel(
     private var card: DropCard? = null
     private var taxonomy: Taxonomy? = null
     private var dropId: Uuid? = null
+    private var accessKey: String? = null
+    private var accessSummary: AccessSummary? = null
     private var place: LatLng? = null
     private var revealRadius: Int = 0
     private var mine: Boolean = false
@@ -278,11 +287,14 @@ class DropDetailViewModel(
             taxonomy = runCatching { services.taxonomy.load() }.getOrNull()
             val teaser = services.drops.dropTeaser(shortId)
             dropId = teaser.id
+            val osmKey = if (teaser.categorySlug == "access_place") AccessPlaces.fromOsmUrl(teaser.sourceUrl) else null
+            accessKey = osmKey ?: AccessPlaces.drop(teaser.id)
             place = teaser.displayLocation
             revealRadius = teaser.revealRadiusM
             mine = teaser.isMine
             // drop_detail is what counts a unique view. The teaser does not.
             card = services.drops.dropDetail(teaser.id, null)
+            accessSummary = runCatching { services.access.summary(accessKey!!) }.getOrNull()
             publish()
         } catch (e: CancellationException) {
             throw e
@@ -393,7 +405,36 @@ class DropDetailViewModel(
                 },
                 inscription = if (showBody) attributeText(current, "inscription") else null,
                 hmdbUrl = if (showBody) attributeText(current, "hmdb_url") else null,
+                access = accessSummary,
+                accessBusy = previous.accessBusy,
+                accessFailed = previous.accessFailed,
             )
+        }
+    }
+
+    fun submitAccess(stepFree: AccessAnswer, ramp: AccessAnswer, restroom: AccessAnswer, notes: String?) {
+        val key = accessKey ?: return
+        val here = place ?: return
+        if (_state.value.accessBusy) return
+        viewModelScope.launch {
+            _state.update { it.copy(accessBusy = true, accessFailed = false) }
+            try {
+                val summary = services.access.submit(
+                    placeKey = key,
+                    location = here,
+                    stepFree = stepFree,
+                    ramp = ramp,
+                    restroom = restroom,
+                    notes = notes?.trim()?.ifEmpty { null },
+                    dropId = dropId,
+                )
+                accessSummary = summary
+                _state.update { it.copy(access = summary, accessBusy = false, accessFailed = false) }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                _state.update { it.copy(accessBusy = false, accessFailed = true) }
+            }
         }
     }
 

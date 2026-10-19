@@ -63,6 +63,9 @@ jobs:
           python3 supabase/scripts/import_open_data.py \
             --check supabase/seed/open-data/jamestown-ny.json \
             --region supabase/regions/us/jamestown-ny.yaml
+          python3 supabase/scripts/import_open_data.py \
+            --check supabase/seed/open-data/jamestown-ny-access.json \
+            --region supabase/regions/us/jamestown-ny.yaml
           python3 supabase/scripts/import_history.py --self-test
           python3 supabase/scripts/georef_control_points.py \
             --check supabase/regions/us/jamestown-ny.georef.json

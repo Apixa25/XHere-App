@@ -30,6 +30,9 @@ import org.maplibre.android.style.layers.RasterLayer
 import org.maplibre.android.style.layers.SymbolLayer
 import org.maplibre.android.style.sources.GeoJsonSource
 import org.maplibre.android.style.sources.ImageSource
+import world.xhere.shared.access.AccessRollup
+import world.xhere.shared.access.AccessStatus
+import world.xhere.shared.access.AccessSummary
 import world.xhere.shared.geo.BoundingBox
 import world.xhere.shared.geo.Geo
 import world.xhere.shared.geo.LatLng
@@ -88,6 +91,7 @@ private class MapHolder {
     var view: MapView? = null
     var scene: Int = Int.MIN_VALUE
     var history: HistoryMapLayer? = null
+    var access: List<AccessSummary> = emptyList()
 }
 
 @Composable
@@ -154,6 +158,12 @@ private fun NativeMap(
                         val screen = map.projection.toScreenLocation(latLng)
                         val slop = 28f * context.resources.displayMetrics.density
                         val rect = RectF(screen.x - slop, screen.y - slop, screen.x + slop, screen.y + slop)
+                        val accessHit = map.style?.getLayer(ACCESS_LAYER) != null &&
+                            map.queryRenderedFeatures(rect, ACCESS_LAYER).isNotEmpty()
+                        if (accessHit) {
+                            onMapClick(LatLng(latLng.latitude, latLng.longitude))
+                            return@addOnMapClickListener true
+                        }
                         val key = map.queryRenderedFeatures(rect, DROP_LAYER)
                             .firstOrNull()
                             ?.getStringProperty("key")
@@ -183,6 +193,7 @@ private fun NativeMap(
             holder.features = state.features
             holder.location = state.myLocation
             holder.taxonomy = state.taxonomy
+            holder.access = if (state.accessibilityLayer) state.accessPins else emptyList()
             val map = holder.map ?: return@AndroidView
             if (state.camera.token != holder.appliedToken && state.camera.token > 0) {
                 holder.appliedToken = state.camera.token
@@ -197,17 +208,17 @@ private fun NativeMap(
             val route = state.walk?.let { world.xhere.shared.walks.WalkGuide.route(it) }.orEmpty()
             val guide = guideLine(state)
             holder.history = historyLayer(state)
-            val scene = sceneKey(state.features, state.myLocation, state.taxonomy, route, guide, holder.history)
+            val scene = sceneKey(state.features, state.myLocation, state.taxonomy, route, guide, holder.history, holder.access)
             if (loaded != null && holder.styleUrl == styleUrl) {
                 if (scene != holder.scene) {
                     holder.scene = scene
-                    render(loaded, state.features, state.myLocation, state.taxonomy, route, guide, holder.history)
+                    render(loaded, state.features, state.myLocation, state.taxonomy, route, guide, holder.history, holder.access)
                 }
             } else if (holder.styleUrl != null && holder.styleUrl != styleUrl) {
                 map.setStyle(styleUrl) { style ->
                     holder.style = style
                     holder.styleUrl = styleUrl
-                    render(style, state.features, state.myLocation, state.taxonomy, route, guide, holder.history)
+                    render(style, state.features, state.myLocation, state.taxonomy, route, guide, holder.history, holder.access)
                     holder.scene = scene
                 }
             }
@@ -231,6 +242,7 @@ private fun sceneKey(
     route: List<LatLng>,
     guide: List<LatLng>,
     history: HistoryMapLayer?,
+    access: List<AccessSummary> = emptyList(),
 ): Int {
     var hash = 1
     hash = 31 * hash + features.hashCode()
@@ -239,6 +251,7 @@ private fun sceneKey(
     hash = 31 * hash + route.hashCode()
     hash = 31 * hash + guide.hashCode()
     hash = 31 * hash + (history?.hashCode() ?: 0)
+    hash = 31 * hash + access.hashCode()
     return hash
 }
 
@@ -250,8 +263,10 @@ private fun render(
     route: List<LatLng>,
     guide: List<LatLng>,
     history: HistoryMapLayer?,
+    access: List<AccessSummary> = emptyList(),
 ) {
     drawHistory(style, history)
+    drawAccess(style, access)
     drawLine(style, ROUTE_SOURCE, ROUTE_LAYER, route, Color.parseColor("#1B6B4A"), width = 4.5f, dashed = false)
     drawLine(style, GUIDE_SOURCE, GUIDE_LAYER, guide, Color.parseColor("#C47B0A"), width = 3f, dashed = true)
     features.map { iconKey(it, taxonomy) }.distinct().forEach { key ->
@@ -412,4 +427,42 @@ private const val GUIDE_SOURCE = "xhere-walk-guide"
 private const val GUIDE_LAYER = "xhere-walk-guide-line"
 private const val HISTORY_SOURCE = "xhere-history"
 private const val HISTORY_LAYER = "xhere-history-raster"
+private const val ACCESS_SOURCE = "xhere-access"
+private const val ACCESS_LAYER = "xhere-access-symbols"
 private const val EMPTY = """{"type":"FeatureCollection","features":[]}"""
+
+private fun drawAccess(style: Style, pins: List<AccessSummary>) {
+    pins.map { it.status }.distinct().forEach { status ->
+        val id = accessIconId(status)
+        if (style.getImage(id) == null) {
+            val color = MarkerIcons.parseHex(AccessRollup.colorHex(status)) ?: Color.GRAY
+            style.addImage(id, MarkerIcons.bitmap("♿", color))
+        }
+    }
+    val json = accessCollection(pins)
+    val existing = style.getSource(ACCESS_SOURCE) as? GeoJsonSource
+    if (existing == null) {
+        style.addSource(GeoJsonSource(ACCESS_SOURCE, json))
+        style.addLayer(
+            SymbolLayer(ACCESS_LAYER, ACCESS_SOURCE).withProperties(
+                PropertyFactory.iconImage(Expression.get("icon")),
+                PropertyFactory.iconAllowOverlap(true),
+                PropertyFactory.iconIgnorePlacement(true),
+                PropertyFactory.iconAnchor(Property.ICON_ANCHOR_CENTER),
+                PropertyFactory.iconSize(0.85f),
+            ),
+        )
+    } else {
+        existing.setGeoJson(json)
+    }
+}
+
+private fun accessIconId(status: AccessStatus): String = "xhere-access-${status.name}"
+
+private fun accessCollection(pins: List<AccessSummary>): String {
+    val body = pins.joinToString(",") { pin ->
+        val icon = accessIconId(pin.status)
+        """{"type":"Feature","properties":{"icon":"$icon"},"geometry":{"type":"Point","coordinates":[${pin.longitude},${pin.latitude}]}}"""
+    }
+    return """{"type":"FeatureCollection","features":[$body]}"""
+}

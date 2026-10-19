@@ -5,6 +5,7 @@ import kotlin.uuid.Uuid
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonObject
+import world.xhere.shared.access.AccessAnswer
 import world.xhere.shared.integrity.LocationSignal
 import world.xhere.shared.json.InstantSerializer
 import world.xhere.shared.json.UuidSerializer
@@ -337,4 +338,30 @@ internal fun CreateDropRequest.toParams(): CreateDropParams = CreateDropParams(
     media = media,
     acknowledgeGuidelines = acknowledgeGuidelines,
     integrity = signal,
+)
+
+@Serializable
+internal data class SubmitAccessParams(
+    @SerialName("p_place_key") val placeKey: String,
+    @SerialName("p_lat") val lat: Double,
+    @SerialName("p_lng") val lng: Double,
+    @SerialName("p_step_free") val stepFree: AccessAnswer,
+    @SerialName("p_ramp") val ramp: AccessAnswer,
+    @SerialName("p_restroom") val restroom: AccessAnswer,
+    @SerialName("p_notes") val notes: String? = null,
+    @Serializable(with = UuidSerializer::class)
+    @SerialName("p_drop_id") val dropId: Uuid? = null,
+)
+
+@Serializable
+internal data class AccessPlaceParams(
+    @SerialName("p_place_key") val placeKey: String,
+)
+
+@Serializable
+internal data class AccessBoxParams(
+    @SerialName("p_min_lng") val minLng: Double,
+    @SerialName("p_min_lat") val minLat: Double,
+    @SerialName("p_max_lng") val maxLng: Double,
+    @SerialName("p_max_lat") val maxLat: Double,
 )

@@ -71,6 +71,7 @@ ALLOWED_CATEGORIES = {
     "infrastructure",
     "civic_issue",
     "historical_marker",
+    "access_place",
 }
 HISTORY_CATEGORIES = {"historical_fact", "story", "memorial", "historical_marker"}
 FORBIDDEN_MARKERS = ("hmdb", "atlasobscura", "atlas-obscura")
@@ -118,7 +119,7 @@ def main(argv: list[str]) -> int:
         snapshot = Path(args[args.index("--check") + 1])
         region = load_region(Path(region_path) if region_path else _region_for(snapshot))
         items = json.loads(snapshot.read_text(encoding="utf-8"))
-        counts = validate_snapshot(items, region)
+        counts = validate_snapshot(items, region, snapshot.name)
         print(json.dumps({"ok": True, "counts": counts}, indent=2))
         return 0
     if not region_path:
@@ -188,6 +189,7 @@ def load_region(path: Path) -> dict:
         raise ImportError("region.id is required")
     assert_sources_allowed(region)
     assert_live_block(region)
+    assert_accessibility_block(region)
     return region
 
 
@@ -210,6 +212,35 @@ def assert_sources_allowed(region: dict) -> None:
             raise ImportError(
                 f"candidate {candidate.get('id')} needs decision link-only or reject"
             )
+
+
+def assert_accessibility_block(region: dict) -> None:
+    """Project Sidewalk is optional. A city turns it on only when it has a dump.
+
+    Jamestown leaves enabled false. Enabling it requires an https URL, a
+    license, attribution, and a source whose adapter is project_sidewalk.
+    """
+    block = region.get("accessibility") or {}
+    if not isinstance(block, dict):
+        raise ImportError("accessibility must be a map")
+    sidewalk = block.get("project_sidewalk") or {}
+    if not isinstance(sidewalk, dict):
+        raise ImportError("accessibility.project_sidewalk must be a map")
+    enabled = sidewalk.get("enabled", False)
+    if not isinstance(enabled, bool):
+        raise ImportError("project_sidewalk.enabled must be true or false")
+    uses_adapter = any(source.get("adapter") == "project_sidewalk" for source in region["sources"])
+    if uses_adapter and not enabled:
+        raise ImportError("a project_sidewalk source needs accessibility.project_sidewalk.enabled: true")
+    if not enabled:
+        return
+    url = str(sidewalk.get("url") or "")
+    if not url.startswith("https://"):
+        raise ImportError("project_sidewalk needs an https url when enabled")
+    if not sidewalk.get("license") or not sidewalk.get("attribution"):
+        raise ImportError("project_sidewalk needs license and attribution when enabled")
+    if not uses_adapter:
+        raise ImportError("project_sidewalk is enabled but no source uses that adapter")
 
 
 def assert_live_block(region: dict) -> None:
@@ -602,6 +633,10 @@ def fetch_source(
         return fetch_historical_markers(source, bbox, region_id)
     if adapter == "open311":
         return fetch_open311(source, bbox, region_id)
+    if adapter == "osm_accessibility":
+        return fetch_osm_access(source, bbox, region_id)
+    if adapter == "project_sidewalk":
+        return fetch_project_sidewalk(source, bbox, region_id)
     raise ImportError(f"unknown adapter {adapter}. Add it once, then reuse it from region YAML.")
 
 
@@ -635,6 +670,168 @@ def merge_into_snapshot(region: dict, existing: list, source_id: str) -> list[di
         ]
     print(f"{source_id}: {len(fresh)}", file=sys.stderr)
     return kept + fresh
+
+
+def fetch_osm_access(source: dict, bbox: list[float], region_id: str) -> list[dict]:
+    """wheelchair=*, toilets:wheelchair=*, and ramp=* from OpenStreetMap (ODbL)."""
+    try:
+        elements = overpass_access_elements(bbox)
+    except ImportError as error:
+        print(f"overpass unavailable ({error}); using the OSM map API for access", file=sys.stderr)
+        elements = osm_map_elements(
+            {"historic": False},
+            bbox,
+            require_name=False,
+            accept=lambda tags: access_wanted(tags),
+        )
+    items = []
+    seen: set[str] = set()
+    for element in elements:
+        external_id = f"osm:{element.get('type')}/{element.get('id')}"
+        if external_id in seen:
+            continue
+        record = access_record(source, region_id, element, bbox)
+        if record is None:
+            continue
+        seen.add(external_id)
+        items.append(record)
+    return items
+
+
+def overpass_access_elements(bbox: list[float]) -> list[dict]:
+    west, south, east, north = bbox
+    box = f"({south},{west},{north},{east})"
+    query = (
+        "[out:json][timeout:60];("
+        f'node["wheelchair"]{box};'
+        f'way["wheelchair"]{box};'
+        f'node["toilets:wheelchair"]{box};'
+        f'way["toilets:wheelchair"]{box};'
+        f'node["ramp"]{box};'
+        f'way["ramp"]{box};'
+        f'node["ramp:wheelchair"]{box};'
+        f'way["ramp:wheelchair"]{box};'
+        ");out center tags;"
+    )
+    payload = overpass(query, timeout=70)
+    return payload.get("elements") or []
+
+
+def access_wanted(tags: dict) -> bool:
+    return bool(access_attributes(tags))
+
+
+def access_attributes(tags: dict) -> dict:
+    """Only the values the access_place schema accepts. Extra OSM values are dropped."""
+    attributes: dict[str, str] = {}
+    wheelchair = (tags.get("wheelchair") or "").strip().lower()
+    if wheelchair == "designated":
+        wheelchair = "yes"
+    if wheelchair in {"yes", "limited", "no", "unknown"}:
+        attributes["wheelchair"] = wheelchair
+    toilets = (tags.get("toilets:wheelchair") or "").strip().lower()
+    if toilets in {"yes", "no", "unknown"}:
+        attributes["toilets_wheelchair"] = toilets
+    ramp = (tags.get("ramp") or tags.get("ramp:wheelchair") or "").strip().lower()
+    if ramp in {"yes", "no", "unknown"}:
+        attributes["ramp"] = ramp
+    return attributes
+
+
+def access_record(source: dict, region_id: str, element: dict, bbox: list[float]) -> dict | None:
+    tags = element.get("tags") or {}
+    attributes = access_attributes(tags)
+    if not attributes:
+        return None
+    lat, lng = element_point(element)
+    if lat is None or lng is None or not inside_bbox(lat, lng, bbox):
+        return None
+    element_type = element.get("type")
+    element_id = element.get("id")
+    if not element_type or element_id is None:
+        return None
+    name = (tags.get("name") or "").strip()
+    kind = (tags.get("amenity") or tags.get("shop") or tags.get("tourism") or "place").replace("_", " ")
+    title = clip_title(name or f"{kind[:1].upper()}{kind[1:]} access")
+    bits = []
+    if "wheelchair" in attributes:
+        bits.append(f"wheelchair {attributes['wheelchair']}")
+    if "ramp" in attributes:
+        bits.append(f"ramp {attributes['ramp']}")
+    if "toilets_wheelchair" in attributes:
+        bits.append(f"accessible restroom {attributes['toilets_wheelchair']}")
+    summary = "OpenStreetMap records " + ", ".join(bits) + "."
+    url = f"https://www.openstreetmap.org/{element_type}/{element_id}"
+    attributes = dict(attributes)
+    attributes["citation"] = "OpenStreetMap"
+    attributes["source_url"] = url
+    return item(
+        source,
+        region_id,
+        external_id=f"osm:{element_type}/{element_id}",
+        title=title,
+        summary=summary[:400],
+        lat=lat,
+        lng=lng,
+        source_url=url,
+        category="access_place",
+        citation="OpenStreetMap",
+        attributes=attributes,
+    )
+
+
+def fetch_project_sidewalk(source: dict, bbox: list[float], region_id: str) -> list[dict]:
+    """Optional city dump. Disabled regions never call this.
+
+    Project Sidewalk publishes point labels (curb ramps, missing ramps, obstacles)
+    for cities that have run a campaign. The file is local so the importer does
+    not call a paid service. Jamestown has no dump.
+    """
+    raw_path = source.get("file")
+    if not raw_path:
+        raise ImportError(f"{source.get('id')} needs a local GeoJSON file")
+    path = Path(raw_path)
+    if not path.is_absolute():
+        path = ROOT / path
+    if not path.exists():
+        raise ImportError(f"project sidewalk file not found: {path}")
+    document = json.loads(path.read_text(encoding="utf-8"))
+    features = document.get("features") if isinstance(document, dict) else None
+    if not isinstance(features, list):
+        raise ImportError("project sidewalk file must be a GeoJSON FeatureCollection")
+    items = []
+    for index, feature in enumerate(features):
+        record = sidewalk_feature(source, region_id, feature, bbox, index)
+        if record is not None:
+            items.append(record)
+    return items
+
+
+def sidewalk_feature(source: dict, region_id: str, feature: dict, bbox: list[float], index: int) -> dict | None:
+    if not isinstance(feature, dict):
+        return None
+    geometry = feature.get("geometry") or {}
+    if geometry.get("type") != "Point":
+        return None
+    coordinates = geometry.get("coordinates") or []
+    if len(coordinates) < 2:
+        return None
+    lng, lat = float(coordinates[0]), float(coordinates[1])
+    if not inside_bbox(lat, lng, bbox):
+        return None
+    props = feature.get("properties") or {}
+    label = str(props.get("label_type") or props.get("label") or "").replace(" ", "").lower()
+    tags: dict[str, str] = {}
+    if label == "curbramp":
+        tags["ramp"] = "yes"
+    elif label == "nocurbramp":
+        tags["ramp"] = "no"
+    elif label in {"obstacle", "surfaceproblem"}:
+        tags["wheelchair"] = "no"
+    else:
+        return None
+    element = {"type": "node", "id": props.get("label_id") or index + 1, "lat": lat, "lon": lng, "tags": tags}
+    return access_record(source, region_id, element, bbox)
 
 
 def fetch_osm(
@@ -1093,12 +1290,13 @@ def dedupe(items: list[dict]) -> list[dict]:
 
 
 def marker_kept_beside(row: dict, other: dict) -> bool:
-    """A marker stays on the map even when a nearby place shares its name.
+    """A marker or an access pin stays even when a nearby place shares its name.
 
     Two plaques can also share a fallback title ("Historical plaque") without
-    one of them being dropped.
+    one of them being dropped. A wheelchair tag is a different fact from the
+    building it sits on.
     """
-    return row.get("category_slug") == "historical_marker"
+    return row.get("category_slug") in {"historical_marker", "access_place"}
 
 
 def similar_name(left: str, right: str) -> bool:
@@ -1397,12 +1595,27 @@ def kotlin_live_catalog() -> list:
 # Snapshot
 # ---------------------------------------------------------------------------
 
-def validate_snapshot(items: list, region: dict) -> dict[str, int]:
+def snapshot_sources(region: dict, snapshot_name: str) -> list[dict]:
+    """Sources that belong in this snapshot file.
+
+    A source may set `snapshot: other-file.json` so it is checked with that
+    file and not required in the main region snapshot.
+    """
+    named = [source for source in region["sources"] if source.get("snapshot") == snapshot_name]
+    if named:
+        return named
+    return [source for source in region["sources"] if not source.get("snapshot")]
+
+
+def validate_snapshot(items: list, region: dict, snapshot_name: str | None = None) -> dict[str, int]:
     if not isinstance(items, list) or not items:
         raise ImportError("snapshot must be a non-empty list")
     bbox = region["region"]["bbox"]
     region_id = region["region"]["id"]
-    configured = {source["id"]: source for source in region["sources"]}
+    if snapshot_name is None:
+        configured = {source["id"]: source for source in region["sources"]}
+    else:
+        configured = {source["id"]: source for source in snapshot_sources(region, snapshot_name)}
     seen: set[tuple[str, str]] = set()
     counts: dict[str, int] = {source_id: 0 for source_id in configured}
     for index, row in enumerate(items):
@@ -1471,12 +1684,28 @@ def self_test() -> None:
         "arcgis_feature",
         "osm_overpass",
         "osm_historical_markers",
+        "osm_accessibility",
     ]
     assert region["sources"][3]["id"] == "osm-heritage"
     assert region["sources"][4]["id"] == "osm-historical-markers"
+    assert region["sources"][5]["id"] == "osm-accessibility"
+    assert region["sources"][5]["snapshot"] == "jamestown-ny-access.json"
+    assert region["accessibility"]["project_sidewalk"]["enabled"] is False
     decisions = {candidate["id"]: candidate["decision"] for candidate in region["candidates"]}
     assert decisions["hmdb"] == "link-only"
     assert decisions["atlas-obscura"] == "link-only"
+    assert decisions["project-sidewalk"] == "reject"
+    try:
+        assert_accessibility_block(
+            {
+                "sources": [],
+                "accessibility": {"project_sidewalk": {"enabled": True}},
+            }
+        )
+    except ImportError:
+        pass
+    else:
+        raise AssertionError("enabled Project Sidewalk without a url was accepted")
     try:
         assert_sources_allowed(
             {
@@ -1496,6 +1725,31 @@ def self_test() -> None:
     else:
         raise AssertionError("HMdb source was accepted")
 
+    access_source = region["sources"][5]
+    access_sample = access_record(
+        access_source,
+        "us-ny-jamestown",
+        {
+            "type": "node",
+            "id": 42,
+            "lat": 42.096,
+            "lon": -79.242,
+            "tags": {
+                "name": "Library",
+                "wheelchair": "limited",
+                "ramp": "yes",
+                "toilets:wheelchair": "yes",
+            },
+        },
+        region["region"]["bbox"],
+    )
+    if access_sample is None:
+        raise AssertionError("access sample was dropped")
+    assert access_sample["category_slug"] == "access_place"
+    assert access_sample["attributes"]["wheelchair"] == "limited"
+    assert access_sample["license"] == "ODbL 1.0"
+    assert access_attributes({"wheelchair": "designated"}) == {"wheelchair": "yes"}
+    assert access_attributes({"wheelchair": "private"}) == {}
     assert osm_category({"tourism": "artwork"}) == "public_art"
     assert osm_category({"tourism": "viewpoint"}) == "viewpoint"
     assert osm_category({"historic": "memorial"}) == "memorial"
@@ -1564,14 +1818,17 @@ def self_test() -> None:
     beside = dedupe([nrhp, plaque])
     assert {row["external_id"] for row in beside} == {"nrhp:1", "osm:node/99"}
 
-    counts = validate_snapshot([nrhp, wiki, other, _osm_sample(region), plaque], region)
+    counts = validate_snapshot([nrhp, wiki, other, _osm_sample(region), plaque, access_sample], region)
     assert counts == {
         "wikipedia-geo": 1,
         "wikidata-geo": 1,
         "nrhp": 1,
         "osm-heritage": 1,
         "osm-historical-markers": 1,
+        "osm-accessibility": 1,
     }
+    access_only = validate_snapshot([access_sample], region, "jamestown-ny-access.json")
+    assert access_only == {"osm-accessibility": 1}
     try:
         validate_snapshot([nrhp, wiki, other], region)
     except ImportError as error:

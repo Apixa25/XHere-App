@@ -165,6 +165,7 @@ class FreshSessionRule : TestRule {
                 TestGraph.conditions.alerts = emptyList()
             }
             app.getSharedPreferences(world.xhere.app.auth.PrefsAuthDraft.PREFS, Context.MODE_PRIVATE).edit().clear().commit()
+            app.getSharedPreferences("xhere_voice", Context.MODE_PRIVATE).edit().clear().commit()
             if (TestGraph.isReady()) {
                 runBlocking {
                     TestGraph.services.auth.signOut()
@@ -176,6 +177,7 @@ class FreshSessionRule : TestRule {
                     )
                     TestGraph.services.store.drops.entries.removeAll { it.value.shortId !in demoShortIds }
                     TestGraph.services.store.suggestionLogs.clear()
+                    TestGraph.services.store.accessChecks.clear()
                     TestGraph.services.store.mediaBytes.clear()
                     TestGraph.services.store.confirmations.clear()
                     TestGraph.services.store.reports.clear()
@@ -199,6 +201,8 @@ class FreshSessionRule : TestRule {
             runCatching { GlobalContext.get().get<world.xhere.app.drop.PendingDropSpot>().clear() }
             if (TestGraph.isReady()) {
                 TestGraph.location.reset()
+                TestGraph.speech.next = null
+                TestGraph.speaker.last = null
                 TestGraph.ar.reset()
                 TestGraph.sharer.last = null
                 TestGraph.exporter.fileName = null

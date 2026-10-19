@@ -498,7 +498,8 @@ object JamestownDemo {
         """{"type":"object","additionalProperties":false,"required":["occurred_at"],"properties":{
         "occurred_at":{"type":"string","format":"date-time"},
         "severity":{"enum":["low","med","high"]},
-        "ongoing":{"type":"boolean"}}}""",
+        "ongoing":{"type":"boolean"},
+        "hazard_type":{"enum":["road","sidewalk","flood","other"]}}}""",
     )
     private val RIGHT_NOW_SCHEMA = schema(
         """{"type":"object","additionalProperties":false,"required":["kind"],"properties":{

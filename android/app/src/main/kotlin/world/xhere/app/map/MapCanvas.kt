@@ -14,12 +14,14 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import kotlin.math.roundToInt
 import world.xhere.app.R
 import world.xhere.app.ui.TestTags
+import world.xhere.shared.access.AccessRollup
 import world.xhere.shared.demo.JamestownDemo
 import world.xhere.shared.geo.Geo
 import world.xhere.shared.geo.LatLng
@@ -95,7 +97,27 @@ internal fun ProgrammaticMap(
                 style = MaterialTheme.typography.titleMedium,
             )
         }
+        if (state.accessibilityLayer) {
+            state.accessPins.forEach { pin ->
+                val color = accessColor(pin.status)
+                Text(
+                    text = "♿  ${pin.title}",
+                    color = color,
+                    modifier = Modifier
+                        .padding(horizontal = 16.dp)
+                        .testTag(TestTags.accessPin(pin.placeKey))
+                        .clickable { onMapClick(pin.location) },
+                    style = MaterialTheme.typography.titleMedium,
+                )
+            }
+        }
     }
+}
+
+private fun accessColor(status: world.xhere.shared.access.AccessStatus): Color {
+    val raw = AccessRollup.colorHex(status).removePrefix("#")
+    val value = raw.toLongOrNull(16) ?: return Color.Gray
+    return Color(0xFF000000L or value)
 }
 
 internal fun markerTag(feature: MapFeature): String {

@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import world.xhere.app.explore.ExperienceMemory
 import world.xhere.app.session.SignOutNotice
+import world.xhere.app.voice.VoicePrefs
 import world.xhere.shared.data.XHereServices
 import world.xhere.shared.data.canModerate
 
@@ -30,6 +31,8 @@ data class SettingsUiState(
     val leaderboardReady: Boolean = false,
     /** The small "Explore: N nearby" pill on the map. */
     val exploreHint: Boolean = true,
+    /** Driving mode for Talk to the map. Off unless this phone turns it on. */
+    val voiceAutoPost: Boolean = false,
 )
 
 /**
@@ -45,9 +48,10 @@ class SettingsViewModel(
     private val signOutFailed: String,
     private val exporter: DataExporter,
     private val experiences: ExperienceMemory,
+    private val voicePrefs: VoicePrefs,
     private val clock: Clock = Clock.System,
 ) : ViewModel() {
-    private val _state = MutableStateFlow(SettingsUiState())
+    private val _state = MutableStateFlow(SettingsUiState(voiceAutoPost = voicePrefs.autoPost()))
     val state: StateFlow<SettingsUiState> = _state.asStateFlow()
 
     init {
@@ -90,6 +94,11 @@ class SettingsViewModel(
 
     fun setExploreHint(enabled: Boolean) {
         viewModelScope.launch { experiences.setHintEnabled(enabled) }
+    }
+
+    fun setVoiceAutoPost(enabled: Boolean) {
+        voicePrefs.setAutoPost(enabled)
+        _state.update { it.copy(voiceAutoPost = enabled) }
     }
 
     fun setLocationGranted(granted: Boolean) {

@@ -25,6 +25,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTag
 import androidx.compose.ui.unit.dp
 import world.xhere.app.R
+import world.xhere.app.access.AccessStatusChip
 import world.xhere.app.reputation.TierChip
 import world.xhere.app.ui.TestTags
 import world.xhere.shared.reputation.Reputation
@@ -49,6 +50,7 @@ internal fun HereCardSheet(
     alerts: List<WeatherAlert> = emptyList(),
     onDropHere: () -> Unit,
     onTimeMachine: () -> Unit,
+    onAccess: () -> Unit = {},
     onDismiss: () -> Unit,
 ) {
     val groups = Here.groups(sheet.drops)
@@ -107,13 +109,26 @@ internal fun HereCardSheet(
             ) {
                 Text(stringResource(R.string.drop_fab))
             }
-            TextButton(
-                onClick = onTimeMachine,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag(TestTags.HERE_TIME),
-            ) {
-                Text(stringResource(R.string.time_machine))
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                TextButton(
+                    onClick = onTimeMachine,
+                    modifier = Modifier
+                        .weight(1f)
+                        .testTag(TestTags.HERE_TIME),
+                ) {
+                    Text(stringResource(R.string.time_machine))
+                }
+                TextButton(
+                    onClick = onAccess,
+                    modifier = Modifier
+                        .weight(1f)
+                        .testTag(TestTags.ACCESS_CHECK),
+                ) {
+                    Text(stringResource(R.string.access_check))
+                }
+            }
+            if (!sheet.loading) {
+                sheet.access?.let { AccessStatusChip(it) }
             }
             if (alerts.isNotEmpty()) {
                 Column(

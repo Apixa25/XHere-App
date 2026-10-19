@@ -25,6 +25,9 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -41,9 +44,13 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.core.content.ContextCompat
 import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
 import world.xhere.app.R
+import world.xhere.app.access.AccessSurveySheet
 import world.xhere.app.explore.DismissibleCard
 import world.xhere.app.explore.ExperienceFocus
 import world.xhere.app.explore.ExperienceUndoBar
@@ -61,6 +68,10 @@ import world.xhere.app.voice.ThingStoryCard
 import world.xhere.app.voice.ThingsAroundSheet
 import world.xhere.app.ui.hapticClick
 import world.xhere.app.ui.openAppSettings
+import world.xhere.app.voice.VoiceSheet
+import world.xhere.app.voice.VoiceViewModel
+import world.xhere.shared.access.AccessSurvey
+import world.xhere.shared.access.SurveyDraft
 import world.xhere.shared.model.Taxonomy
 import world.xhere.shared.walks.WalkGuide
 
@@ -100,6 +111,7 @@ fun MapScreen(
     onOpenAr: () -> Unit = {},
     onExplore: () -> Unit = {},
     viewModel: MapViewModel = koinViewModel(),
+    voiceModel: VoiceViewModel = koinViewModel(),
     canvas: MapCanvas = koinInject(),
     things: ThingsViewModel = koinViewModel(),
     voice: VoiceSession = koinInject(),
@@ -110,6 +122,8 @@ fun MapScreen(
     val voiceState by things.state.collectAsStateWithLifecycle()
     val pendingThing by links.pendingThing.collectAsStateWithLifecycle()
     val pendingFocus by focus.requests.collectAsStateWithLifecycle()
+    val talk by voiceModel.state.collectAsStateWithLifecycle()
+    var accessDraft by remember { mutableStateOf(SurveyDraft()) }
     val context = LocalContext.current
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     DisposableEffect(lifecycle, viewModel) {
@@ -141,6 +155,9 @@ fun MapScreen(
     }
     val speakPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { granted ->
         if (granted.values.all { it }) things.speak()
+    }
+    val microphone = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        voiceModel.onPermission(granted)
     }
     val walk = state.walk?.takeIf { walk -> walk.stops.any { it.available } }
     val quest = state.quests.firstOrNull()
@@ -326,6 +343,51 @@ fun MapScreen(
                     )
                 }
                 Surface(
+                    onClick = {
+                        val allowed = ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) ==
+                            PackageManager.PERMISSION_GRANTED
+                        if (allowed) {
+                            voiceModel.listen()
+                        } else {
+                            // The system prompt is still shown. The sheet explains how to open Settings
+                            // when the person has already said no, or the prompt cannot appear.
+                            voiceModel.onPermission(false)
+                            microphone.launch(Manifest.permission.RECORD_AUDIO)
+                        }
+                    },
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.tertiary,
+                    shadowElevation = 4.dp,
+                    modifier = Modifier
+                        .defaultMinSize(minWidth = 56.dp, minHeight = 56.dp)
+                        .testTag(TestTags.VOICE_MIC),
+                ) {
+                    Text(
+                        text = "🎤",
+                        modifier = Modifier.padding(16.dp),
+                        style = MaterialTheme.typography.titleMedium,
+                    )
+                }
+                Surface(
+                    onClick = viewModel::toggleAccessibility,
+                    shape = MaterialTheme.shapes.large,
+                    color = if (state.accessibilityLayer) {
+                        MaterialTheme.colorScheme.tertiaryContainer
+                    } else {
+                        MaterialTheme.colorScheme.surface
+                    },
+                    shadowElevation = 2.dp,
+                    modifier = Modifier
+                        .defaultMinSize(minHeight = 48.dp)
+                        .testTag(TestTags.MAP_ACCESS),
+                ) {
+                    Text(
+                        text = stringResource(R.string.access_layer),
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+                        style = MaterialTheme.typography.labelLarge,
+                    )
+                }
+                Surface(
                     onClick = hapticClick(onDrop),
                     shape = CircleShape,
                     color = MaterialTheme.colorScheme.primary,
@@ -457,9 +519,46 @@ fun MapScreen(
                 alerts = state.alerts,
                 onDropHere = { onDropHere(sheet.spot, sheet.place?.name) },
                 onTimeMachine = { viewModel.openTimeMachine(sheet.spot) },
+                onAccess = {
+                    accessDraft = SurveyDraft()
+                    viewModel.openAccessSurvey()
+                },
                 onDismiss = viewModel::dismissHere,
             )
         }
+        if (state.accessSurvey) {
+            AccessSurveySheet(
+                draft = accessDraft,
+                busy = false,
+                onAnswer = { accessDraft = AccessSurvey.answer(accessDraft, it) },
+                onNotes = { accessDraft = AccessSurvey.notes(accessDraft, it) },
+                onSave = {
+                    val draft = accessDraft
+                    val step = draft.stepFree
+                    val ramp = draft.ramp
+                    val restroom = draft.restroom
+                    if (step != null && ramp != null && restroom != null) {
+                        viewModel.submitAccess(step, ramp, restroom, draft.notes)
+                    }
+                },
+                onDismiss = viewModel::dismissAccessSurvey,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(16.dp),
+            )
+        }
+        VoiceSheet(
+            state = talk,
+            onPost = voiceModel::post,
+            onCancelCountdown = voiceModel::cancelCountdown,
+            onRecord = voiceModel::recordClip,
+            onStopClip = voiceModel::stopClip,
+            onOpenSettings = { openAppSettings(context) },
+            onDismiss = voiceModel::dismiss,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(16.dp),
+        )
         state.timeMachine?.let { time ->
             TimeMachineSheet(
                 ui = time,
