@@ -122,6 +122,15 @@ select lives_ok(
   'alice confirms bob, which is the later direction'
 );
 reset role;
+-- One test transaction shares now(), so the insert order is not a timestamp.
+-- Pin Bob's confirms earlier. The ring follows that clock, then drop id.
+update public.confirmations
+set created_at = now() - interval '2 minutes'
+where user_id = '22222222-2222-4222-8222-222222222222'
+  and drop_id in (
+    current_setting('t.a1')::uuid, current_setting('t.a2')::uuid,
+    current_setting('t.a3')::uuid, current_setting('t.a4')::uuid
+  );
 select is(
   (select points from public.profiles where id = '22222222-2222-4222-8222-222222222222'),
   0, 'a confirm ring scores only the earlier direction'
