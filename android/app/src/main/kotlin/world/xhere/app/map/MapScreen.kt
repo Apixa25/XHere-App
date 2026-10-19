@@ -510,6 +510,7 @@ fun MapScreen(
                 cards = cards,
                 onOpen = { card -> onOpenDrop(card.shortId) },
                 onDismiss = viewModel::closeNearMe,
+                taxonomy = state.taxonomy,
             )
         }
         state.here?.let { sheet ->
@@ -585,7 +586,6 @@ fun MapScreen(
             SavePresetDialog(
                 onSave = viewModel::savePreset,
                 onDismiss = viewModel::dismissSavePreset,
-                modifier = Modifier.align(Alignment.Center),
             )
         }
         if (voiceState.around) {

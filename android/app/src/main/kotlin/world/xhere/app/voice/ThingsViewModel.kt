@@ -7,6 +7,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import world.xhere.app.map.SheetSignals
 import world.xhere.shared.data.XHereApiException
 import world.xhere.shared.data.XHereServices
 import world.xhere.shared.model.CreateThingRequest
@@ -31,11 +32,13 @@ data class ThingsUiState(
 class ThingsViewModel(
     private val services: XHereServices,
     private val session: VoiceSession,
+    private val sheets: SheetSignals = SheetSignals(),
 ) : ViewModel() {
     private val _state = MutableStateFlow(ThingsUiState())
     val state: StateFlow<ThingsUiState> = _state.asStateFlow()
 
     init {
+        viewModelScope.launch { sheets.dismissals.collect { dismissOpenSheets() } }
         viewModelScope.launch { session.nearby.collect { list -> _state.update { it.copy(nearby = list) } } }
         viewModelScope.launch { session.selected.collect { card -> _state.update { it.copy(selected = card) } } }
         viewModelScope.launch { session.speaking.collect { id -> _state.update { it.copy(speakingId = id) } } }
@@ -50,6 +53,21 @@ class ThingsViewModel(
     fun closeAround() {
         session.unwatch(VoiceSurface.SHEET)
         _state.update { it.copy(around = false, giving = false) }
+    }
+
+    /** Closes the around list and any story card sitting on the map. */
+    fun dismissOpenSheets() {
+        session.unwatch(VoiceSurface.SHEET)
+        session.clearSelection()
+        _state.update {
+            it.copy(
+                around = false,
+                giving = false,
+                reporting = false,
+                nfcWaiting = false,
+                selected = null,
+            )
+        }
     }
 
     fun openGive() {

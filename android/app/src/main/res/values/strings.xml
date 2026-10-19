@@ -54,6 +54,7 @@
     <string name="weather_source">%1$s · %2$s</string>
     <string name="weather_more">+ %1$d more</string>
     <string name="map_near_title">Near me</string>
+    <string name="sheet_drag">Drag down to close</string>
     <string name="map_near_body">Closest drops first, within 5 km. The same category filter as the map.</string>
     <string name="map_near_empty">Nothing in this filter within 5 km. Try All, or drop the first note.</string>
     <string name="map_status_details">Details</string>
