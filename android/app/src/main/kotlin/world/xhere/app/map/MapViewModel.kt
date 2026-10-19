@@ -15,6 +15,8 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlin.uuid.Uuid
 import world.xhere.app.location.DeviceLocation
+import world.xhere.app.location.LocationReading
+import world.xhere.shared.integrity.LocationReasons
 import world.xhere.shared.data.XHereServices
 import world.xhere.shared.demo.JamestownDemo
 import world.xhere.shared.geo.Geo
@@ -55,6 +57,7 @@ class MapViewModel(
     private var checkJob: Job? = null
     private var lastFrame: CameraFrame? = null
     private var lastCheckIn: LatLng? = null
+    private var lastReading: LocationReading? = null
     /** True after the first quest list arrives, so a later completion can celebrate. */
     private var questsLoaded = false
 
@@ -247,7 +250,7 @@ class MapViewModel(
             try {
                 val started = services.walks.start(id)
                 _state.update { it.copy(walk = mergeWalk(it.walk, started) ?: started, notice = null) }
-                val here = _state.value.myLocation
+                val here = lastReading
                 if (here != null) checkIn(here, force = true)
             } catch (e: CancellationException) {
                 throw e
@@ -381,7 +384,9 @@ class MapViewModel(
         }
     }
 
-    private fun onFix(fix: LatLng) {
+    private fun onFix(reading: LocationReading) {
+        lastReading = reading
+        val fix = reading.point
         val snapshot = _state.value
         val shouldFollow = snapshot.followNextFix || (!snapshot.userPanned && snapshot.camera.token == 0)
         _state.update { it.copy(myLocation = fix, followNextFix = false) }
@@ -389,14 +394,15 @@ class MapViewModel(
             val zoom = if (snapshot.followNextFix) 16.0 else snapshot.camera.zoom
             moveCamera(fix, zoom, fromUser = false)
         }
-        checkIn(fix, force = false)
+        checkIn(reading, force = false)
     }
 
     /**
      * A check-in uses the point the way a reveal does, then the server drops it.
      * Repeats closer than [CHECK_MOVE_M] are skipped unless the walk just started.
      */
-    private fun checkIn(fix: LatLng, force: Boolean) {
+    private fun checkIn(reading: LocationReading, force: Boolean) {
+        val fix = reading.point
         if (!force) {
             val last = lastCheckIn
             if (last != null && Geo.distanceMeters(last, fix) < CHECK_MOVE_M) return
@@ -406,17 +412,24 @@ class MapViewModel(
             val walk = _state.value.walk
             val walkId = walk?.takeIf { it.started && !it.completed }?.id
             try {
-                val result = services.walks.checkIn(fix, walkId)
+                val result = services.walks.checkIn(fix, walkId, reading.signal)
                 lastCheckIn = fix
                 val previous = _state.value.quests
                 val flipped = questJustCompleted(previous, result.quests)
                 questsLoaded = true
+                val flagged = integrityNotice(result.reasons)
                 _state.update {
+                    val notice = when {
+                        flagged != null -> flagged
+                        it.notice in INTEGRITY_NOTICES -> null
+                        else -> it.notice
+                    }
                     it.copy(
                         quests = result.quests,
                         walk = result.walk?.let { fresh -> mergeWalk(it.walk, fresh) } ?: it.walk,
                         celebrateWalk = it.celebrateWalk || result.walkJustCompleted,
                         celebrateQuest = it.celebrateQuest || flipped,
+                        notice = notice,
                     )
                 }
             } catch (e: CancellationException) {
@@ -425,6 +438,13 @@ class MapViewModel(
                 // A missed check-in retries after the next 20 m.
             }
         }
+    }
+
+    private fun integrityNotice(reasons: List<String>): MapNotice? = when {
+        LocationReasons.MOCK in reasons -> MapNotice.MOCK_LOCATION
+        LocationReasons.TRAVEL in reasons -> MapNotice.IMPOSSIBLE_TRAVEL
+        LocationReasons.UNVERIFIED in reasons -> MapNotice.UNVERIFIED_FIX
+        else -> null
     }
 
     private suspend fun reloadQuests(celebrate: Boolean) {
@@ -457,6 +477,11 @@ class MapViewModel(
     private companion object {
         const val NEAR_RADIUS_M = 5_000
         const val CHECK_MOVE_M = 20.0
+        val INTEGRITY_NOTICES = setOf(
+            MapNotice.MOCK_LOCATION,
+            MapNotice.IMPOSSIBLE_TRAVEL,
+            MapNotice.UNVERIFIED_FIX,
+        )
 
         fun centerOf(frame: CameraFrame): LatLng = LatLng(
             latitude = (frame.box.minLatitude + frame.box.maxLatitude) / 2.0,

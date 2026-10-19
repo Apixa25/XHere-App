@@ -77,6 +77,9 @@
     <string name="walk_progress">%1$d of %2$d</string>
     <string name="walk_done">Walk complete</string>
     <string name="walk_failed">Couldn\'t start that walk.</string>
+    <string name="map_mock_location">This location looks simulated, so check-ins will not count.</string>
+    <string name="map_impossible_travel">That move was too fast to count as being there.</string>
+    <string name="map_unverified_fix">That point was not a device location, so it will not count.</string>
     <string name="walk_celebrate_title">You finished %1$s</string>
     <string name="walk_celebrate_body">Every stop on this walk is checked off.</string>
     <string name="quest_dismiss">Not now</string>
@@ -130,6 +133,8 @@
     <string name="detail_away">%1$s away</string>
     <string name="detail_walk_closer">Walk %1$d m closer to reveal</string>
     <string name="detail_locked">Walk closer to reveal.</string>
+    <string name="detail_location_withheld">This location could not be verified, so the note stays hidden.</string>
+    <string name="detail_not_counted">Saved, but it will not count until the location looks like a real visit.</string>
     <string name="detail_within">This opens within %1$d m.</string>
     <string name="detail_location_off">Location is off, so this stays locked.</string>
     <string name="detail_use_location">Use location</string>
@@ -212,6 +217,7 @@
     <string name="safety_emergency_call">Call 911</string>
     <string name="safety_no_tip_line">Incident reports are only available where a local police tip line is set up. For now that\'s the Jamestown area. In an emergency call 911.</string>
     <string name="drop_held">Sent for review. It appears on the map once a moderator approves it.</string>
+    <string name="drop_reduced_trust">Posted with reduced trust. It stays on the map and does not count toward quests or campaigns.</string>
 
     <!-- M7: settings additions -->
     <string name="settings_safety_title">Safety and your data</string>
@@ -257,6 +263,8 @@
     <!-- M7: moderation queue -->
     <string name="mod_title">Moderation queue</string>
     <string name="mod_empty">Nothing waiting. Pending drops and open reports show up here.</string>
+    <string name="mod_integrity">Location checks</string>
+    <string name="mod_integrity_row">%1$s · %2$s</string>
     <string name="mod_not_allowed">Only moderators can open the queue.</string>
     <string name="mod_failed">Couldn\'t load the queue.</string>
     <string name="mod_pending">Waiting for review</string>

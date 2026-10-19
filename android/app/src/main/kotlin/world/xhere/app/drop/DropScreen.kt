@@ -227,6 +227,13 @@ fun DropScreen(
                     style = MaterialTheme.typography.bodyLarge,
                 )
             }
+            if (state.reducedTrust) {
+                Text(
+                    text = stringResource(R.string.drop_reduced_trust),
+                    modifier = Modifier.testTag(TestTags.DROP_REDUCED),
+                    style = MaterialTheme.typography.bodyLarge,
+                )
+            }
             state.duplicate?.let { message ->
                 Text(message, modifier = Modifier.testTag(TestTags.DROP_DUPLICATE), style = MaterialTheme.typography.bodyLarge)
             }

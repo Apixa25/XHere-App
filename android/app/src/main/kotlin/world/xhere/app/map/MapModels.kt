@@ -132,6 +132,9 @@ enum class MapNotice {
     LOCATION_OFF,
     PRESET_NAME,
     WALK_FAILED,
+    MOCK_LOCATION,
+    IMPOSSIBLE_TRAVEL,
+    UNVERIFIED_FIX,
 }
 
 data class MapUiState(

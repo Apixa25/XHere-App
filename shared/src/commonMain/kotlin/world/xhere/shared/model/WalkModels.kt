@@ -76,4 +76,6 @@ data class CheckInResult(
     val quests: List<QuestProgress> = emptyList(),
     val walk: Walk? = null,
     @SerialName("walk_just_completed") val walkJustCompleted: Boolean = false,
+    @SerialName("counts_for_credit") val countsForCredit: Boolean = true,
+    val reasons: List<String> = emptyList(),
 )

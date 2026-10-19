@@ -34,7 +34,7 @@ select is(
   'a nearby confirmation counts'
 );
 select is(
-  public.confirm_drop(current_setting('t.hist')::uuid, 'not_true', 40.0005, -100.0, 'Gone') - array['drop_id', 'expires_at', 'distance_m', 'status', 'is_confirmed', 'verdict'],
+  public.confirm_drop(current_setting('t.hist')::uuid, 'not_true', 40.0005, -100.0, 'Gone') - array['drop_id', 'expires_at', 'distance_m', 'status', 'is_confirmed', 'verdict', 'counts_for_credit', 'reasons'],
   '{"confirm_count": 0, "deny_count": 1}'::jsonb,
   'changing the verdict moves the count instead of adding one'
 );
@@ -98,7 +98,7 @@ select ok(
 );
 set local request.jwt.claims to '{"sub": "33333333-3333-4333-8333-333333333333", "role": "authenticated"}';
 select is(
-  public.confirm_drop(current_setting('t.note')::uuid, 'still_true', 40.001, -100.0) - array['drop_id', 'confirm_count', 'deny_count', 'distance_m', 'verdict', 'is_confirmed'],
+  public.confirm_drop(current_setting('t.note')::uuid, 'still_true', 40.001, -100.0) - array['drop_id', 'confirm_count', 'deny_count', 'distance_m', 'verdict', 'is_confirmed', 'counts_for_credit', 'reasons'],
   '{"status": "confirmed", "expires_at": null}'::jsonb,
   'two confirmations make a note permanent'
 );

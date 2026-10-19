@@ -78,7 +78,7 @@ select ok(
   'signed-out visitors cannot read profiles or raw drops'
 );
 select ok(
-  not has_function_privilege('anon', 'public.create_drop(text,double precision,double precision,text,text,jsonb,text[],integer,timestamptz,boolean,jsonb,boolean)', 'execute')
+  not has_function_privilege('anon', 'public.create_drop(text,double precision,double precision,text,text,jsonb,text[],integer,timestamptz,boolean,jsonb,boolean,jsonb)', 'execute')
   and not has_function_privilege('anon', 'public.drops_nearby(double precision,double precision,integer,text[],integer)', 'execute'),
   'signed-out visitors cannot post or use proximity reveal'
 );
@@ -159,7 +159,7 @@ select ok(
 -- Jobs and the new-user trigger
 select is(
   (select array_agg(j.jobname::text order by j.jobname) from cron.job j where j.jobname like 'xhere-%'),
-  array['xhere-expire-drops', 'xhere-purge-deleted-accounts', 'xhere-recompute-tiers'],
+  array['xhere-expire-drops', 'xhere-purge-deleted-accounts', 'xhere-purge-location-integrity', 'xhere-recompute-tiers'],
   'pg_cron jobs are scheduled'
 );
 

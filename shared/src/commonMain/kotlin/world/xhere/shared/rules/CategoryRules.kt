@@ -119,6 +119,7 @@ data class CreateDropRequest(
     val displayAnonymous: Boolean,
     val media: List<MediaUpload>,
     val acknowledgeGuidelines: Boolean,
+    val signal: world.xhere.shared.integrity.LocationSignal? = null,
 )
 
 /**

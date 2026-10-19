@@ -119,7 +119,7 @@ select ok(
 from (select public.confirm_drop(current_setting('t.note')::uuid, 'still_true', 40.002, -100.0) as r) s;
 set local request.jwt.claims to '{"sub": "33333333-3333-4333-8333-333333333333", "role": "authenticated"}';
 select is(
-  public.confirm_drop(current_setting('t.note')::uuid, 'still_true', 40.002, -100.0) - array['drop_id', 'confirm_count', 'deny_count', 'distance_m', 'verdict', 'is_confirmed'],
+  public.confirm_drop(current_setting('t.note')::uuid, 'still_true', 40.002, -100.0) - array['drop_id', 'confirm_count', 'deny_count', 'distance_m', 'verdict', 'is_confirmed', 'counts_for_credit', 'reasons'],
   '{"status": "confirmed", "expires_at": null}'::jsonb,
   'two confirmations make a note permanent and confirmed'
 );
