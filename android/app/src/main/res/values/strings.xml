@@ -505,7 +505,6 @@
     <string name="access_status_no">Not accessible</string>
     <string name="access_status_unknown">Unknown</string>
     <string name="access_failed">Couldn’t save that check. Try again.</string>
-
     <plurals name="detail_people_checked">
         <item quantity="one">%d person checked</item>
         <item quantity="other">%d people checked</item>
@@ -514,4 +513,43 @@
         <item quantity="one">%d said still there</item>
         <item quantity="other">%d said still there</item>
     </plurals>
+    <string name="here_claim">Claim this place</string>
+    <string name="here_memory">Leave a memory</string>
+    <string name="here_oral">Oral history</string>
+    <string name="official_badge">%1$s · %2$s</string>
+    <string name="hours_mon">Mon</string>
+    <string name="hours_tue">Tue</string>
+    <string name="hours_wed">Wed</string>
+    <string name="hours_thu">Thu</string>
+    <string name="hours_fri">Fri</string>
+    <string name="hours_sat">Sat</string>
+    <string name="hours_sun">Sun</string>
+    <string name="claim_title">Claim this place</string>
+    <string name="claim_help">Stand here, then match the website email, ask for a postcard code, or send it to an admin. The postcard is not mailed yet.</string>
+    <string name="claim_name">Place name</string>
+    <string name="claim_website">Website</string>
+    <string name="claim_email">Match my email</string>
+    <string name="claim_postcard">Request a postcard</string>
+    <string name="claim_postcard_pending">Postcard requested. Nothing was mailed.</string>
+    <string name="claim_review">Ask an admin to review</string>
+    <string name="capsule_title">Leave a memory</string>
+    <string name="capsule_oral_title">Oral history</string>
+    <string name="capsule_help">The story stays sealed until the date, until the next person stands here, or both.</string>
+    <string name="capsule_prompts">A few questions, if they help</string>
+    <string name="capsule_title_field">Title</string>
+    <string name="capsule_body">Story</string>
+    <string name="capsule_mode_visit">When someone stands here</string>
+    <string name="capsule_mode_date">On a date</string>
+    <string name="capsule_mode_both">Date and a visit</string>
+    <string name="capsule_date">Date (YYYY-MM-DD)</string>
+    <string name="capsule_save">Seal it</string>
+    <string name="detail_capsule_sealed">Sealed</string>
+    <string name="detail_owner_replies">From the place</string>
+    <string name="detail_reply_hint">Reply as the place</string>
+    <string name="detail_reply_send">Send reply</string>
+    <string name="detail_dispute">Report this claim</string>
+    <string name="impact_capsule_opened">Opened by someone standing there: %1$d</string>
+    <string name="mod_claims">Claim review</string>
+    <string name="mod_claim_row">%1$s · %2$s</string>
+    <string name="mod_reject">Reject</string>
 </resources>

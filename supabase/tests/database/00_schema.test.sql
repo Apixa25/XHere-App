@@ -120,7 +120,7 @@ select is(
   null,
   'every PLAN §4.2 category is seeded and active'
 );
-select is((select count(*)::integer from public.categories), 34, 'exactly 34 built-in categories');
+select is((select count(*)::integer from public.categories), 37, 'exactly 37 built-in categories');
 select is(
   (select row(c.min_tier_to_post, c.moderation_mode, c.premod_exempt_tier, c.location_precision_m,
               c.default_ttl, c.max_ttl, c.sensitive, c.confirmations_to_confirm, c.content_filters)::text
@@ -139,7 +139,7 @@ select is(
   array['incident_report'],
   'only incident reports are location-blurred'
 );
-select is((select count(*)::integer from public.category_versions where version = 1), 34, 'version 1 of every category is recorded');
+select is((select count(*)::integer from public.category_versions where version = 1), 37, 'version 1 of every category is recorded');
 select is((select count(*)::integer from public.tier_limits), 4, 'limits exist for all four tiers');
 
 -- Editing a rule bumps the version and snapshots it; cosmetic sort changes do not

@@ -22,7 +22,18 @@ import world.xhere.shared.model.CreateDropResult
 import world.xhere.shared.here.Here
 import world.xhere.shared.model.DropCard
 import world.xhere.shared.model.DropStatus
+import world.xhere.shared.model.AnnouncementPosted
+import world.xhere.shared.model.CapsuleCreated
+import world.xhere.shared.model.CapsuleRequest
+import world.xhere.shared.model.ClaimQueueItem
+import world.xhere.shared.model.ClaimTicket
+import world.xhere.shared.model.OfficialPlace
 import world.xhere.shared.model.OwnDrop
+import world.xhere.shared.model.OwnerReply
+import world.xhere.shared.model.PlaceCreated
+import world.xhere.shared.model.PlaceHours
+import world.xhere.shared.model.PlaceMembership
+import world.xhere.shared.model.PostcardStub
 import world.xhere.shared.model.PlaceLabel
 import world.xhere.shared.model.MapFeature
 import world.xhere.shared.model.ModerateDropAction
@@ -226,6 +237,61 @@ interface ModerationRepository {
 }
 
 /**
+ * Claimed places and time capsules. Billing is not implemented.
+ * A locked capsule's story is not on the drop until the server releases it.
+ */
+interface PlaceDeskRepository {
+    suspend fun createUserPlace(name: String, point: LatLng, website: String?, signal: LocationSignal? = null): PlaceCreated
+
+    suspend fun startClaim(anchorDropId: Uuid, website: String?, point: LatLng, signal: LocationSignal? = null): ClaimTicket
+
+    suspend fun proveEmail(claimId: Uuid): ClaimTicket
+
+    suspend fun requestPostcard(claimId: Uuid): PostcardStub
+
+    suspend fun submitForReview(claimId: Uuid, note: String? = null): ClaimTicket
+
+    suspend fun review(claimId: Uuid, approve: Boolean, note: String? = null): ClaimTicket
+
+    suspend fun revoke(claimId: Uuid, reason: String): ClaimTicket
+
+    suspend fun invite(placeId: Uuid, handle: String)
+
+    suspend fun acceptInvite(placeId: Uuid)
+
+    suspend fun setHours(placeId: Uuid, hours: List<PlaceHours>, summary: String?): OfficialPlace
+
+    suspend fun postAnnouncement(
+        placeId: Uuid,
+        title: String,
+        body: String,
+        expiresAt: Instant,
+        point: LatLng,
+        signal: LocationSignal? = null,
+    ): AnnouncementPosted
+
+    suspend fun reply(dropId: Uuid, body: String): OwnerReply
+
+    suspend fun repliesFor(dropId: Uuid): List<OwnerReply>
+
+    suspend fun dispute(placeId: Uuid, reason: String, details: String? = null)
+
+    suspend fun reviewQueue(limit: Int = 50): List<ClaimQueueItem>
+
+    suspend fun resolveDispute(disputeId: Uuid, dismiss: Boolean)
+
+    suspend fun officialAt(point: LatLng): OfficialPlace?
+
+    suspend fun officialForDrop(dropId: Uuid): OfficialPlace?
+
+    suspend fun myPlaces(): List<PlaceMembership>
+
+    suspend fun createCapsule(request: CapsuleRequest): CapsuleCreated
+
+    suspend fun openCapsulesHere(point: LatLng, signal: LocationSignal? = null): Int
+}
+
+/**
  * Top-3 category chips for the quick-drop composer (PLAN §4.4, §7 M5).
  * The Supabase client calls the `suggest-category` Edge Function and falls back
  * to the on-device ranker when that call cannot be made. The in-memory fake
@@ -406,6 +472,7 @@ interface XHereServices {
     val things: ThingRepository
     val account: AccountRepository
     val moderation: ModerationRepository
+    val desk: PlaceDeskRepository
 }
 
 /** Placeholder role check used by screens that should hide moderator tools. The RPC still enforces it. */

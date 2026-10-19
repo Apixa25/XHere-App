@@ -11,6 +11,8 @@ import world.xhere.shared.geo.LatLng
 import world.xhere.shared.live.AlertSeverity
 import world.xhere.shared.live.WeatherAlert
 import world.xhere.shared.model.CampaignProgress
+import world.xhere.shared.model.DropCard
+import world.xhere.shared.model.DropStatus
 import world.xhere.shared.model.QuestProgress
 import world.xhere.shared.model.QuestStepProgress
 import world.xhere.shared.model.ThingCard
@@ -96,6 +98,42 @@ class ExperienceTest {
         )
         val thing = filled.single { it.kind == ExperienceKind.NEARBY_THING }
         assertFalse(thing.placeholder)
+        val capsule = DropCard(
+            id = Uuid.parse("00000000-0000-4000-8000-0000000000c1"),
+            shortId = "memory000001",
+            categorySlug = "time_capsule",
+            groupSlug = "history_stories",
+            title = "A story from this place",
+            latitude = 42.096,
+            longitude = -79.241,
+            locationPrecisionM = 0,
+            revealRadiusM = 150,
+            revealed = false,
+            body = "the sealed neighborhood secret",
+            status = DropStatus.ACTIVE,
+            isConfirmed = false,
+            confirmCount = 0,
+            denyCount = 0,
+            createdAt = Instant.parse("2026-10-19T00:00:00Z"),
+            isMine = true,
+            capsuleMode = "visit",
+            capsuleLocked = true,
+        )
+        val withCapsule = Experiences.assemble(
+            walks = emptyList(),
+            quests = emptyList(),
+            campaigns = emptyList(),
+            alerts = emptyList(),
+            things = emptyList(),
+            here = here,
+            capsules = listOf(capsule),
+        )
+        val real = withCapsule.single { it.kind == ExperienceKind.TIME_CAPSULE }
+        assertFalse(real.placeholder)
+        assertEquals("capsule:${capsule.id}", real.id)
+        assertEquals("Sealed until someone stands here", real.summary)
+        assertFalse(real.summary.contains("secret"))
+        assertFalse(real.revision.contains("secret"))
         assertEquals(12.0, thing.distanceM)
         assertEquals(card.title, thing.title)
         assertNull(thing.durationMin)

@@ -26,6 +26,7 @@ import world.xhere.shared.geo.LatLng
 import world.xhere.shared.live.LiveConditions
 import world.xhere.shared.live.QuietConditions
 import world.xhere.shared.model.CampaignProgress
+import world.xhere.shared.model.DropCard
 import world.xhere.shared.model.QuestProgress
 import world.xhere.shared.model.ThingCard
 import world.xhere.shared.model.Walk
@@ -53,6 +54,7 @@ class ExploreViewModel(
     private var alerts: List<WeatherAlert> = emptyList()
     private var owned: List<ThingCard> = emptyList()
     private var heard: List<NearbyThing> = emptyList()
+    private var capsules: List<DropCard> = emptyList()
 
     init {
         viewModelScope.launch {
@@ -134,6 +136,9 @@ class ExploreViewModel(
         campaigns = runCatching { services.campaigns.campaignsFor(frame.box) }.getOrDefault(campaigns)
         alerts = runCatching { conditions.alertsAt(center) }.getOrDefault(alerts)
         owned = runCatching { services.things.mine() }.getOrDefault(owned)
+        capsules = runCatching {
+            services.drops.dropsNearby(center, radiusM = 2_000, categories = listOf("time_capsule"), limit = 20)
+        }.getOrDefault(capsules)
         _state.update { it.copy(dismissedAlertIds = presets.dismissedAlerts()) }
         publish()
     }
@@ -156,6 +161,7 @@ class ExploreViewModel(
             things = cards.values.toList(),
             here = point,
             heardMeters = meters,
+            capsules = capsules,
         )
         _state.update {
             it.copy(

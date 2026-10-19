@@ -35,6 +35,8 @@ import world.xhere.shared.data.ThingRepository
 import world.xhere.shared.data.WalkRepository
 import world.xhere.shared.data.XHereApiException
 import world.xhere.shared.data.LiveRepository
+import world.xhere.shared.capsule.Capsules
+import world.xhere.shared.data.PlaceDeskRepository
 import world.xhere.shared.data.PlaceRepository
 import world.xhere.shared.data.XHereServices
 import world.xhere.shared.geo.BoundingBox
@@ -75,11 +77,11 @@ import world.xhere.shared.reputation.ReputationStanding
 import world.xhere.shared.model.PlaceLabel
 import world.xhere.shared.model.DropMedia
 import world.xhere.shared.model.DropStatus
+import world.xhere.shared.model.MediaUpload
 import world.xhere.shared.model.MapFeature
 import world.xhere.shared.media.ExifStrip
 import world.xhere.shared.model.MediaKind
 import world.xhere.shared.voice.VoiceClips
-import world.xhere.shared.model.MediaUpload
 import world.xhere.shared.model.ModerateDropAction
 import world.xhere.shared.model.QuestProgress
 import world.xhere.shared.model.QuestStepProgress
@@ -156,6 +158,26 @@ class InMemoryXHere(
     override val account: AccountRepository = AccountRepo()
     override val moderation: ModerationRepository = ModerationRepo()
 
+    /**
+     * The signed-in account's email, for the website-domain claim check.
+     * The Supabase client reads this from Auth. Tests set it directly.
+     */
+    var claimEmail: String? = null
+
+    private val placeDesk: MemoryPlaceDesk by lazy {
+        MemoryPlaceDesk(
+            store = store,
+            viewer = { viewer },
+            clock = clock,
+            claimEmail = { claimEmail },
+            decide = ::decideLocation,
+            flag = ::recordIntegrityFlag,
+            onOpened = { opened -> store.noteHelped(opened, "open", clock()) },
+        )
+    }
+
+    override val desk: PlaceDeskRepository get() = placeDesk
+
     /** Who is signed in. Tests may swap it, for example to act as a moderator. */
     var viewer: Profile? = viewer
         set(value) {
@@ -182,7 +204,8 @@ class InMemoryXHere(
         val profile = store.profiles[drop.authorId]
         val badges = store.awardsFor(drop.authorId, drop.trueLocation, anonymous, clock()) + drop.extraBadges
         val displayName = if (anonymous) null else profile?.displayName
-        return drop.toCard(viewerId, distance, verdict, revealDistance, badges, rankTier(drop), displayName)
+        val built = drop.toCard(viewerId, distance, verdict, revealDistance, badges, rankTier(drop), displayName)
+        return placeDesk.decorate(drop, built, viewerId)
     }
 
     private fun decideLocation(
@@ -420,31 +443,53 @@ class InMemoryXHere(
             if (!store.canView(drop, viewer?.id, clock())) {
                 throw XHereApiException("drop_not_found", sqlState = XHereApiException.SQL_NOT_FOUND)
             }
-            val distance = location?.let { Geo.distanceMeters(it, drop.displayLocation) }
             val viewerId = viewer?.id
-            var withheld = false
+            var credit = true
+            var reasons = emptyList<String>()
             if (location != null && viewerId != null) {
                 val decision = decideLocation(viewerId, LocationAction.REVEAL, location, signal)
-                val publicRecord = drop.source == world.xhere.shared.model.DropSource.OPEN_DATA
-                val mine = drop.authorId == viewerId && !publicRecord
-                withheld = !decision.countsForCredit &&
-                    !mine &&
-                    !publicRecord &&
-                    distance != null &&
-                    distance <= drop.revealRadiusM
-                if (withheld) {
-                    recordIntegrityFlag(viewerId, LocationAction.REVEAL, drop.id, decision.reasons)
-                } else {
-                    recordView(drop)
-                }
-            } else {
+                credit = decision.countsForCredit
+                reasons = decision.reasons
+            }
+            if (Capsules.isLocked(drop.capsuleMode, drop.capsuleOpenedAt)) {
+                placeDesk.release(drop, viewerId, location, credit, reasons)
+            }
+            val distance = location?.let { Geo.distanceMeters(it, drop.displayLocation) }
+            val stillLocked = Capsules.isLocked(drop.capsuleMode, drop.capsuleOpenedAt)
+            val publicRecord = drop.source == DropSource.OPEN_DATA
+            val officialRecord = drop.source == DropSource.OFFICIAL
+            val mine = viewerId != null && drop.authorId == viewerId && !publicRecord
+            val withheld = !credit &&
+                !mine &&
+                !stillLocked &&
+                !publicRecord &&
+                !officialRecord &&
+                distance != null &&
+                distance <= drop.revealRadiusM
+            if (withheld && viewerId != null) {
+                recordIntegrityFlag(viewerId, LocationAction.REVEAL, drop.id, reasons)
+            } else if (!stillLocked) {
                 recordView(drop)
             }
             val built = card(drop, viewerId, distance, store.verdict(drop.id, viewerId))
-            return if (withheld) {
-                built.copy(revealed = false, body = null, attributes = null, media = null, tags = null, locationWithheld = true)
-            } else {
-                built
+            return when {
+                withheld -> built.copy(
+                    revealed = false,
+                    body = null,
+                    attributes = null,
+                    media = null,
+                    tags = null,
+                    locationWithheld = true,
+                )
+                stillLocked -> built.copy(
+                    revealed = false,
+                    body = null,
+                    attributes = null,
+                    media = null,
+                    tags = null,
+                    locationWithheld = false,
+                )
+                else -> built
             }
         }
 
@@ -1609,6 +1654,14 @@ class MemoryStore(
     val checkpoints: MutableMap<Uuid, LocationCheckpoint> = linkedMapOf()
     /** Reason codes only. The moderator queue is the app surface. */
     val integrityFlags: MutableList<StoredIntegrityFlag> = mutableListOf()
+    /** Claimed places. Not readable as a client table; the desk is the only writer. */
+    val claimedPlaces: MutableList<StoredPlace> = mutableListOf()
+    val placeTeams: MutableList<StoredTeam> = mutableListOf()
+    val placeMembers: MutableList<StoredMember> = mutableListOf()
+    val placeClaims: MutableList<StoredClaim> = mutableListOf()
+    val placeOfficial: MutableList<StoredOfficial> = mutableListOf()
+    val ownerReplies: MutableList<world.xhere.shared.model.OwnerReply> = mutableListOf()
+    val claimDisputes: MutableList<StoredDispute> = mutableListOf()
     /** OpenStreetMap place names, keyed by the 0.001° cell. Not a user trail. */
     val placeLabels: MutableMap<String, StoredPlaceLabel> = linkedMapOf()
     /** When false, [PlaceRepository.claimNominatimSlot] refuses, matching a busy global gate. */
@@ -1675,6 +1728,7 @@ class MemoryStore(
                 noticeDay = day,
                 viewEvents = if (kind == "view") 1 else 0,
                 confirmEvents = if (kind == "confirm") 1 else 0,
+                capsuleOpens = if (kind == "open") 1 else 0,
                 readAt = null,
                 createdAt = at,
                 updatedAt = at,
@@ -1686,6 +1740,7 @@ class MemoryStore(
         impactNotices[index] = current.copy(
             viewEvents = current.viewEvents + if (kind == "view") 1 else 0,
             confirmEvents = current.confirmEvents + if (kind == "confirm") 1 else 0,
+            capsuleOpens = current.capsuleOpens + if (kind == "open") 1 else 0,
             updatedAt = at,
         )
     }
@@ -1839,6 +1894,14 @@ class StoredDrop(
     var statusBeforeDelete: DropStatus? = null,
     var deletedAt: Instant? = null,
     var extraBadges: List<BadgeAward> = emptyList(),
+    var placeId: Uuid? = null,
+    var capsuleMode: String? = null,
+    var capsuleUnlockAt: Instant? = null,
+    var capsuleOpenedAt: Instant? = null,
+    var oralHistory: Boolean = false,
+    /** Held off the card until [MemoryPlaceDesk.release] copies it. */
+    var capsuleSecret: String? = null,
+    var capsuleSecretMedia: List<MediaUpload> = emptyList(),
 )
 
 /**
@@ -1915,6 +1978,7 @@ private fun StoredDrop.toFeature(): MapFeature = MapFeature(
     longitude = displayLocation.longitude,
     pointCount = 1,
     source = source,
+    capsuleSealed = capsuleMode != null && capsuleOpenedAt == null,
 )
 
 private fun LatLng.inBox(box: BoundingBox): Boolean =

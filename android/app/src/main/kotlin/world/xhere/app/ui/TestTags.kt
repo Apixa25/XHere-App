@@ -51,6 +51,8 @@ internal object TestTags {
 
     fun impactRow(shortId: String): String = "impact_$shortId"
 
+    fun impactCapsule(shortId: String): String = "impact_capsule_$shortId"
+
     const val SETTINGS_SIGN_OUT = "settings_sign_out"
     const val SETTINGS_DELETE = "settings_delete"
     const val SETTINGS_DELETE_CONFIRM = "settings_delete_confirm"
@@ -143,6 +145,35 @@ internal object TestTags {
     const val MAP_LONG_PRESS = "map_long_press"
     const val HERE_SHEET = "here_sheet"
     const val HERE_PLACE = "here_place"
+    const val HERE_OFFICIAL = "here_official"
+    const val HERE_CLAIM = "here_claim"
+    const val HERE_MEMORY = "here_memory"
+    const val HERE_ORAL = "here_oral"
+    const val CLAIM_SHEET = "claim_sheet"
+    const val CLAIM_NAME = "claim_name"
+    const val CLAIM_WEBSITE = "claim_website"
+    const val CLAIM_EMAIL = "claim_email"
+    const val CLAIM_POSTCARD = "claim_postcard"
+    const val CLAIM_POSTCARD_NOTE = "claim_postcard_note"
+    const val CLAIM_REVIEW = "claim_review"
+    const val CLAIM_ERROR = "claim_error"
+    const val CLAIM_QUEUE = "claim_queue"
+    const val CAPSULE_SHEET = "capsule_sheet"
+    const val CAPSULE_PROMPTS = "capsule_prompts"
+    const val CAPSULE_TITLE = "capsule_title"
+    const val CAPSULE_BODY = "capsule_body"
+    const val CAPSULE_SAVE = "capsule_save"
+    const val CAPSULE_ERROR = "capsule_error"
+    const val CAPSULE_MODE_VISIT = "capsule_mode_visit"
+    const val CAPSULE_MODE_DATE = "capsule_mode_date"
+    const val CAPSULE_MODE_BOTH = "capsule_mode_both"
+    const val CAPSULE_DATE = "capsule_date"
+    const val DETAIL_OFFICIAL = "detail_official"
+    const val DETAIL_HOURS = "detail_hours"
+    const val DETAIL_REPLIES = "detail_replies"
+    const val DETAIL_REPLY = "detail_reply"
+    const val DETAIL_REPLY_SEND = "detail_reply_send"
+    const val DETAIL_DISPUTE = "detail_dispute"
     const val HERE_ADDRESS = "here_address"
     const val HERE_ATTRIBUTION = "here_attribution"
     const val HERE_DROP = "here_drop"
@@ -342,6 +373,12 @@ internal object TestTags {
     fun queueItem(id: String): String = "queue_$id"
 
     fun modAction(action: String, id: String): String = "mod_${action}_$id"
+
+    fun claimRow(id: String): String = "claim_row_$id"
+
+    fun claimApprove(id: String): String = "claim_approve_$id"
+
+    fun claimReject(id: String): String = "claim_reject_$id"
 
     const val VOICE_MIC = "voice_mic"
     const val VOICE_SHEET = "voice_sheet"

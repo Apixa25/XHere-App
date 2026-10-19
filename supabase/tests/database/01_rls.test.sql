@@ -166,7 +166,7 @@ reset role;
 set local role anon;
 set local request.jwt.claims to '';
 select throws_ok($$ select 1 from public.profiles $$, '42501', null, 'signed-out visitors cannot read profiles');
-select is((select count(*)::integer from public.categories), 34, 'signed-out visitors can read the taxonomy');
+select is((select count(*)::integer from public.categories), 37, 'signed-out visitors can read the taxonomy');
 
 select * from finish();
 rollback;

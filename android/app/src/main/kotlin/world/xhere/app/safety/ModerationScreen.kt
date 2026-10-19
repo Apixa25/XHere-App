@@ -3,6 +3,7 @@ package world.xhere.app.safety
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.CircularProgressIndicator
@@ -48,7 +49,39 @@ fun ModerationScreen(onBack: () -> Unit, viewModel: ModerationViewModel = koinVi
                 if (state.failed) {
                     Text(stringResource(R.string.mod_failed), color = MaterialTheme.colorScheme.error)
                 }
-                if (state.items.isEmpty() && state.flags.isEmpty() && !state.failed) {
+                if (state.claims.isNotEmpty()) {
+                    Text(
+                        text = stringResource(R.string.mod_claims),
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.testTag(TestTags.CLAIM_QUEUE),
+                    )
+                    state.claims.forEach { claim ->
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text(
+                                text = stringResource(R.string.mod_claim_row, claim.placeName, claim.kind),
+                                style = MaterialTheme.typography.bodyLarge,
+                                modifier = Modifier.testTag(TestTags.claimRow(claim.id.toString())),
+                            )
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                OutlinedButton(
+                                    onClick = { viewModel.approveClaim(claim) },
+                                    enabled = !state.busy,
+                                    modifier = Modifier.testTag(TestTags.claimApprove(claim.id.toString())),
+                                ) {
+                                    Text(stringResource(R.string.mod_approve))
+                                }
+                                OutlinedButton(
+                                    onClick = { viewModel.rejectClaim(claim) },
+                                    enabled = !state.busy,
+                                    modifier = Modifier.testTag(TestTags.claimReject(claim.id.toString())),
+                                ) {
+                                    Text(stringResource(if (claim.kind == "claim") R.string.mod_reject else R.string.mod_dismiss))
+                                }
+                            }
+                        }
+                    }
+                }
+                if (state.items.isEmpty() && state.flags.isEmpty() && state.claims.isEmpty() && !state.failed) {
                     Text(
                         text = stringResource(R.string.mod_empty),
                         style = MaterialTheme.typography.bodyLarge,

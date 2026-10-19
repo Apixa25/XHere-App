@@ -60,6 +60,7 @@ import world.xhere.shared.data.IdentityProvider
 import world.xhere.shared.data.MediaRepository
 import world.xhere.shared.data.ModerationRepository
 import world.xhere.shared.data.LiveRepository
+import world.xhere.shared.data.PlaceDeskRepository
 import world.xhere.shared.data.PlaceRepository
 import world.xhere.shared.data.ProfileRepository
 import world.xhere.shared.data.ReportRepository
@@ -118,6 +119,22 @@ import world.xhere.shared.integrity.LocationSignal
 import io.ktor.client.request.put
 import world.xhere.shared.access.AccessSummary
 import world.xhere.shared.data.AccessRepository
+import world.xhere.shared.data.remote.AnnouncementParams
+import world.xhere.shared.data.remote.ClaimIdParams
+import world.xhere.shared.data.remote.CreateCapsuleParams
+import world.xhere.shared.data.remote.CreatePlaceParams
+import world.xhere.shared.data.remote.DisputeClaimParams
+import world.xhere.shared.data.remote.InviteCoownerParams
+import world.xhere.shared.data.remote.OfficialAtParams
+import world.xhere.shared.data.remote.OpenCapsulesParams
+import world.xhere.shared.data.remote.OwnerReplyParams
+import world.xhere.shared.data.remote.PlaceIdParams
+import world.xhere.shared.data.remote.ResolveDisputeParams
+import world.xhere.shared.data.remote.ReviewClaimParams
+import world.xhere.shared.data.remote.RevokeClaimParams
+import world.xhere.shared.data.remote.SetHoursParams
+import world.xhere.shared.data.remote.StartClaimParams
+import world.xhere.shared.data.remote.SubmitClaimParams
 import world.xhere.shared.data.remote.AccessBoxParams
 import world.xhere.shared.data.remote.AccessPlaceParams
 import world.xhere.shared.data.remote.SubmitAccessParams
@@ -148,6 +165,18 @@ import world.xhere.shared.model.CreateDropResult
 import world.xhere.shared.model.DropCard
 import world.xhere.shared.model.OwnDrop
 import world.xhere.shared.model.ImpactNotice
+import world.xhere.shared.model.AnnouncementPosted
+import world.xhere.shared.model.CapsuleCreated
+import world.xhere.shared.model.ClaimQueueItem
+import world.xhere.shared.model.ClaimTicket
+import world.xhere.shared.model.OfficialPlace
+import world.xhere.shared.model.OpenedCount
+import world.xhere.shared.model.OwnerReply
+import world.xhere.shared.model.PlaceCreated
+import world.xhere.shared.model.PlaceHours
+import world.xhere.shared.model.PlaceMembership
+import world.xhere.shared.model.PostcardStub
+import world.xhere.shared.model.CapsuleRequest
 import world.xhere.shared.model.PlaceLabel
 import world.xhere.shared.model.DropStatus
 import world.xhere.shared.model.MapFeature
@@ -220,6 +249,7 @@ class SupabaseXHereClient(
     override val things: ThingRepository = ThingRepo()
     override val account: AccountRepository = AccountRepo()
     override val moderation: ModerationRepository = ModerationRepo()
+    override val desk: PlaceDeskRepository = PlaceDeskRepo()
 
     private inner class AuthRepo : AuthRepository {
         override suspend fun currentSession(): SessionInfo? = call {
@@ -875,6 +905,124 @@ class SupabaseXHereClient(
         accessToken = accessToken,
         email = user?.email,
     )
+
+    private inner class PlaceDeskRepo : PlaceDeskRepository {
+        override suspend fun createUserPlace(name: String, point: LatLng, website: String?, signal: LocationSignal?): PlaceCreated = call {
+            supabase.postgrest.rpc(
+                "create_user_place",
+                CreatePlaceParams(name, point.latitude, point.longitude, website, signal).rpcJson(),
+            ).decodeAs()
+        }
+
+        override suspend fun startClaim(anchorDropId: Uuid, website: String?, point: LatLng, signal: LocationSignal?): ClaimTicket = call {
+            supabase.postgrest.rpc(
+                "start_place_claim",
+                StartClaimParams(anchorDropId, website, point.latitude, point.longitude, signal).rpcJson(),
+            ).decodeAs()
+        }
+
+        override suspend fun proveEmail(claimId: Uuid): ClaimTicket = call {
+            supabase.postgrest.rpc("prove_claim_email", ClaimIdParams(claimId).rpcJson()).decodeAs()
+        }
+
+        override suspend fun requestPostcard(claimId: Uuid): PostcardStub = call {
+            supabase.postgrest.rpc("request_claim_postcard", ClaimIdParams(claimId).rpcJson()).decodeAs()
+        }
+
+        override suspend fun submitForReview(claimId: Uuid, note: String?): ClaimTicket = call {
+            supabase.postgrest.rpc("submit_claim_for_review", SubmitClaimParams(claimId, note).rpcJson()).decodeAs()
+        }
+
+        override suspend fun review(claimId: Uuid, approve: Boolean, note: String?): ClaimTicket = call {
+            supabase.postgrest.rpc("review_place_claim", ReviewClaimParams(claimId, approve, note).rpcJson()).decodeAs()
+        }
+
+        override suspend fun revoke(claimId: Uuid, reason: String): ClaimTicket = call {
+            supabase.postgrest.rpc("revoke_place_claim", RevokeClaimParams(claimId, reason).rpcJson()).decodeAs()
+        }
+
+        override suspend fun invite(placeId: Uuid, handle: String) {
+            call { supabase.postgrest.rpc("invite_place_coowner", InviteCoownerParams(placeId, handle).rpcJson()) }
+        }
+
+        override suspend fun acceptInvite(placeId: Uuid) {
+            call { supabase.postgrest.rpc("accept_place_invite", PlaceIdParams(placeId).rpcJson()) }
+        }
+
+        override suspend fun setHours(placeId: Uuid, hours: List<PlaceHours>, summary: String?): OfficialPlace = call {
+            supabase.postgrest.rpc("set_place_hours", SetHoursParams(placeId, hours, summary).rpcJson()).decodeAs()
+        }
+
+        override suspend fun postAnnouncement(
+            placeId: Uuid,
+            title: String,
+            body: String,
+            expiresAt: Instant,
+            point: LatLng,
+            signal: LocationSignal?,
+        ): AnnouncementPosted = call {
+            supabase.postgrest.rpc(
+                "post_place_announcement",
+                AnnouncementParams(placeId, title, body, expiresAt, point.latitude, point.longitude, signal).rpcJson(),
+            ).decodeAs()
+        }
+
+        override suspend fun reply(dropId: Uuid, body: String): OwnerReply = call {
+            supabase.postgrest.rpc("reply_as_owner", OwnerReplyParams(dropId, body).rpcJson()).decodeAs()
+        }
+
+        override suspend fun repliesFor(dropId: Uuid): List<OwnerReply> = call {
+            decodeListOrEmpty(supabase.postgrest.rpc("owner_replies_for_drop", DropIdParams(dropId).rpcJson()).data)
+        }
+
+        override suspend fun dispute(placeId: Uuid, reason: String, details: String?) {
+            call { supabase.postgrest.rpc("dispute_place_claim", DisputeClaimParams(placeId, reason, details).rpcJson()) }
+        }
+
+        override suspend fun reviewQueue(limit: Int): List<ClaimQueueItem> = call {
+            decodeListOrEmpty(supabase.postgrest.rpc("claim_review_queue", QueueParams(limit.coerceIn(1, 100)).rpcJson()).data)
+        }
+
+        override suspend fun resolveDispute(disputeId: Uuid, dismiss: Boolean) {
+            call { supabase.postgrest.rpc("resolve_claim_dispute", ResolveDisputeParams(disputeId, dismiss).rpcJson()) }
+        }
+
+        override suspend fun officialAt(point: LatLng): OfficialPlace? = call {
+            decodeNullable(supabase.postgrest.rpc("official_at", OfficialAtParams(point.latitude, point.longitude).rpcJson()).data)
+        }
+
+        override suspend fun officialForDrop(dropId: Uuid): OfficialPlace? = call {
+            decodeNullable(supabase.postgrest.rpc("official_for_drop", DropIdParams(dropId).rpcJson()).data)
+        }
+
+        override suspend fun myPlaces(): List<PlaceMembership> = call {
+            decodeListOrEmpty(supabase.postgrest.rpc("my_places").data)
+        }
+
+        override suspend fun createCapsule(request: CapsuleRequest): CapsuleCreated = call {
+            supabase.postgrest.rpc(
+                "create_capsule",
+                CreateCapsuleParams(
+                    title = request.title,
+                    body = request.body,
+                    lat = request.latitude,
+                    lng = request.longitude,
+                    mode = request.mode,
+                    unlockAt = request.unlockAt,
+                    oralHistory = request.oralHistory,
+                    media = request.media,
+                    integrity = request.signal,
+                ).rpcJson(),
+            ).decodeAs()
+        }
+
+        override suspend fun openCapsulesHere(point: LatLng, signal: LocationSignal?): Int = call {
+            supabase.postgrest.rpc(
+                "open_capsules_here",
+                OpenCapsulesParams(point.latitude, point.longitude, signal).rpcJson(),
+            ).decodeAs<OpenedCount>().opened
+        }
+    }
 }
 
 private const val CATEGORY_COLUMNS =
@@ -907,6 +1055,18 @@ private inline fun <reified T> decode(raw: String): T {
     val element = XHereJson.parseToJsonElement(raw)
     val body = if (element is JsonPrimitive && element.isString) element.content else raw
     return XHereJson.decodeFromString(body)
+}
+
+private inline fun <reified T> decodeNullable(raw: String): T? {
+    val trimmed = raw.trim()
+    if (trimmed.isEmpty() || trimmed == "null") return null
+    return decode(trimmed)
+}
+
+private inline fun <reified T> decodeListOrEmpty(raw: String): List<T> {
+    val trimmed = raw.trim()
+    if (trimmed.isEmpty() || trimmed == "null" || trimmed == "[]") return emptyList()
+    return decode(trimmed)
 }
 
 private fun PostgrestRestException.toXHere(): XHereApiException {

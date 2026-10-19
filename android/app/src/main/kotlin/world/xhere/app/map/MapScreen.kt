@@ -64,6 +64,8 @@ import world.xhere.app.explore.ExperienceUndoBar
 import world.xhere.shared.explore.Experiences
 import world.xhere.app.detail.IncomingLinks
 import world.xhere.app.location.ForegroundLocation
+import world.xhere.app.place.DeskRequest
+import world.xhere.app.place.PlaceDeskSheet
 import world.xhere.app.ui.TestTags
 import world.xhere.app.voice.ThingsViewModel
 import world.xhere.app.voice.VoicePermissions
@@ -132,6 +134,7 @@ fun MapScreen(
     val pendingFocus by focus.requests.collectAsStateWithLifecycle()
     val talk by voiceModel.state.collectAsStateWithLifecycle()
     var accessDraft by remember { mutableStateOf(SurveyDraft()) }
+    var deskRequest by remember { mutableStateOf<DeskRequest?>(null) }
     val context = LocalContext.current
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     DisposableEffect(lifecycle, viewModel) {
@@ -549,7 +552,23 @@ fun MapScreen(
                     accessDraft = SurveyDraft()
                     viewModel.openAccessSurvey()
                 },
+                onClaim = {
+                    val anchor = sheet.drops.firstOrNull { it.categorySlug == "place" }?.id
+                    deskRequest = DeskRequest.Claim(sheet.spot, anchor)
+                },
+                onMemory = { deskRequest = DeskRequest.Memory(sheet.spot, oral = false) },
+                onOral = { deskRequest = DeskRequest.Memory(sheet.spot, oral = true) },
                 onDismiss = viewModel::dismissHere,
+            )
+        }
+        deskRequest?.let { request ->
+            PlaceDeskSheet(
+                request = request,
+                onDismiss = { deskRequest = null },
+                onSaved = {
+                    deskRequest = null
+                    viewModel.refreshHere()
+                },
             )
         }
         if (state.accessSurvey) {

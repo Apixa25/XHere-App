@@ -70,6 +70,19 @@ data class DropCard(
      * Null on a public record or an anonymous drop, so those stay on raw distance.
      */
     @SerialName("author_tier") val authorTier: UserTier? = null,
+    /** True while an owner claim for this place is active. */
+    val official: Boolean = false,
+    @SerialName("place_name") val placeName: String? = null,
+    @SerialName("official_summary") val officialSummary: String? = null,
+    @SerialName("official_hours") val officialHours: List<PlaceHours> = emptyList(),
+    @SerialName("capsule_mode") val capsuleMode: String? = null,
+    @Serializable(with = InstantSerializer::class)
+    @SerialName("capsule_unlock_at") val capsuleUnlockAt: Instant? = null,
+    @Serializable(with = InstantSerializer::class)
+    @SerialName("capsule_opened_at") val capsuleOpenedAt: Instant? = null,
+    @SerialName("oral_history") val oralHistory: Boolean = false,
+    /** The story is still in private storage. [body] is null until this is false. */
+    @SerialName("capsule_locked") val capsuleLocked: Boolean = false,
 ) {
     val displayLocation: LatLng get() = LatLng(latitude, longitude)
 
@@ -136,6 +149,8 @@ data class MapFeature(
     @SerialName("category_counts") val categoryCounts: Map<String, Int>? = null,
     /** Set on a single pin. Clusters mix sources, so this stays null. */
     val source: DropSource? = null,
+    /** A time capsule whose story is still hidden. Clusters are not sealed. */
+    @SerialName("sealed") val capsuleSealed: Boolean = false,
 ) {
     val isCluster: Boolean get() = kind == "cluster"
     val location: LatLng get() = LatLng(latitude, longitude)
@@ -200,6 +215,8 @@ data class ImpactNotice(
     @SerialName("read_at") val readAt: Instant? = null,
     @Serializable(with = InstantSerializer::class)
     @SerialName("created_at") val createdAt: Instant,
+    /** How many times this drop's capsule was opened that day. */
+    @SerialName("capsule_opens") val capsuleOpens: Int = 0,
     /** Not on the wire. The in-memory inbox uses it to keep each person's notes apart. */
     @Serializable(with = UuidSerializer::class)
     @SerialName("recipient_id") val recipientId: Uuid? = null,

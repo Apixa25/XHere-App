@@ -483,6 +483,13 @@ private fun ColumnScope.ImpactInbox(
                     text = stringResource(R.string.detail_impact, notice.viewEvents, notice.confirmEvents),
                     style = MaterialTheme.typography.bodyLarge,
                 )
+                if (notice.capsuleOpens > 0) {
+                    Text(
+                        text = stringResource(R.string.impact_capsule_opened, notice.capsuleOpens),
+                        style = MaterialTheme.typography.bodyLarge,
+                        modifier = Modifier.testTag(TestTags.impactCapsule(notice.shortId)),
+                    )
+                }
                 Text(
                     text = notice.noticeDay,
                     style = MaterialTheme.typography.bodyMedium,
