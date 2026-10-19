@@ -84,7 +84,7 @@ select is(
   'a point outside the region does not return the walk'
 );
 select ok(
-  not has_function_privilege('anon', 'public.check_in(double precision, double precision, uuid)', 'execute')
+  not has_function_privilege('anon', 'public.check_in(double precision, double precision, uuid, jsonb)', 'execute')
   and not has_function_privilege('anon', 'public.start_walk(uuid)', 'execute')
   and has_function_privilege('anon', 'public.walks_for_point(double precision, double precision)', 'execute'),
   'signed-out visitors can read walks and cannot record progress'

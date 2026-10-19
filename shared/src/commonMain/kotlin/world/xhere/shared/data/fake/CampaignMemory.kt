@@ -44,6 +44,7 @@ fun MemoryStore.countedDrops(
         windowStart = windowStart,
         windowEnd = windowEnd,
         now = now,
+        countsForCredit = drop.countsForCredit,
     )
     if (!counts) return@mapNotNull null
     CountedDrop(

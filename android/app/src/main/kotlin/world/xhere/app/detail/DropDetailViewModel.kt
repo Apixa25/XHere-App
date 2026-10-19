@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import world.xhere.app.location.DeviceLocation
+import world.xhere.app.location.LocationReading
 import world.xhere.shared.data.XHereApiException
 import world.xhere.shared.data.XHereServices
 import world.xhere.shared.geo.Geo
@@ -37,6 +38,7 @@ enum class DetailNotice {
     RATE_LIMITED,
     FAILED,
     UNAVAILABLE,
+    NOT_COUNTED,
 }
 
 enum class SafetyDialog { REPORT_DROP, REPORT_AUTHOR, BLOCK_AUTHOR }
@@ -86,6 +88,8 @@ data class DetailUiState(
     /** Hidden or blocked from this screen: the drop is gone for this person. */
     val gone: Boolean = false,
     val canUndoHide: Boolean = false,
+    /** Close enough, but the location check withheld the body. */
+    val locationWithheld: Boolean = false,
 )
 
 /**
@@ -114,7 +118,8 @@ class DropDetailViewModel(
     private var mine: Boolean = false
     private var distance: Double? = null
     private var fetchedInside: Boolean? = null
-    private var lastFix: LatLng? = null
+    private var lastReading: LocationReading? = null
+    private var lastFetchedKey: String? = null
     private var detailJob: Job? = null
 
     init {
@@ -143,14 +148,17 @@ class DropDetailViewModel(
 
     fun confirm(verdict: ConfirmationVerdict) {
         val id = dropId ?: return
-        val here = lastFix ?: return
+        val here = lastReading ?: return
         viewModelScope.launch {
             _state.update { it.copy(answering = true, notice = null) }
             try {
-                services.drops.confirmDrop(id, verdict, here)
-                val detailed = services.drops.dropDetail(id, here)
+                val result = services.drops.confirmDrop(id, verdict, here.point, signal = here.signal)
+                val detailed = services.drops.dropDetail(id, here.point, here.signal)
                 card = detailed
                 publish()
+                if (!result.countsForCredit) {
+                    _state.update { it.copy(notice = DetailNotice.NOT_COUNTED) }
+                }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: XHereApiException) {
@@ -221,7 +229,8 @@ class DropDetailViewModel(
             services.hidden.unhideDrop(id)
             _state.update { it.copy(sending = false, gone = false, canUndoHide = false, safetyMessage = null) }
             fetchedInside = null
-            card = services.drops.dropDetail(id, lastFix)
+            val reading = lastReading
+            card = services.drops.dropDetail(id, reading?.point, reading?.signal)
             publish()
         }
     }
@@ -273,9 +282,10 @@ class DropDetailViewModel(
         }
     }
 
-    private fun onFix(fix: LatLng) {
+    private fun onFix(reading: LocationReading) {
         val here = place ?: return
-        lastFix = fix
+        val fix = reading.point
+        lastReading = reading
         if (_state.value.gone) return
         val next = Geo.distanceMeters(fix, here)
         val wasInside = distance?.let { it <= revealRadius }
@@ -283,14 +293,16 @@ class DropDetailViewModel(
         val nowInside = next <= revealRadius
         publish()
         if (mine) return
-        if (fetchedInside != null && wasInside == nowInside) return
+        val key = signalKey(reading)
+        if (fetchedInside != null && wasInside == nowInside && key == lastFetchedKey) return
         val id = dropId ?: return
         detailJob?.cancel()
         detailJob = viewModelScope.launch {
             try {
-                val detailed = services.drops.dropDetail(id, fix)
-                if (lastFix != fix) return@launch
+                val detailed = services.drops.dropDetail(id, fix, reading.signal)
+                if (lastReading != reading) return@launch
                 card = detailed
+                lastFetchedKey = key
                 fetchedInside = detailed.isMine || (distance != null && distance!! <= revealRadius)
                 publish()
             } catch (e: CancellationException) {
@@ -357,6 +369,7 @@ class DropDetailViewModel(
                 safetyMessage = previous.safetyMessage,
                 gone = previous.gone,
                 canUndoHide = previous.canUndoHide,
+                locationWithheld = current.locationWithheld && !publicRecord && !current.isMine,
             )
         }
     }
@@ -367,6 +380,9 @@ class DropDetailViewModel(
         "drop_not_found" -> DetailNotice.UNAVAILABLE
         else -> DetailNotice.FAILED
     }
+
+    private fun signalKey(reading: LocationReading): String =
+        "${reading.signal.mock}|${reading.signal.deviceFix}|${reading.signal.developerOptions}|${reading.signal.accuracyM}"
 
     private companion object {
         const val SAFETY_GROUP = "safety_alerts"

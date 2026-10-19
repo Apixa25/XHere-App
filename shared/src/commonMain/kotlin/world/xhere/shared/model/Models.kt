@@ -199,6 +199,9 @@ data class MediaUpload(
     val width: Int? = null,
     val height: Int? = null,
     @SerialName("duration_s") val durationS: Double? = null,
+    /** Read from the photo before Exif is stripped. The server does not store these. */
+    @SerialName("capture_lat") val captureLat: Double? = null,
+    @SerialName("capture_lng") val captureLng: Double? = null,
 )
 
 data class Confirmation(
@@ -208,6 +211,7 @@ data class Confirmation(
     val note: String?,
     val distanceM: Int,
     val createdAt: Instant,
+    val countsForCredit: Boolean = true,
 )
 
 data class Report(

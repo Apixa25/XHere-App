@@ -47,6 +47,8 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.callbackFlow
+import world.xhere.app.location.LocationReading
+import world.xhere.shared.integrity.LocationSignal
 import kotlinx.coroutines.launch
 
 class FakeGoogleIdTokenSource : GoogleIdTokenSource {
@@ -178,7 +180,7 @@ private fun jpegWithExif(): ByteArray {
 /** Foreground fixes the detail tests can push. Permission stays off until a test allows it. */
 class ScriptedDeviceLocation : DeviceLocation {
     private val permitted = java.util.concurrent.atomic.AtomicBoolean(false)
-    private val updates = MutableSharedFlow<LatLng>(extraBufferCapacity = 16)
+    private val updates = MutableSharedFlow<LocationReading>(extraBufferCapacity = 16)
     private val collectors = java.util.concurrent.atomic.AtomicInteger(0)
 
     val collectionCount: Int get() = collectors.get()
@@ -193,11 +195,16 @@ class ScriptedDeviceLocation : DeviceLocation {
         permitted.set(false)
     }
 
+    /** A real device fix with no extra signals, so existing tests still count. */
     fun emit(point: LatLng) {
-        updates.tryEmit(point)
+        emit(LocationReading(point, LocationSignal(accuracyM = 10.0)))
     }
 
-    override fun fixes(): Flow<LatLng> = callbackFlow {
+    fun emit(reading: LocationReading) {
+        updates.tryEmit(reading)
+    }
+
+    override fun fixes(): Flow<LocationReading> = callbackFlow {
         collectors.incrementAndGet()
         val job = launch {
             updates.collect { send(it) }

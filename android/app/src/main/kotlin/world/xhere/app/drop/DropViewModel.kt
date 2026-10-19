@@ -14,6 +14,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.flow.first
 import world.xhere.app.location.DeviceLocation
+import world.xhere.shared.integrity.LocationSignal
 import world.xhere.shared.data.XHereApiException
 import world.xhere.shared.data.XHereServices
 import world.xhere.shared.demo.JamestownDemo
@@ -186,8 +187,8 @@ class DropViewModel(
                 val result = services.drops.createDrop(
                     CreateDropRequest(
                         categorySlug = slug,
-                        latitude = here.latitude,
-                        longitude = here.longitude,
+                        latitude = here.point.latitude,
+                        longitude = here.point.longitude,
                         title = title,
                         body = bodyFor(snapshot, title),
                         attributes = AttributeFields.toAttributes(snapshot.fields, snapshot.values),
@@ -197,6 +198,7 @@ class DropViewModel(
                         displayAnonymous = false,
                         media = listOfNotNull(photo),
                         acknowledgeGuidelines = snapshot.guidelinesChecked,
+                        signal = here.signal,
                     ),
                 )
                 remember(slug)
@@ -211,6 +213,7 @@ class DropViewModel(
                         fuzz = fuzzNotice(result.locationPrecisionM),
                         error = null,
                         held = held,
+                        reducedTrust = !held && !result.countsForCredit,
                     )
                 }
             } catch (e: CancellationException) {
@@ -249,8 +252,8 @@ class DropViewModel(
             val query = SuggestionQuery(
                 text = _state.value.text,
                 labels = labels,
-                latitude = here.latitude,
-                longitude = here.longitude,
+                latitude = here.point.latitude,
+                longitude = here.point.longitude,
                 hour = ZonedDateTime.now().hour,
                 recentSlugs = recent.toList(),
             )
@@ -272,10 +275,15 @@ class DropViewModel(
         }
     }
 
-    private suspend fun here(): LatLng {
-        pinned?.let { return it }
-        if (!location.hasPermission()) return JamestownDemo.center
-        return withTimeoutOrNull(250) { location.fixes().first() } ?: JamestownDemo.center
+    private suspend fun here(): HerePoint {
+        pinned?.let { return HerePoint(it, LocationSignal(deviceFix = false)) }
+        if (!location.hasPermission()) return HerePoint(JamestownDemo.center, LocationSignal(deviceFix = false))
+        val reading = withTimeoutOrNull(250) { location.fixes().first() }
+        return if (reading == null) {
+            HerePoint(JamestownDemo.center, LocationSignal(deviceFix = false))
+        } else {
+            HerePoint(reading.point, reading.signal)
+        }
     }
 
     private fun expiresFor(slug: String, ttl: RightNowDuration?): kotlin.time.Instant? {
@@ -320,6 +328,8 @@ class DropViewModel(
     }
 }
 
+private data class HerePoint(val point: LatLng, val signal: LocationSignal)
+
 enum class DropPhase {
     CAPTURE,
     CHOOSE,
@@ -350,6 +360,8 @@ data class DropUiState(
     val safety: SafetyPanel? = null,
     /** The last post went to pre-moderation. */
     val held: Boolean = false,
+    /** Posted, but the location check said it should not earn credit. */
+    val reducedTrust: Boolean = false,
     /** Place name and coordinates when the composer was opened from a Here Card. */
     val pinnedLabel: String? = null,
 )

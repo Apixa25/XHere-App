@@ -96,6 +96,9 @@ import world.xhere.shared.data.remote.UserIdParams
 import world.xhere.shared.data.remote.taxonomyOf
 import world.xhere.shared.data.remote.toParams
 import world.xhere.shared.geo.BoundingBox
+import world.xhere.shared.integrity.LocationIntegrityFlag
+import world.xhere.shared.integrity.LocationSignal
+import world.xhere.shared.media.ExifGps
 import world.xhere.shared.geo.Geo
 import world.xhere.shared.geo.LatLng
 import world.xhere.shared.live.LiveRegion
@@ -302,13 +305,13 @@ class SupabaseXHereClient(
             ).decodeList<DropCard>()
         }
 
-        override suspend fun dropDetail(dropId: Uuid, location: LatLng?): DropCard = call {
+        override suspend fun dropDetail(dropId: Uuid, location: LatLng?, signal: LocationSignal?): DropCard = call {
             if (location != null && !Geo.isValid(location)) {
                 throw invalid("invalid_location", "lat=${location.latitude} lng=${location.longitude}")
             }
             supabase.postgrest.rpc(
                 "drop_detail",
-                DropDetailParams(dropId, location?.latitude, location?.longitude).rpcJson(),
+                DropDetailParams(dropId, location?.latitude, location?.longitude, signal).rpcJson(),
             ).decodeAs<DropCard>()
         }
 
@@ -325,11 +328,12 @@ class SupabaseXHereClient(
             verdict: ConfirmationVerdict,
             location: LatLng,
             note: String?,
+            signal: LocationSignal?,
         ): ConfirmDropResult = call {
             if (!Geo.isValid(location)) throw invalid("invalid_location", "lat=${location.latitude} lng=${location.longitude}")
             supabase.postgrest.rpc(
                 "confirm_drop",
-                ConfirmDropParams(dropId, verdict, location.latitude, location.longitude, note).rpcJson(),
+                ConfirmDropParams(dropId, verdict, location.latitude, location.longitude, note, signal).rpcJson(),
             ).decodeAs<ConfirmDropResult>()
         }
     }
@@ -451,13 +455,13 @@ class SupabaseXHereClient(
             decode(supabase.postgrest.rpc("start_walk", StartWalkParams(walkId).rpcJson()).data)
         }
 
-        override suspend fun checkIn(point: LatLng, walkId: Uuid?): CheckInResult = call {
+        override suspend fun checkIn(point: LatLng, walkId: Uuid?, signal: LocationSignal?): CheckInResult = call {
             if (!Geo.isValid(point)) {
                 throw invalid("invalid_location", "lat=${point.latitude} lng=${point.longitude}")
             }
             decode(supabase.postgrest.rpc(
                 "check_in",
-                CheckInParams(point.latitude, point.longitude, walkId).rpcJson(),
+                CheckInParams(point.latitude, point.longitude, walkId, signal).rpcJson(),
             ).data)
         }
 
@@ -528,6 +532,11 @@ class SupabaseXHereClient(
         override suspend fun queue(limit: Int): List<ModerationQueueItem> = call {
             supabase.postgrest.rpc("moderation_queue", QueueParams(limit).rpcJson()).decodeList<ModerationQueueItem>()
         }
+
+        override suspend fun integrityQueue(limit: Int): List<LocationIntegrityFlag> = call {
+            supabase.postgrest.rpc("location_integrity_queue", QueueParams(limit.coerceIn(1, 200)).rpcJson())
+                .decodeList<LocationIntegrityFlag>()
+        }
     }
 
     private inner class SuggestionRepo : SuggestionRepository {
@@ -597,11 +606,14 @@ class SupabaseXHereClient(
                     throw XHereApiException(code, detail = "photo upload failed")
                 }
                 val stored = XHereJson.decodeFromString(StoredPhotoWire.serializer(), payload)
+                val capture = if (mime == "image/jpeg") ExifGps.read(bytes) else null
                 return MediaUpload(
                     storagePath = stored.storagePath,
                     mediaKind = MediaKind.IMAGE,
                     mimeType = stored.mimeType,
                     byteSize = stored.byteSize,
+                    captureLat = capture?.latitude,
+                    captureLng = capture?.longitude,
                 )
             } catch (e: CancellationException) {
                 throw e

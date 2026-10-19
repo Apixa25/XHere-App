@@ -5,6 +5,7 @@ import kotlin.uuid.Uuid
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonObject
+import world.xhere.shared.integrity.LocationSignal
 import world.xhere.shared.json.InstantSerializer
 import world.xhere.shared.json.UuidSerializer
 import world.xhere.shared.model.ConfirmationVerdict
@@ -82,6 +83,7 @@ internal data class DropDetailParams(
     @SerialName("p_drop_id") val dropId: Uuid,
     @SerialName("p_lat") val lat: Double? = null,
     @SerialName("p_lng") val lng: Double? = null,
+    @SerialName("p_integrity") val integrity: LocationSignal? = null,
 )
 
 @Serializable
@@ -104,6 +106,7 @@ internal data class CreateDropParams(
     @SerialName("p_display_anonymous") val displayAnonymous: Boolean = false,
     @SerialName("p_media") val media: List<MediaUpload> = emptyList(),
     @SerialName("p_acknowledge_guidelines") val acknowledgeGuidelines: Boolean = false,
+    @SerialName("p_integrity") val integrity: LocationSignal? = null,
 )
 
 @Serializable
@@ -124,6 +127,7 @@ internal data class CheckInParams(
     @SerialName("p_lng") val lng: Double,
     @Serializable(with = UuidSerializer::class)
     @SerialName("p_walk_id") val walkId: Uuid? = null,
+    @SerialName("p_integrity") val integrity: LocationSignal? = null,
 )
 
 @Serializable
@@ -151,6 +155,7 @@ internal data class ConfirmDropParams(
     @SerialName("p_lat") val lat: Double,
     @SerialName("p_lng") val lng: Double,
     @SerialName("p_note") val note: String? = null,
+    @SerialName("p_integrity") val integrity: LocationSignal? = null,
 )
 
 @Serializable
@@ -235,4 +240,5 @@ internal fun CreateDropRequest.toParams(): CreateDropParams = CreateDropParams(
     displayAnonymous = displayAnonymous,
     media = media,
     acknowledgeGuidelines = acknowledgeGuidelines,
+    integrity = signal,
 )

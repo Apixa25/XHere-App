@@ -61,6 +61,7 @@ class CampaignRulesTest {
         assertTrue(!counts(DropSource.USER, DropStatus.ACTIVE, LatLng(10.0, 20.0)))
         assertTrue(!counts(DropSource.USER, DropStatus.ACTIVE, inside, createdAt = now - 2.days, windowStart = now - 1.hours))
         assertTrue(!counts(DropSource.USER, DropStatus.ACTIVE, inside, createdAt = now + 14.days, windowEnd = now + 14.days))
+        assertTrue(!counts(DropSource.USER, DropStatus.ACTIVE, inside, countsForCredit = false))
     }
 
     @Test
@@ -89,6 +90,7 @@ class CampaignRulesTest {
         createdAt: kotlin.time.Instant = now,
         windowStart: kotlin.time.Instant? = null,
         windowEnd: kotlin.time.Instant? = null,
+        countsForCredit: Boolean = true,
     ) = CampaignRules.counts(
         source = source,
         status = status,
@@ -101,6 +103,7 @@ class CampaignRulesTest {
         windowStart = windowStart,
         windowEnd = windowEnd,
         now = now,
+        countsForCredit = countsForCredit,
     )
 
     private fun row(

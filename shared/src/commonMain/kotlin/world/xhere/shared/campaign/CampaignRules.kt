@@ -14,8 +14,9 @@ import world.xhere.shared.model.LeaderboardEntry
  * The same rules as `private.drop_counts_in_region` and `private.refresh_founders`.
  * The database is the authority. This copy is what the offline app and the tests use.
  *
- * A qualifying drop is a user drop other people can see, inside the region box.
- * `open_data` never counts. Founding Local is the first [cap] people by their
+ * A qualifying drop is a user drop other people can see, inside the region box,
+ * whose location check counted (`counts_for_credit`). `open_data` never counts.
+ * Founding Local is the first [cap] people by their
  * earliest qualifying drop, for all time. A campaign counts drops inside its window.
  */
 object CampaignRules {
@@ -47,7 +48,9 @@ object CampaignRules {
         windowStart: Instant?,
         windowEnd: Instant?,
         now: Instant,
+        countsForCredit: Boolean = true,
     ): Boolean {
+        if (!countsForCredit) return false
         if (source != DropSource.USER || authorId == null || authorDeleted) return false
         if (status != DropStatus.ACTIVE && status != DropStatus.CONFIRMED) return false
         if (expiresAt != null && expiresAt <= now) return false

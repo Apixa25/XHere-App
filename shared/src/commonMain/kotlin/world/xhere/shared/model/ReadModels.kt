@@ -52,13 +52,17 @@ data class DropCard(
     val attribution: String? = null,
     /** Unique signed-in viewers, not counting the author. Anonymous opens are not included. */
     @SerialName("view_count") val viewCount: Long = 0,
-    /** This caller's answer, when they have confirmed or denied. */
+    /** This caller's answer, when they have confirmed or denied and that answer counted. */
     @SerialName("my_verdict") val myVerdict: ConfirmationVerdict? = null,
     /**
      * Badges to show next to the author. Empty when the drop is anonymous or a public record.
      * A regional badge is included only when this drop is inside that region.
      */
     @SerialName("author_badges") val authorBadges: List<BadgeAward> = emptyList(),
+    /** `standard` or `reduced`. Reduced posts stay on the map and do not earn credit. */
+    @SerialName("location_trust") val locationTrust: String = "standard",
+    /** True when this caller was close enough, but the location check withheld the body. */
+    @SerialName("location_withheld") val locationWithheld: Boolean = false,
 ) {
     val displayLocation: LatLng get() = LatLng(latitude, longitude)
 
@@ -132,6 +136,10 @@ data class CreateDropResult(
     @SerialName("location_precision_m") val locationPrecisionM: Int,
     @SerialName("posting_notice") val postingNotice: String? = null,
     @SerialName("possible_duplicates") val possibleDuplicates: List<String> = emptyList(),
+    /** False when this post failed the location check. Quests and badges must skip it. */
+    @SerialName("counts_for_credit") val countsForCredit: Boolean = true,
+    @SerialName("location_trust") val locationTrust: String = "standard",
+    val reasons: List<String> = emptyList(),
 ) {
     val displayLocation: LatLng get() = LatLng(latitude, longitude)
 }
@@ -148,6 +156,8 @@ data class ConfirmDropResult(
     @Serializable(with = InstantSerializer::class)
     @SerialName("expires_at") val expiresAt: Instant? = null,
     @SerialName("distance_m") val distanceM: Int,
+    @SerialName("counts_for_credit") val countsForCredit: Boolean = true,
+    val reasons: List<String> = emptyList(),
 )
 
 /**

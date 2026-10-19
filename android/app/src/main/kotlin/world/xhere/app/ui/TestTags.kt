@@ -135,6 +135,7 @@ internal object TestTags {
     const val DROP_FUZZ = "drop_fuzz"
     const val DROP_ANOTHER = "drop_another"
     const val DROP_PINNED = "drop_pinned"
+    const val DROP_REDUCED = "drop_reduced"
     const val DROP_TTL_USUAL = "drop_ttl_usual"
 
     fun dropTtl(id: String): String = "drop_ttl_$id"
@@ -209,6 +210,7 @@ internal object TestTags {
     const val MOD_EMPTY = "mod_empty"
     const val MOD_DENIED = "mod_denied"
     const val MOD_MESSAGE = "mod_message"
+    const val MOD_INTEGRITY = "mod_integrity"
 
     fun queueItem(id: String): String = "queue_$id"
 

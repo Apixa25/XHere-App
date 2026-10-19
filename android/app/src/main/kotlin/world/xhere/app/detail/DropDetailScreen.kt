@@ -455,10 +455,10 @@ private fun LockedCard(state: DetailUiState, onUseLocation: () -> Unit) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             val gap = state.distanceM?.let { Geo.revealGapMeters(it, state.revealRadiusM) }
             Text(
-                text = if (gap != null && gap > 0) {
-                    stringResource(R.string.detail_walk_closer, gap)
-                } else {
-                    stringResource(R.string.detail_locked)
+                text = when {
+                    state.locationWithheld -> stringResource(R.string.detail_location_withheld)
+                    gap != null && gap > 0 -> stringResource(R.string.detail_walk_closer, gap)
+                    else -> stringResource(R.string.detail_locked)
                 },
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onPrimaryContainer,
@@ -513,4 +513,5 @@ private fun noticeText(notice: DetailNotice): String = when (notice) {
     DetailNotice.RATE_LIMITED -> stringResource(R.string.detail_rate_limited)
     DetailNotice.UNAVAILABLE -> stringResource(R.string.detail_unavailable)
     DetailNotice.FAILED -> stringResource(R.string.detail_confirm_failed)
+    DetailNotice.NOT_COUNTED -> stringResource(R.string.detail_not_counted)
 }

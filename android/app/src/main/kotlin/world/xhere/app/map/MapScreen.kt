@@ -318,6 +318,9 @@ private fun noticeText(notice: MapNotice): String = when (notice) {
     MapNotice.LOCATION_OFF -> stringResource(R.string.map_location_off)
     MapNotice.PRESET_NAME -> stringResource(R.string.map_preset_rejected)
     MapNotice.WALK_FAILED -> stringResource(R.string.walk_failed)
+    MapNotice.MOCK_LOCATION -> stringResource(R.string.map_mock_location)
+    MapNotice.IMPOSSIBLE_TRAVEL -> stringResource(R.string.map_impossible_travel)
+    MapNotice.UNVERIFIED_FIX -> stringResource(R.string.map_unverified_fix)
 }
 
 @Composable

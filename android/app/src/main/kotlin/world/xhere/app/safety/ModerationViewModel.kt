@@ -16,6 +16,7 @@ import world.xhere.shared.model.DropStatus
 import world.xhere.shared.model.ModerateDropAction
 import world.xhere.shared.model.ModerationQueueItem
 import world.xhere.shared.model.QueueItemKind
+import world.xhere.shared.integrity.LocationIntegrityFlag
 import world.xhere.shared.model.ReportStatus
 
 enum class ModAction(val slug: String) {
@@ -35,6 +36,7 @@ data class ModerationUiState(
     val denied: Boolean = false,
     val failed: Boolean = false,
     val items: List<ModerationQueueItem> = emptyList(),
+    val flags: List<LocationIntegrityFlag> = emptyList(),
     val busy: Boolean = false,
     val message: ModMessage? = null,
 )
@@ -104,7 +106,8 @@ class ModerationViewModel(
     private suspend fun reload() {
         try {
             val items = services.moderation.queue()
-            _state.update { it.copy(loading = false, denied = false, failed = false, items = items) }
+            val flags = runCatching { services.moderation.integrityQueue() }.getOrDefault(emptyList())
+            _state.update { it.copy(loading = false, denied = false, failed = false, items = items, flags = flags) }
         } catch (e: CancellationException) {
             throw e
         } catch (e: XHereApiException) {

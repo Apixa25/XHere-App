@@ -21,6 +21,7 @@ import kotlin.time.Clock
 import org.koin.androidx.compose.koinViewModel
 import world.xhere.app.R
 import world.xhere.app.ui.TestTags
+import world.xhere.shared.integrity.LocationIntegrityFlag
 import world.xhere.shared.model.ModerationQueueItem
 import world.xhere.shared.model.QueueItemKind
 
@@ -47,12 +48,20 @@ fun ModerationScreen(onBack: () -> Unit, viewModel: ModerationViewModel = koinVi
                 if (state.failed) {
                     Text(stringResource(R.string.mod_failed), color = MaterialTheme.colorScheme.error)
                 }
-                if (state.items.isEmpty() && !state.failed) {
+                if (state.items.isEmpty() && state.flags.isEmpty() && !state.failed) {
                     Text(
                         text = stringResource(R.string.mod_empty),
                         style = MaterialTheme.typography.bodyLarge,
                         modifier = Modifier.testTag(TestTags.MOD_EMPTY),
                     )
+                }
+                if (state.flags.isNotEmpty()) {
+                    Text(
+                        text = stringResource(R.string.mod_integrity),
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.testTag(TestTags.MOD_INTEGRITY),
+                    )
+                    state.flags.forEach { flag -> IntegrityRow(flag) }
                 }
                 state.items.forEach { item ->
                     QueueCard(
@@ -127,6 +136,16 @@ private fun QueueCard(
             }
         }
     }
+}
+
+@Composable
+private fun IntegrityRow(flag: LocationIntegrityFlag) {
+    val who = flag.handle ?: flag.userId.toString()
+    Text(
+        text = stringResource(R.string.mod_integrity_row, who, flag.reasons.joinToString(", ")),
+        style = MaterialTheme.typography.bodyMedium,
+        modifier = Modifier.testTag("mod_flag_${flag.action}"),
+    )
 }
 
 private fun actionLabel(action: ModAction): Int = when (action) {

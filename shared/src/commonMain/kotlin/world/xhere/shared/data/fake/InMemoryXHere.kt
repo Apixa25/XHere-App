@@ -31,6 +31,13 @@ import world.xhere.shared.geo.BoundingBox
 import world.xhere.shared.geo.Geo
 import world.xhere.shared.geo.LatLng
 import world.xhere.shared.here.Here
+import world.xhere.shared.integrity.LocationAction
+import world.xhere.shared.integrity.LocationCheckpoint
+import world.xhere.shared.integrity.LocationDecision
+import world.xhere.shared.integrity.LocationIntegrity
+import world.xhere.shared.integrity.LocationIntegrityFlag
+import world.xhere.shared.integrity.LocationSignal
+import world.xhere.shared.media.ExifGps
 import world.xhere.shared.json.ExportJson
 import world.xhere.shared.model.BadgeAward
 import world.xhere.shared.model.BadgeShelf
@@ -150,6 +157,62 @@ class InMemoryXHere(
         val anonymous = drop.displayAnonymous && drop.category.allowAnonymousDisplay
         val badges = store.awardsFor(drop.authorId, drop.trueLocation, anonymous, clock())
         return drop.toCard(viewerId, distance, verdict, revealDistance, badges)
+    }
+
+    private fun decideLocation(
+        userId: Uuid,
+        action: LocationAction,
+        point: LatLng,
+        signal: LocationSignal?,
+    ): LocationDecision {
+        val now = clock()
+        val decision = LocationIntegrity.decide(action, point, signal, store.checkpoints[userId], now)
+        if (decision.moveCheckpoint) {
+            store.checkpoints[userId] = LocationCheckpoint(point.latitude, point.longitude, now)
+        }
+        return decision
+    }
+
+    private fun recordIntegrityFlag(userId: Uuid, action: LocationAction, targetId: Uuid?, reasons: List<String>) {
+        if (reasons.isEmpty()) return
+        val now = clock()
+        val duplicate = store.integrityFlags.any { flag ->
+            flag.userId == userId &&
+                flag.action == action.wire &&
+                flag.targetId == targetId &&
+                flag.reasons == reasons &&
+                now - flag.createdAt < LocationIntegrity.flagDedupe &&
+                flag.expiresAt > now
+        }
+        if (duplicate) return
+        store.integrityFlags += StoredIntegrityFlag(
+            id = Uuid.random(),
+            userId = userId,
+            action = action.wire,
+            targetId = targetId,
+            reasons = reasons,
+            createdAt = now,
+            expiresAt = now + LocationIntegrity.flagTtl,
+        )
+    }
+
+    private fun integrityQueue(viewerId: Uuid, limit: Int): List<LocationIntegrityFlag> {
+        val now = clock()
+        return store.integrityFlags
+            .filter { it.expiresAt > now && it.userId != viewerId && it.userId !in store.deleted }
+            .sortedByDescending { it.createdAt }
+            .take(limit.coerceIn(1, 200))
+            .map { flag ->
+                LocationIntegrityFlag(
+                    id = flag.id,
+                    userId = flag.userId,
+                    handle = store.profiles[flag.userId]?.handle,
+                    action = flag.action,
+                    targetId = flag.targetId,
+                    reasons = flag.reasons,
+                    createdAt = flag.createdAt,
+                )
+            }
     }
 
     private fun recordView(drop: StoredDrop) {
@@ -283,7 +346,7 @@ class InMemoryXHere(
                 }
         }
 
-        override suspend fun dropDetail(dropId: Uuid, location: LatLng?): DropCard {
+        override suspend fun dropDetail(dropId: Uuid, location: LatLng?, signal: LocationSignal?): DropCard {
             if (location != null && !Geo.isValid(location)) {
                 throw XHereApiException.fromViolation(world.xhere.shared.rules.RuleViolation("invalid_location"))
             }
@@ -292,8 +355,31 @@ class InMemoryXHere(
                 throw XHereApiException("drop_not_found", sqlState = XHereApiException.SQL_NOT_FOUND)
             }
             val distance = location?.let { Geo.distanceMeters(it, drop.displayLocation) }
-            recordView(drop)
-            return card(drop, viewer?.id, distance, store.verdict(drop.id, viewer?.id))
+            val viewerId = viewer?.id
+            var withheld = false
+            if (location != null && viewerId != null) {
+                val decision = decideLocation(viewerId, LocationAction.REVEAL, location, signal)
+                val publicRecord = drop.source == world.xhere.shared.model.DropSource.OPEN_DATA
+                val mine = drop.authorId == viewerId && !publicRecord
+                withheld = !decision.countsForCredit &&
+                    !mine &&
+                    !publicRecord &&
+                    distance != null &&
+                    distance <= drop.revealRadiusM
+                if (withheld) {
+                    recordIntegrityFlag(viewerId, LocationAction.REVEAL, drop.id, decision.reasons)
+                } else {
+                    recordView(drop)
+                }
+            } else {
+                recordView(drop)
+            }
+            val built = card(drop, viewerId, distance, store.verdict(drop.id, viewerId))
+            return if (withheld) {
+                built.copy(revealed = false, body = null, attributes = null, media = null, tags = null, locationWithheld = true)
+            } else {
+                built
+            }
         }
 
         override suspend fun dropTeaser(shortId: String): DropCard {
@@ -359,6 +445,7 @@ class InMemoryXHere(
                     Geo.distanceMeters(display, existing.displayLocation) <= 50.0 &&
                     store.canView(existing, profile.id, clock())
             }.take(5).map { it.shortId }
+            val decision = decideLocation(profile.id, LocationAction.CREATE_DROP, LatLng(request.latitude, request.longitude), request.signal)
             val id = Uuid.random()
             val shortId = store.nextShortId()
             val groupSlug = store.taxonomy.groups.firstOrNull { it.id == category.groupId }?.slug ?: ""
@@ -381,6 +468,11 @@ class InMemoryXHere(
                 expiresAt = checked.expiresAt,
                 createdAt = clock(),
                 media = request.media.mapIndexed { index, item ->
+                    val capture = if (item.captureLat != null && item.captureLng != null) {
+                        LatLng(item.captureLat, item.captureLng)
+                    } else {
+                        null
+                    }
                     DropMedia(
                         id = Uuid.random(),
                         storageBucket = item.storageBucket,
@@ -391,10 +483,21 @@ class InMemoryXHere(
                         width = item.width,
                         height = item.height,
                         durationS = item.durationS,
+                        takenHere = LocationIntegrity.photoTakenHere(
+                            LatLng(request.latitude, request.longitude),
+                            capture,
+                            request.signal?.accuracyM,
+                            decision.countsForCredit,
+                        ),
                     )
                 },
+                locationTrust = decision.locationTrust,
+                countsForCredit = decision.countsForCredit,
             )
             store.drops[id] = stored
+            if (!decision.countsForCredit) {
+                recordIntegrityFlag(profile.id, LocationAction.CREATE_DROP, id, decision.reasons)
+            }
             return CreateDropResult(
                 id = id,
                 shortId = shortId,
@@ -408,6 +511,9 @@ class InMemoryXHere(
                 locationPrecisionM = category.locationPrecisionM,
                 postingNotice = category.postingNotice,
                 possibleDuplicates = duplicates,
+                countsForCredit = decision.countsForCredit,
+                locationTrust = decision.locationTrust,
+                reasons = decision.reasons,
             )
         }
 
@@ -416,6 +522,7 @@ class InMemoryXHere(
             verdict: ConfirmationVerdict,
             location: LatLng,
             note: String?,
+            signal: LocationSignal?,
         ): ConfirmDropResult {
             val profile = requireViewer()
             if (!Geo.isValid(location)) throw XHereApiException.fromViolation(world.xhere.shared.rules.RuleViolation("invalid_location"))
@@ -432,7 +539,8 @@ class InMemoryXHere(
             }
             val distance = Geo.distanceMeters(location, drop.displayLocation)
             val problems = CategoryRules.checkConfirmation(distance, drop.revealRadiusM, note, drop.authorId == profile.id)
-            val previous = store.confirmations[dropId to profile.id]?.verdict
+            val previousRow = store.confirmations[dropId to profile.id]
+            val previous = previousRow?.verdict
             if (problems.isNotEmpty()) throw XHereApiException.fromViolation(problems.first(), problems)
             val cap = store.taxonomy.limits(profile.tier)?.confirmationsPerHour
             if (cap != null) {
@@ -448,25 +556,47 @@ class InMemoryXHere(
                     )
                 }
             }
+            val decision = decideLocation(profile.id, LocationAction.CONFIRM_DROP, location, signal)
+            if (!decision.countsForCredit && previousRow?.countsForCredit == true) {
+                recordIntegrityFlag(profile.id, LocationAction.CONFIRM_DROP, drop.id, decision.reasons)
+                return ConfirmDropResult(
+                    dropId = dropId,
+                    verdict = previousRow.verdict,
+                    status = drop.status,
+                    isConfirmed = drop.status == DropStatus.CONFIRMED,
+                    confirmCount = drop.confirmCount,
+                    denyCount = drop.denyCount,
+                    expiresAt = drop.expiresAt,
+                    distanceM = previousRow.distanceM,
+                    countsForCredit = false,
+                    reasons = decision.reasons,
+                )
+            }
+            val counts = decision.countsForCredit
             store.confirmations[dropId to profile.id] = Confirmation(
                 dropId = dropId,
                 userId = profile.id,
                 verdict = verdict,
                 note = note?.trim()?.ifEmpty { null },
                 distanceM = distance.toInt(),
-                createdAt = clock(),
+                createdAt = previousRow?.createdAt ?: clock(),
+                countsForCredit = counts,
             )
-            val rows = store.confirmations.filterKeys { it.first == dropId }.values
+            val rows = store.confirmations.filterKeys { it.first == dropId }.values.filter { it.countsForCredit }
             val confirms = rows.count { it.verdict == ConfirmationVerdict.STILL_TRUE }
             val denies = rows.count { it.verdict == ConfirmationVerdict.NOT_TRUE }
             drop.confirmCount = confirms
             drop.denyCount = denies
             drop.status = CategoryRules.statusAfterConfirmations(drop.status, confirms, denies, drop.category)
             drop.expiresAt = CategoryRules.expiryAfterConfirmations(drop.status, drop.expiresAt, confirms, denies, drop.category)
-            if (verdict == ConfirmationVerdict.STILL_TRUE && previous != ConfirmationVerdict.STILL_TRUE) {
+            if (!counts) {
+                recordIntegrityFlag(profile.id, LocationAction.CONFIRM_DROP, drop.id, decision.reasons)
+            } else if (verdict == ConfirmationVerdict.STILL_TRUE &&
+                (previousRow == null || !previousRow.countsForCredit || previous != ConfirmationVerdict.STILL_TRUE)
+            ) {
                 store.noteHelped(drop, "confirm", clock())
             }
-            if (verdict == ConfirmationVerdict.STILL_TRUE) {
+            if (counts && verdict == ConfirmationVerdict.STILL_TRUE) {
                 drop.lastConfirmedAt = clock()
                 val extend = drop.category.confirmExtendsTtl
                 val currentExpiry = drop.expiresAt
@@ -485,6 +615,8 @@ class InMemoryXHere(
                 denyCount = drop.denyCount,
                 expiresAt = drop.expiresAt,
                 distanceM = distance.toInt(),
+                countsForCredit = counts,
+                reasons = decision.reasons,
             )
         }
     }
@@ -541,6 +673,7 @@ class InMemoryXHere(
             if (bytes.isEmpty() || bytes.size > MAX_PHOTO_BYTES) {
                 throw XHereApiException("invalid_image", sqlState = XHereApiException.SQL_VALIDATION, detail = "photo must be 1 byte..10 MB")
             }
+            val capture = if (mime == "image/jpeg") ExifGps.read(bytes) else null
             val stripped = ExifStrip.strip(bytes, mime)
             val extension = when (mime) {
                 "image/png" -> "png"
@@ -554,6 +687,8 @@ class InMemoryXHere(
                 mediaKind = MediaKind.IMAGE,
                 mimeType = mime,
                 byteSize = stripped.size.toLong(),
+                captureLat = capture?.latitude,
+                captureLng = capture?.longitude,
             )
         }
     }
@@ -735,22 +870,34 @@ class InMemoryXHere(
             return snapshot(walk, null)
         }
 
-        override suspend fun checkIn(point: LatLng, walkId: Uuid?): CheckInResult {
+        override suspend fun checkIn(point: LatLng, walkId: Uuid?, signal: LocationSignal?): CheckInResult {
             val uid = requireViewer().id
             if (!Geo.isValid(point)) throw invalidLocation(point)
-            val added = recordVisits(uid, point)
+            val decision = decideLocation(uid, LocationAction.WALK_CHECK_IN, point, signal)
+            val storedWalk = if (walkId != null) {
+                store.walks.firstOrNull { it.id == walkId && it.active }
+                    ?: throw XHereApiException("walk_not_found", sqlState = XHereApiException.SQL_NOT_FOUND)
+            } else {
+                null
+            }
+            val added: Int
             var walk: Walk? = null
             var just = false
-            if (walkId != null) {
-                val stored = store.walks.firstOrNull { it.id == walkId && it.active }
-                    ?: throw XHereApiException("walk_not_found", sqlState = XHereApiException.SQL_NOT_FOUND)
-                if (store.walkStarts.contains(uid to walkId)) {
-                    val before = snapshot(stored, point).completed
-                    markStops(uid, stored, point)
-                    walk = snapshot(stored, point)
-                    just = !before && walk.completed
-                } else {
-                    walk = snapshot(stored, point)
+            if (!decision.countsForCredit) {
+                recordIntegrityFlag(uid, LocationAction.WALK_CHECK_IN, walkId, decision.reasons)
+                added = 0
+                if (storedWalk != null) walk = snapshot(storedWalk, point)
+            } else {
+                added = recordVisits(uid, point)
+                if (storedWalk != null && walkId != null) {
+                    if (store.walkStarts.contains(uid to walkId)) {
+                        val before = snapshot(storedWalk, point).completed
+                        markStops(uid, storedWalk, point)
+                        walk = snapshot(storedWalk, point)
+                        just = !before && walk.completed
+                    } else {
+                        walk = snapshot(storedWalk, point)
+                    }
                 }
             }
             return CheckInResult(
@@ -759,6 +906,8 @@ class InMemoryXHere(
                 quests = questSnapshots(uid),
                 walk = walk,
                 walkJustCompleted = just,
+                countsForCredit = decision.countsForCredit,
+                reasons = decision.reasons,
             )
         }
 
@@ -1115,6 +1264,12 @@ class InMemoryXHere(
                 .sortedWith(compareByDescending<ModerationQueueItem> { it.sensitive }.thenByDescending { it.isPending }.thenBy { it.queuedAt })
                 .take(limit.coerceIn(1, 200))
         }
+
+        override suspend fun integrityQueue(limit: Int): List<LocationIntegrityFlag> {
+            val profile = requireViewer()
+            if (!profile.isModerator) throw XHereApiException("not_moderator", sqlState = XHereApiException.SQL_PERMISSION)
+            return integrityQueue(profile.id, limit)
+        }
     }
 }
 
@@ -1152,6 +1307,10 @@ class MemoryStore(
     /** People who turned off campaign leaderboards. Everyone else is listed when they have a display name. */
     val leaderboardHidden: MutableSet<Uuid> = mutableSetOf()
     val mediaBytes: MutableMap<String, ByteArray> = linkedMapOf()
+    /** One overwritten device fix per user. Not a trail, and not part of an export. */
+    val checkpoints: MutableMap<Uuid, LocationCheckpoint> = linkedMapOf()
+    /** Reason codes only. The moderator queue is the app surface. */
+    val integrityFlags: MutableList<StoredIntegrityFlag> = mutableListOf()
     /** OpenStreetMap place names, keyed by the 0.001° cell. Not a user trail. */
     val placeLabels: MutableMap<String, StoredPlaceLabel> = linkedMapOf()
     /** When false, [PlaceRepository.claimNominatimSlot] refuses, matching a busy global gate. */
@@ -1182,15 +1341,22 @@ class MemoryStore(
 
     fun questProgress(userId: Uuid, kind: String): Int = when (kind) {
         "visit_places" -> visits.count { it.first == userId }
-        "confirm_drop" -> confirmations.values.count { it.userId == userId && it.verdict == ConfirmationVerdict.STILL_TRUE }
+        "confirm_drop" -> confirmations.values.count {
+            it.userId == userId && it.verdict == ConfirmationVerdict.STILL_TRUE && it.countsForCredit
+        }
         "create_drop" -> drops.values.count {
-            it.authorId == userId && it.source == world.xhere.shared.model.DropSource.USER && it.status != DropStatus.REMOVED
+            it.authorId == userId &&
+                it.source == world.xhere.shared.model.DropSource.USER &&
+                it.status != DropStatus.REMOVED &&
+                it.countsForCredit
         }
         else -> 0
     }
 
-    fun verdict(dropId: Uuid, viewerId: Uuid?): ConfirmationVerdict? =
-        viewerId?.let { confirmations[dropId to it]?.verdict }
+    fun verdict(dropId: Uuid, viewerId: Uuid?): ConfirmationVerdict? {
+        val row = viewerId?.let { confirmations[dropId to it] } ?: return null
+        return if (row.countsForCredit) row.verdict else null
+    }
 
     /**
      * One inbox row per author, drop, and UTC day.
@@ -1254,6 +1420,17 @@ class MemoryStore(
         auditLog += ModerationAction(auditLog.size + 1L, actorId, targetType, targetId, action, reason, now)
     }
 }
+
+/** A soft location flag. Coordinates are not stored. Kept for [LocationIntegrity.flagTtl]. */
+data class StoredIntegrityFlag(
+    val id: Uuid,
+    val userId: Uuid,
+    val action: String,
+    val targetId: Uuid?,
+    val reasons: List<String>,
+    val createdAt: Instant,
+    val expiresAt: Instant,
+)
 
 /** One cached place name. [fetchedAt] is when Nominatim was asked, not when a person stood here. */
 data class StoredPlaceLabel(
@@ -1340,11 +1517,13 @@ class StoredDrop(
     val createdAt: Instant,
     val media: List<DropMedia>,
     var removedReason: String? = null,
-    val source: world.xhere.shared.model.DropSource = world.xhere.shared.model.DropSource.USER,
+    var source: world.xhere.shared.model.DropSource = world.xhere.shared.model.DropSource.USER,
     val sourceName: String? = null,
     val sourceUrl: String? = null,
     val license: String? = null,
     val attribution: String? = null,
+    var locationTrust: String = "standard",
+    var countsForCredit: Boolean = true,
 )
 
 /**
@@ -1399,6 +1578,7 @@ private fun StoredDrop.toCard(
         viewCount = viewCount,
         myVerdict = myVerdict,
         authorBadges = authorBadges,
+        locationTrust = locationTrust,
     )
 }
 

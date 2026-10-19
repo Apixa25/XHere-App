@@ -5,6 +5,8 @@ import kotlin.uuid.Uuid
 import kotlinx.coroutines.flow.Flow
 import world.xhere.shared.geo.BoundingBox
 import world.xhere.shared.geo.LatLng
+import world.xhere.shared.integrity.LocationIntegrityFlag
+import world.xhere.shared.integrity.LocationSignal
 import world.xhere.shared.model.AppRole
 import world.xhere.shared.model.BlockedUser
 import world.xhere.shared.model.ConfirmDropResult
@@ -103,7 +105,7 @@ interface DropRepository {
         limit: Int = Here.LIMIT,
     ): List<DropCard>
 
-    suspend fun dropDetail(dropId: Uuid, location: LatLng? = null): DropCard
+    suspend fun dropDetail(dropId: Uuid, location: LatLng? = null, signal: LocationSignal? = null): DropCard
 
     /** Share-page teaser. Never reveals the body, attributes, media, or tags. */
     suspend fun dropTeaser(shortId: String): DropCard
@@ -115,6 +117,7 @@ interface DropRepository {
         verdict: ConfirmationVerdict,
         location: LatLng,
         note: String? = null,
+        signal: LocationSignal? = null,
     ): ConfirmDropResult
 }
 
@@ -177,6 +180,12 @@ interface ModerationRepository {
 
     /** Pending drops and open reports: sensitive first, then oldest. Throws `not_moderator` otherwise. */
     suspend fun queue(limit: Int = 50): List<ModerationQueueItem>
+
+    /**
+     * Recent location soft-flags. Reason codes only, no coordinates.
+     * Throws `not_moderator`. Does not suspend anyone.
+     */
+    suspend fun integrityQueue(limit: Int = 50): List<LocationIntegrityFlag>
 }
 
 /**
@@ -234,7 +243,7 @@ interface WalkRepository {
      * Records places inside the reveal radius, and checks off stops on [walkId]
      * when that walk is already started. Does not keep [point].
      */
-    suspend fun checkIn(point: LatLng, walkId: Uuid? = null): CheckInResult
+    suspend fun checkIn(point: LatLng, walkId: Uuid? = null, signal: LocationSignal? = null): CheckInResult
 
     /** Quests the caller has not dismissed. The global starter quest is in this list. */
     suspend fun quests(): List<QuestProgress>
