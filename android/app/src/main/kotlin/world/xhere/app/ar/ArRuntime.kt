@@ -15,7 +15,12 @@ interface ArRuntime {
     val support: StateFlow<ArSupport>
     val frames: StateFlow<ArFrame>
 
-    suspend fun refreshSupport(latitude: Double, longitude: Double)
+    /**
+     * Asks whether Geospatial and VPS cover this spot.
+     * Returns false when a check is already running, so the caller keeps the
+     * button state it already has. Returns true after [support] was updated.
+     */
+    suspend fun refreshSupport(latitude: Double, longitude: Double): Boolean
 
     fun setTargets(targets: List<ArTarget>)
 

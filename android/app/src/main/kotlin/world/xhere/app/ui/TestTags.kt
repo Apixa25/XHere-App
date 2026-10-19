@@ -50,6 +50,7 @@ internal object TestTags {
     const val MY_LOCATION = "my_location"
     const val MAP_ATTRIBUTION = "map_attribution"
     const val MAP_NOTICE = "map_notice"
+    const val MAP_LOCATION_SETTINGS = "map_location_settings"
     const val MAP_MARKERS = "map_markers"
     const val MARKER_CLUSTER = "marker_cluster"
     const val SUBCATEGORY_SHEET = "subcategory_sheet"
@@ -62,6 +63,8 @@ internal object TestTags {
     const val AR_CAMERA = "ar_camera"
     const val AR_DROP = "ar_drop"
     const val AR_CLOSE = "ar_close"
+    const val AR_RETRY = "ar_retry"
+    const val AR_SETTINGS = "ar_settings"
 
     fun arLabel(shortId: String): String = "ar_label_$shortId"
 
@@ -137,6 +140,8 @@ internal object TestTags {
     fun subcategory(slug: String): String = "sub_$slug"
 
     const val DROP_SHUTTER = "drop_shutter"
+    const val DROP_CAMERA_DENIED = "drop_camera_denied"
+    const val DROP_CAMERA_SETTINGS = "drop_camera_settings"
     const val DROP_PICK = "drop_pick"
     const val DROP_TEXT = "drop_text"
     const val DROP_TEXT_CONTINUE = "drop_text_continue"

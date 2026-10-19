@@ -152,8 +152,9 @@ class DropDetailViewModel(
     fun confirm(verdict: ConfirmationVerdict) {
         val id = dropId ?: return
         val here = lastReading ?: return
+        if (_state.value.answering) return
+        _state.update { it.copy(answering = true, notice = null) }
         viewModelScope.launch {
-            _state.update { it.copy(answering = true, notice = null) }
             try {
                 val result = services.drops.confirmDrop(id, verdict, here.point, signal = here.signal)
                 val detailed = services.drops.dropDetail(id, here.point, here.signal)

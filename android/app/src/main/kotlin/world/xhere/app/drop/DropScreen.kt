@@ -35,9 +35,11 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
+import androidx.compose.material3.TextButton
 import world.xhere.app.R
 import world.xhere.app.safety.SafetyFooter
 import world.xhere.app.ui.TestTags
+import world.xhere.app.ui.openAppSettings
 import world.xhere.shared.live.RightNowDuration
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -54,7 +56,7 @@ fun DropScreen(
     }
     val context = LocalContext.current
     val cameraPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-        if (granted) viewModel.shutter(context)
+        if (granted) viewModel.shutter(context) else viewModel.noteCameraDenied()
     }
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
         if (uri == null) return@rememberLauncherForActivityResult
@@ -99,6 +101,20 @@ fun DropScreen(
                     enabled = !state.busy,
                     modifier = Modifier.testTag(TestTags.DROP_PICK),
                 ) { Text(stringResource(R.string.drop_pick)) }
+            }
+            if (state.cameraDenied) {
+                Text(
+                    text = stringResource(R.string.drop_camera_denied),
+                    modifier = Modifier.testTag(TestTags.DROP_CAMERA_DENIED),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.error,
+                )
+                TextButton(
+                    onClick = { openAppSettings(context) },
+                    modifier = Modifier.testTag(TestTags.DROP_CAMERA_SETTINGS),
+                ) {
+                    Text(stringResource(R.string.drop_camera_settings))
+                }
             }
             OutlinedTextField(
                 value = state.text,

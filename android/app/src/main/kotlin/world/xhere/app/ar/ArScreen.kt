@@ -52,6 +52,7 @@ import org.koin.compose.koinInject
 import world.xhere.app.R
 import world.xhere.app.map.MarkerIcons
 import world.xhere.app.ui.TestTags
+import world.xhere.app.ui.openAppSettings
 import world.xhere.shared.geo.LatLng
 import world.xhere.shared.integrity.LocationSignal
 
@@ -78,10 +79,11 @@ fun ArScreen(
     }
     val context = LocalContext.current
     var granted by rememberSaveable { mutableStateOf(ArPermissions.granted(context)) }
+    var asked by rememberSaveable { mutableStateOf(false) }
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { result ->
+        asked = true
         granted = result[Manifest.permission.CAMERA] == true &&
             result[Manifest.permission.ACCESS_FINE_LOCATION] == true
-        if (granted) viewModel.begin()
     }
     LaunchedEffect(Unit) {
         if (!ArPermissions.granted(context)) launcher.launch(ArPermissions.requested)
@@ -116,12 +118,28 @@ fun ArScreen(
                 }
             }
             StatusLine(ui.status, Modifier.align(Alignment.TopCenter).padding(top = 56.dp, start = 16.dp, end = 16.dp))
-        } else {
+        } else if (asked) {
             Column(
                 modifier = Modifier.align(Alignment.Center).padding(24.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Text(stringResource(R.string.ar_camera_denied), style = MaterialTheme.typography.bodyLarge)
+                Text(
+                    stringResource(R.string.ar_camera_denied),
+                    style = MaterialTheme.typography.bodyLarge,
+                )
+                Button(
+                    onClick = { launcher.launch(ArPermissions.requested) },
+                    modifier = Modifier.testTag(TestTags.AR_RETRY),
+                ) {
+                    Text(stringResource(R.string.ar_camera_retry))
+                }
+                TextButton(
+                    onClick = { openAppSettings(context) },
+                    modifier = Modifier.testTag(TestTags.AR_SETTINGS),
+                ) {
+                    Text(stringResource(R.string.ar_camera_settings))
+                }
             }
         }
         TextButton(

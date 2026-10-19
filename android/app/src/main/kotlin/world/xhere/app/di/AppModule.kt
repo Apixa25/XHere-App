@@ -9,6 +9,7 @@ import world.xhere.app.ar.ArRuntime
 import world.xhere.app.ar.ArViewModel
 import world.xhere.app.auth.AuthStrings
 import world.xhere.app.auth.AuthViewModel
+import world.xhere.app.auth.PrefsAuthDraft
 import world.xhere.app.auth.CredentialManagerGoogleSignIn
 import world.xhere.app.auth.GoogleIdTokenSource
 import world.xhere.app.config.ClientConfig
@@ -94,7 +95,7 @@ val appModule = module {
     viewModel { MapViewModel(get(), get(), get(), get(), get(), conditions = get()) }
     viewModel { ArViewModel(get(), get(), get()) }
     viewModel { (shortId: String) -> DropDetailViewModel(shortId, get(), get()) }
-    viewModel { AuthViewModel(get(), get(), get(), get(), get()) }
+    viewModel { AuthViewModel(get(), get(), get(), get(), get(), PrefsAuthDraft(androidContext())) }
     viewModel { ProfileViewModel(get()) }
     viewModel { SafetyListsViewModel(get()) }
     viewModel { ModerationViewModel(get()) }
