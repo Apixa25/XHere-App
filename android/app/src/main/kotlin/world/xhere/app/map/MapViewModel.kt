@@ -30,6 +30,8 @@ import world.xhere.shared.explore.Experience
 import world.xhere.shared.explore.ExperienceKind
 import world.xhere.shared.integrity.LocationReasons
 import world.xhere.shared.data.XHereServices
+import world.xhere.shared.civic.Civic
+import world.xhere.shared.civic.CivicItem
 import world.xhere.shared.demo.JamestownDemo
 import world.xhere.shared.geo.Geo
 import world.xhere.shared.geo.LatLng
@@ -148,7 +150,40 @@ class MapViewModel(
 
     fun selectAll() = applySelection(FilterSelection())
 
-    fun selectGroup(slug: String) = applySelection(FilterSelection(slugs = listOf(slug), activeGroup = slug))
+    fun selectGroup(slug: String) {
+        if (slug == Civic.GROUP) {
+            _state.update { it.copy(townHallLayer = true) }
+        }
+        applySelection(FilterSelection(slugs = listOf(slug), activeGroup = slug))
+    }
+
+    fun toggleTownHall() {
+        val enable = !_state.value.townHallLayer
+        _state.update { it.copy(townHallLayer = enable, civicPins = if (enable) it.civicPins else emptyList()) }
+        val frame = lastFrame ?: return
+        if (!enable) return
+        viewModelScope.launch {
+            val pins = civicPins(frame)
+            if (lastFrame != frame) return@launch
+            _state.update { if (it.townHallLayer) it.copy(civicPins = pins) else it }
+        }
+    }
+
+    fun followHere() {
+        val sheet = _state.value.here ?: return
+        val item = sheet.civic.firstOrNull { !it.addressText.isNullOrBlank() }
+        val address = item?.addressText ?: sheet.place?.address ?: return
+        val region = item?.regionId ?: sheet.civic.firstOrNull()?.regionId ?: return
+        viewModelScope.launch {
+            try {
+                services.civic.follow(region, address)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                // The button stays so they can try again.
+            }
+        }
+    }
 
     fun selectPreset(preset: FilterPreset) = applySelection(
         FilterSelection(slugs = preset.slugs, activePreset = preset.name),
@@ -500,10 +535,15 @@ class MapViewModel(
 
     /** Opens one experience from Explore: move the camera, start a walk, or open Time Machine. */
     fun focus(action: ExperienceAction) {
-        _state.update { it.copy(focusedExperienceId = action.id) }
+        if (action.id.startsWith("civic:")) {
+            _state.update { it.copy(townHallLayer = true, focusedExperienceId = action.id) }
+        } else {
+            _state.update { it.copy(focusedExperienceId = action.id) }
+        }
         val point = action.anchor
         if (point != null && Geo.isValid(point)) moveCamera(point, 16.0, fromUser = true)
         if (action.id.startsWith("capsule:") && point != null && Geo.isValid(point)) openHere(point)
+        if (action.id.startsWith("civic:") && point != null && Geo.isValid(point)) openHere(point)
         if (action.openTimeMachine) openTimeMachine(point)
         if (action.startWalk) {
             val id = runCatching { Uuid.parse(action.id) }.getOrNull()
@@ -600,6 +640,17 @@ class MapViewModel(
                 null
             }
             val access = if (drops != null) accessFor(spot) else null
+            val civic = if (drops != null) {
+                try {
+                    services.civic.near(spot)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (_: Exception) {
+                    emptyList()
+                }
+            } else {
+                emptyList()
+            }
             val official = if (drops != null) {
                 try {
                     services.desk.officialAt(spot)
@@ -630,6 +681,7 @@ class MapViewModel(
                         access = open.access ?: access,
                         accessKey = open.access?.placeKey ?: access?.placeKey ?: AccessPlaces.cell(spot),
                         official = official,
+                        civic = civic,
                     ),
                 )
             }
@@ -693,6 +745,7 @@ class MapViewModel(
             val walks = runCatching { services.walks.walksFor(centerOf(frame)) }.getOrDefault(emptyList())
             val campaigns = runCatching { services.campaigns.campaignsFor(frame.box) }.getOrDefault(emptyList())
             val pins = if (_state.value.accessibilityLayer) accessPins(frame) else emptyList()
+            val civic = if (_state.value.townHallLayer) civicPins(frame) else emptyList()
             if (lastFrame != frame) return
             _state.update {
                 it.copy(
@@ -702,6 +755,7 @@ class MapViewModel(
                     campaigns = campaigns,
                     notice = null,
                     accessPins = if (it.accessibilityLayer) pins else emptyList(),
+                    civicPins = if (it.townHallLayer) civic else emptyList(),
                 )
             }
         } catch (e: CancellationException) {
@@ -712,6 +766,14 @@ class MapViewModel(
             _state.update { it.copy(loading = false, notice = MapNotice.LOAD_FAILED) }
         }
         if (lastFrame == frame) refreshAlerts(frame)
+    }
+
+    private suspend fun civicPins(frame: CameraFrame): List<CivicItem> = try {
+        services.civic.inView(frame.box)
+    } catch (e: CancellationException) {
+        throw e
+    } catch (_: Exception) {
+        emptyList()
     }
 
     private suspend fun accessPins(frame: CameraFrame): List<AccessSummary> = try {

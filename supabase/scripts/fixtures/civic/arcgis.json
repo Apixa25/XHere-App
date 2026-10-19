@@ -1,0 +1,12 @@
+{
+  "features": [
+    {
+      "attributes": {
+        "PERMITID": "A1",
+        "WORK": "Fence",
+        "ADDRESS": "1 Pine Street"
+      },
+      "geometry": { "x": -79.24, "y": 42.09 }
+    }
+  ]
+}

@@ -176,6 +176,18 @@ psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/seed/capsules/jamestown-ny.s
 
 `db push` applies `supabase/migrations/20261021140000_claims_and_capsules.sql` and any earlier migration the host does not have yet. It does not load seeds. The Jamestown capsule seed is idempotent and does nothing when the demo guide is missing. Do not paste the migration or the seed into the dashboard SQL editor. This does not change Auth. There is no new Edge Function and no paid mailer.
 
+## Town Hall (hosted)
+
+Not applied from this repo's agents, and not applied by CI. The sources and the license notes are in [docs/TOWN-HALL.md](../docs/TOWN-HALL.md). From a machine linked to `jpeuldzegtbqfezijhuy`, after the history repair in [Before `supabase db push`](#before-supabase-db-push):
+
+```bash
+supabase link --project-ref jpeuldzegtbqfezijhuy
+supabase db push
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/seed/civic/jamestown-ny.sql
+```
+
+`db push` applies `supabase/migrations/20261021180000_civic_items.sql` and any earlier migration the host does not have yet. It does not load the seed. Do not paste the migration or the seed into the dashboard SQL editor. This does not change Auth. There is no new Edge Function.
+
 ## Security model
 
 - Clients never `insert` drops, confirmations, or reports directly. Writes go through `security definer` RPCs that validate against the category's rules. Table grants only allow narrow column updates on your own rows (profile fields; a drop's title, body, tags, and anonymity).

@@ -412,3 +412,7 @@ accessibility:
 ```
 
 Jamestown's candidate `project-sidewalk` is `reject`. The gallery does not include it. Do not invent labels.
+
+## 10. Town Hall (agendas, hearings, permits, notices)
+
+Meetings and permits are not drops. A region lists them under `civic:` and the importer in `supabase/scripts/import_civic.py` writes `civic_items`. The adapters are Legistar, CivicPlus AgendaCenter, Socrata, ArcGIS permits, a generic RSS/iCal feed, and a manual YAML or CSV file. Jamestown uses the manual file because the other adapters have nothing free and allowed to read there. The worked example, the robots and terms checks, and the hosted apply steps are in [`TOWN-HALL.md`](TOWN-HALL.md). Summaries are shortened public text. No language model is called.

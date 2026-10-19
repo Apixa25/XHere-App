@@ -91,7 +91,13 @@ fun ExploreScreen(
                     if (section.items.isEmpty()) {
                         item(key = "empty-${section.filter.name}") {
                             Text(
-                                text = stringResource(R.string.explore_live_empty),
+                                text = stringResource(
+                                    if (section.filter == ExperienceFilter.TOWN_HALL) {
+                                        R.string.explore_town_hall_empty
+                                    } else {
+                                        R.string.explore_live_empty
+                                    },
+                                ),
                                 modifier = Modifier.padding(horizontal = 20.dp),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -142,6 +148,7 @@ private fun sections(state: ExploreUiState): List<Section> {
             ExperienceFilter.TIME,
             ExperienceFilter.THINGS,
             ExperienceFilter.CAPSULES,
+            ExperienceFilter.TOWN_HALL,
         )
     } else {
         listOf(state.filter)
@@ -154,7 +161,9 @@ private fun sections(state: ExploreUiState): List<Section> {
             items = sorted.filter { it.matches(filter) },
         )
     }.filter { section ->
-        section.items.isNotEmpty() || section.filter == ExperienceFilter.LIVE
+        section.items.isNotEmpty() ||
+            section.filter == ExperienceFilter.LIVE ||
+            section.filter == ExperienceFilter.TOWN_HALL
     }
 }
 
@@ -378,6 +387,7 @@ private fun filterTitle(filter: ExperienceFilter): Int = when (filter) {
     ExperienceFilter.TIME -> R.string.explore_section_time
     ExperienceFilter.THINGS -> R.string.explore_section_things
     ExperienceFilter.CAPSULES -> R.string.explore_section_capsules
+    ExperienceFilter.TOWN_HALL -> R.string.explore_section_town_hall
 }
 
 private fun filterTag(filter: ExperienceFilter): String = when (filter) {
@@ -389,4 +399,5 @@ private fun filterTag(filter: ExperienceFilter): String = when (filter) {
     ExperienceFilter.TIME -> TestTags.EXPLORE_SECTION_TIME
     ExperienceFilter.THINGS -> TestTags.EXPLORE_SECTION_THINGS
     ExperienceFilter.CAPSULES -> TestTags.EXPLORE_SECTION_CAPSULES
+    ExperienceFilter.TOWN_HALL -> TestTags.EXPLORE_SECTION_TOWN_HALL
 }

@@ -1,0 +1,9 @@
+BEGIN:VCALENDAR
+BEGIN:VEVENT
+UID:work-2026-11-09
+DTSTART:20261109T190000Z
+SUMMARY:Work session
+LOCATION:200 East Third Street
+URL:https://www.jamestownny.gov/city-council/meeting-schedule/
+END:VEVENT
+END:VCALENDAR

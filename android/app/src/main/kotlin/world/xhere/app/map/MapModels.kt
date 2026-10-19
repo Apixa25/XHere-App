@@ -127,6 +127,8 @@ data class HereSheet(
     val accessKey: String = "",
     /** Official block for a claimed place within 80 m. Null when no claim is active. */
     val official: world.xhere.shared.model.OfficialPlace? = null,
+    /** Hearings, permits, and meetings within about 300 m. Not drops. */
+    val civic: List<world.xhere.shared.civic.CivicItem> = emptyList(),
 )
 
 /**
@@ -266,6 +268,9 @@ data class MapUiState(
     val accessibilityLayer: Boolean = false,
     val accessPins: List<world.xhere.shared.access.AccessSummary> = emptyList(),
     val accessSurvey: Boolean = false,
+    /** Town Hall pins. Off until the person turns the layer on or picks that chip. */
+    val townHallLayer: Boolean = false,
+    val civicPins: List<world.xhere.shared.civic.CivicItem> = emptyList(),
 )
 
 /** Straight line through the stops, plus a guide from the person to the next one. */

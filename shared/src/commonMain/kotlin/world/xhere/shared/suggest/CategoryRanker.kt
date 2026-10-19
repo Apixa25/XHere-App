@@ -22,7 +22,7 @@ internal object CategoryRanker {
         query: SuggestionQuery,
         nearbyCounts: Map<String, Int> = emptyMap(),
     ): List<CategorySuggestion> {
-        val active = categories.filter { it.active }
+        val active = categories.filter { it.active && !it.slug.startsWith("civic_") }
         val documents = active.map { category ->
             RankDocument(
                 slug = category.slug,

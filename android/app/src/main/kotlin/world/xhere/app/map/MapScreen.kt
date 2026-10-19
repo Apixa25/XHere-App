@@ -402,6 +402,25 @@ fun MapScreen(
                     )
                 }
                 Surface(
+                    onClick = viewModel::toggleTownHall,
+                    shape = MaterialTheme.shapes.large,
+                    color = if (state.townHallLayer) {
+                        MaterialTheme.colorScheme.secondaryContainer
+                    } else {
+                        MaterialTheme.colorScheme.surface
+                    },
+                    shadowElevation = 2.dp,
+                    modifier = Modifier
+                        .defaultMinSize(minHeight = 48.dp)
+                        .testTag(TestTags.MAP_TOWN_HALL),
+                ) {
+                    Text(
+                        text = stringResource(R.string.map_town_hall),
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+                        style = MaterialTheme.typography.labelLarge,
+                    )
+                }
+                Surface(
                     onClick = viewModel::toggleAccessibility,
                     shape = MaterialTheme.shapes.large,
                     color = if (state.accessibilityLayer) {
@@ -562,6 +581,7 @@ fun MapScreen(
                 },
                 onMemory = { deskRequest = DeskRequest.Memory(sheet.spot, oral = false) },
                 onOral = { deskRequest = DeskRequest.Memory(sheet.spot, oral = true) },
+                onFollow = viewModel::followHere,
                 onDismiss = viewModel::dismissHere,
             )
         }

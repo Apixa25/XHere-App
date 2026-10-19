@@ -29,6 +29,8 @@ import world.xhere.app.access.AccessStatusChip
 import world.xhere.app.reputation.TierChip
 import world.xhere.app.ui.TestTags
 import world.xhere.shared.capsule.Capsules
+import world.xhere.shared.civic.Civic
+import world.xhere.shared.civic.CivicItem
 import world.xhere.shared.model.OfficialPlace
 import world.xhere.shared.place.PlaceClaims
 import world.xhere.shared.reputation.Reputation
@@ -57,6 +59,7 @@ internal fun HereCardSheet(
     onClaim: () -> Unit = {},
     onMemory: () -> Unit = {},
     onOral: () -> Unit = {},
+    onFollow: () -> Unit = {},
     onDismiss: () -> Unit,
 ) {
     val groups = Here.groups(sheet.drops)
@@ -188,6 +191,7 @@ internal fun HereCardSheet(
                         style = MaterialTheme.typography.bodyLarge,
                     )
                     if (sheet.clippings.isNotEmpty()) ThisDayHere(sheet.clippings)
+                    ComingUp(sheet.civic, onFollow)
                     PlaceActions(onClaim, onMemory, onOral)
                 }
                 else -> {
@@ -211,9 +215,61 @@ internal fun HereCardSheet(
                             }
                         }
                         if (sheet.clippings.isNotEmpty()) ThisDayHere(sheet.clippings)
+                        ComingUp(sheet.civic, onFollow)
                         PlaceActions(onClaim, onMemory, onOral)
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ComingUp(items: List<CivicItem>, onFollow: () -> Unit) {
+    if (items.isEmpty()) return
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 8.dp)
+            .testTag(TestTags.HERE_CIVIC),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Text(
+            text = stringResource(R.string.here_civic_title),
+            style = MaterialTheme.typography.titleMedium,
+        )
+        items.take(3).forEach { item ->
+            val whenLabel = item.occursOn ?: item.bodyName.orEmpty()
+            Text(
+                text = "${Civic.icon(item.itemType)} ${item.title}",
+                style = MaterialTheme.typography.titleSmall,
+            )
+            if (whenLabel.isNotBlank()) {
+                Text(
+                    text = whenLabel,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Text(
+                text = item.attribution,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            val context = LocalContext.current
+            TextButton(
+                onClick = { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(item.sourceUrl))) },
+            ) {
+                Text(stringResource(R.string.detail_view_source))
+            }
+        }
+        val address = items.firstOrNull { !it.addressText.isNullOrBlank() }?.addressText
+        if (!address.isNullOrBlank()) {
+            TextButton(
+                onClick = onFollow,
+                modifier = Modifier.testTag(TestTags.HERE_CIVIC_FOLLOW),
+            ) {
+                Text(stringResource(R.string.here_civic_follow))
             }
         }
     }

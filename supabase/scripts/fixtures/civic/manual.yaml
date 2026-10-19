@@ -1,0 +1,9 @@
+items:
+  - external_id: hearing-1
+    type: hearing
+    title: Zoning hearing
+    summary: A hearing.
+    date: 2026-11-02
+    body: Planning Board
+    source_url: https://example.com/hearing
+    address: 10 Oak Street

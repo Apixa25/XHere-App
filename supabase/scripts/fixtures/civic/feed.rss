@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <item>
+      <title>Road notice</title>
+      <link>https://example.com/notice/1</link>
+      <description>A published notice</description>
+    </item>
+  </channel>
+</rss>

@@ -399,6 +399,14 @@ internal object TestTags {
     const val SETTINGS_VOICE_AUTO = "settings_voice_auto"
 
     const val MAP_ACCESS = "map_access"
+    const val MAP_TOWN_HALL = "map_town_hall"
+    const val HERE_CIVIC = "here_civic"
+    const val HERE_CIVIC_FOLLOW = "here_civic_follow"
+    const val CIVIC_INBOX = "civic_inbox"
+    const val EXPLORE_SECTION_TOWN_HALL = "explore_section_town_hall"
+
+    fun civicPin(id: String): String = "civic_" + id
+    fun civicNotice(id: String): String = "civic_notice_" + id
     const val ACCESS_SUMMARY = "access_summary"
     const val ACCESS_NONE = "access_none"
     const val ACCESS_STATUS = "access_status"

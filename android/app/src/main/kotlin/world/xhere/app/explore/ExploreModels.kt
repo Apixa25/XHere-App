@@ -22,6 +22,7 @@ enum class ExperienceFilter {
     TIME,
     THINGS,
     CAPSULES,
+    TOWN_HALL,
 }
 
 /** A tap from Explore. The map focuses [anchor], starts a walk, or opens Time Machine. */
@@ -80,4 +81,5 @@ fun Experience.matches(filter: ExperienceFilter): Boolean = when (filter) {
     ExperienceFilter.TIME -> kind == ExperienceKind.TIME_MACHINE
     ExperienceFilter.THINGS -> kind == ExperienceKind.NEARBY_THING
     ExperienceFilter.CAPSULES -> kind == ExperienceKind.TIME_CAPSULE
+    ExperienceFilter.TOWN_HALL -> kind == ExperienceKind.TOWN_HALL
 }

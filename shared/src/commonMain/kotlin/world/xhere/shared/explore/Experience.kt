@@ -1,6 +1,8 @@
 package world.xhere.shared.explore
 
 import world.xhere.shared.capsule.Capsules
+import world.xhere.shared.civic.Civic
+import world.xhere.shared.civic.CivicItem
 import world.xhere.shared.geo.Geo
 import world.xhere.shared.geo.LatLng
 import world.xhere.shared.live.WeatherAlert
@@ -28,6 +30,7 @@ enum class ExperienceKind {
     TIME_MACHINE,
     NEARBY_THING,
     TIME_CAPSULE,
+    TOWN_HALL,
 }
 
 enum class ExperienceSort { DISTANCE, RELEVANCE }
@@ -104,6 +107,7 @@ object Experiences {
         here: LatLng?,
         heardMeters: Map<String, Double> = emptyMap(),
         capsules: List<DropCard> = emptyList(),
+        meetings: List<CivicItem> = emptyList(),
     ): List<Experience> = buildList {
         walks.forEach { add(walk(it, here)) }
         quests.forEach { add(quest(it)) }
@@ -112,6 +116,7 @@ object Experiences {
         add(timeMachine(here))
         addAll(thingCards(things, here, heardMeters))
         addAll(capsuleCards(capsules, here))
+        meetings.forEach { add(meeting(it, here)) }
     }
 
     fun sort(items: List<Experience>, mode: ExperienceSort): List<Experience> = when (mode) {
@@ -285,6 +290,35 @@ object Experiences {
         return real.map { capsule(it, here) }
     }
 
+    /** A published meeting or notice. It does not count toward the map hint. */
+    fun meeting(item: CivicItem, here: LatLng?): Experience {
+        val anchor = item.location
+        val distance = when {
+            here != null && anchor != null -> Geo.distanceMeters(here, anchor)
+            else -> item.distanceM?.toDouble()
+        }
+        val summary = listOfNotNull(
+            item.occursOn,
+            item.bodyName,
+            item.addressText,
+            item.attribution.takeIf { it.isNotBlank() },
+        ).joinToString(" · ")
+        return Experience(
+            id = "civic:${item.id}",
+            kind = ExperienceKind.TOWN_HALL,
+            title = "${Civic.icon(item.itemType)} ${item.title}",
+            summary = summary.ifBlank { item.summary ?: item.attribution },
+            distanceM = distance,
+            durationMin = null,
+            progressCurrent = null,
+            progressTotal = null,
+            revision = listOf(item.id.toString(), item.title, item.occursOn.orEmpty(), item.sourceUrl).joinToString("|"),
+            anchor = anchor,
+            cta = if (anchor != null) ExperienceCta.FOCUS else ExperienceCta.NONE,
+            hints = false,
+        )
+    }
+
     fun timeCapsulePlaceholder(): Experience = Experience(
         id = CAPSULE_PLACEHOLDER_ID,
         kind = ExperienceKind.TIME_CAPSULE,
@@ -318,6 +352,7 @@ object Experiences {
         ExperienceKind.TIME_MACHINE -> 5
         ExperienceKind.NEARBY_THING -> 6
         ExperienceKind.TIME_CAPSULE -> 7
+        ExperienceKind.TOWN_HALL -> 4
     }
 
     private fun walkRevision(walk: Walk): String = listOf(

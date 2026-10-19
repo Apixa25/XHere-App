@@ -27,6 +27,7 @@ data class ProfileUi(
     val tierLabel: String = "",
     val email: String? = null,
     val notices: List<ImpactNotice> = emptyList(),
+    val civicNotices: List<world.xhere.shared.civic.CivicNotice> = emptyList(),
     val impactLoaded: Boolean = false,
     val badges: List<BadgeAward> = emptyList(),
     val campaigns: List<CampaignProgress> = emptyList(),
@@ -64,6 +65,7 @@ class ProfileViewModel(
             val profile = runCatching { services.profiles.currentProfile() }
             val standing = runCatching { services.profiles.reputation() }
             val notices = runCatching { services.impact.myNotices() }
+            val civicNotices = runCatching { services.civic.notices() }
             val badges = runCatching { services.campaigns.myBadges() }
             val campaigns = runCatching { services.campaigns.myCampaigns() }
             val mine = runCatching { services.drops.myDrops() }
@@ -78,6 +80,7 @@ class ProfileViewModel(
                         ?: person?.let { Reputation.standing(it.points, it.tier) }
                         ?: previous.standing,
                 ).copy(
+                    civicNotices = civicNotices.getOrElse { previous.civicNotices },
                     impactLoaded = notices.isSuccess || previous.impactLoaded,
                     myDrops = mine.getOrElse { previous.myDrops },
                     dropsLoaded = mine.isSuccess || previous.dropsLoaded,
@@ -88,12 +91,26 @@ class ProfileViewModel(
                 _state.value = previous.copy(
                     email = email.getOrElse { previous.email },
                     notices = notices.getOrElse { previous.notices },
+                    civicNotices = civicNotices.getOrElse { previous.civicNotices },
                     badges = badges.getOrNull()?.badges ?: previous.badges,
                     campaigns = campaigns.getOrElse { previous.campaigns },
                     standing = standing.getOrNull() ?: previous.standing,
                     impactLoaded = notices.isSuccess || previous.impactLoaded,
                     myDrops = mine.getOrElse { previous.myDrops },
                     dropsLoaded = mine.isSuccess || previous.dropsLoaded,
+                )
+            }
+        }
+    }
+
+    fun markCivicRead(id: kotlin.uuid.Uuid) {
+        viewModelScope.launch {
+            runCatching { services.civic.markRead(id) }
+            _state.update { current ->
+                current.copy(
+                    civicNotices = current.civicNotices.map { row ->
+                        if (row.id == id && row.readAt == null) row.copy(readAt = Clock.System.now()) else row
+                    },
                 )
             }
         }
