@@ -172,6 +172,8 @@ data class MapUiState(
     val celebrateQuest: Boolean = false,
     /** Live campaigns whose region overlaps the camera. Empty outside every campaign. */
     val campaigns: List<CampaignProgress> = emptyList(),
+    /** True only when this phone can run Geospatial and VPS covers the latest fix. */
+    val arReady: Boolean = false,
 )
 
 /** Straight line through the stops, plus a guide from the person to the next one. */

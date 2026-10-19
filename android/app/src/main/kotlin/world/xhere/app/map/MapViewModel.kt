@@ -14,6 +14,8 @@ import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlin.uuid.Uuid
+import world.xhere.app.ar.ArRuntime
+import world.xhere.app.ar.ArSupport
 import world.xhere.app.location.DeviceLocation
 import world.xhere.app.location.LocationReading
 import world.xhere.shared.integrity.LocationReasons
@@ -45,6 +47,7 @@ class MapViewModel(
     private val location: DeviceLocation,
     private val presetStore: FilterPresetStore,
     private val places: SpotNames,
+    private val ar: ArRuntime,
     private val debounceMs: Long = 320,
     private val conditions: LiveConditions = QuietConditions,
 ) : ViewModel() {
@@ -58,6 +61,7 @@ class MapViewModel(
     private var lastFrame: CameraFrame? = null
     private var lastCheckIn: LatLng? = null
     private var lastReading: LocationReading? = null
+    private var arCheckedAt: LatLng? = null
     /** True after the first quest list arrives, so a later completion can celebrate. */
     private var questsLoaded = false
 
@@ -395,6 +399,30 @@ class MapViewModel(
             moveCamera(fix, zoom, fromUser = false)
         }
         checkIn(reading, force = false)
+        refreshAr(fix)
+    }
+
+    /**
+     * Show the AR button only when this phone can run Geospatial and VPS
+     * covers the fix. A failure hides the button. The check does not open
+     * the camera. It repeats after the person moves [AR_RECHECK_M].
+     */
+    private fun refreshAr(point: LatLng) {
+        if (!Geo.isValid(point)) return
+        val previous = arCheckedAt
+        if (previous != null && Geo.distanceMeters(previous, point) < AR_RECHECK_M) return
+        arCheckedAt = point
+        viewModelScope.launch {
+            val ready = try {
+                ar.refreshSupport(point.latitude, point.longitude)
+                ar.support.value == ArSupport.READY
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                false
+            }
+            _state.update { it.copy(arReady = ready) }
+        }
     }
 
     /**
@@ -477,6 +505,7 @@ class MapViewModel(
     private companion object {
         const val NEAR_RADIUS_M = 5_000
         const val CHECK_MOVE_M = 20.0
+        const val AR_RECHECK_M = 250.0
         val INTEGRITY_NOTICES = setOf(
             MapNotice.MOCK_LOCATION,
             MapNotice.IMPOSSIBLE_TRAVEL,

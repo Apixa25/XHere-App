@@ -46,6 +46,21 @@ Put the four values in the GitHub repo under **Settings → Secrets and variable
 
 Play App Signing is separate. When you upload, accept Google's app signing. The certificate testers' phones see is the **App signing key**, not this upload key. The SHA-256 you copy into the website is the app signing key. See the checklist.
 
+## ARCore Geospatial (keyless)
+
+The AR view uses the ARCore Geospatial API with no API key in the app. Google authorizes the session from package `world.xhere.app` and the certificate that signed the APK the phone is running. The Cloud project is `xhere-512103` (number `1059257603719`). The ARCore API is enabled there. An Android OAuth client for the **debug** keystore SHA-1 is already added. Do not put `com.google.android.ar.API_KEY` in the manifest, and do not commit an ARCore key.
+
+Before a release build can open the AR camera, add another Android OAuth client in that same project:
+
+1. Open [Google Cloud Console](https://console.cloud.google.com/) → project `xhere-512103` → APIs & Services → Credentials → Create credentials → OAuth client ID → Android.
+2. Package name: `world.xhere.app`.
+3. SHA-1: the upload keystore (`keytool -list -v -keystore release.jks -alias xhere`). A debug build keeps using the debug certificate that is already registered.
+4. If Play App Signing is on, the phone verifies the **App signing key**, not the upload key. Add that certificate's SHA-1 as well (Play Console → App signing → App signing key certificate). This is a different value from the SHA-256 you copy into `assetlinks.json`.
+
+Until those SHA-1s exist, a release or Play install still installs, and the AR button stays hidden (or the session reports that it is not authorized). Non-AR phones install either way: `com.google.ar.core` is `optional`.
+
+Play Services for AR is a separate install on the device (on the order of 50 MB). It is not packaged in the XHere APK. The in-app notice before the camera is required by Google. It names Play Services for AR and says Google processes camera and location sensor data for that session.
+
 ## Minify
 
 Release builds run R8 with resource shrinking (`isMinifyEnabled`, `isShrinkResources`). Rules are in `android/app/proguard-rules.pro`: kotlinx.serialization, Ktor, supabase-kt, MapLibre, ML Kit, CameraX, Koin, and Sentry, plus the serialization rules from kotlinx.serialization 1.11. The libraries' own consumer rules are merged as well.
@@ -94,6 +109,7 @@ Use the **preview build** column for that AAB. Use the **with Supabase** column 
 | Crash logs | **No.** Sentry is off. | **No**, unless you also set `SENTRY_DSN`. If you do, change this to collected, and name Sentry. |
 | Device or other IDs / advertising ID | No. The app does not use the advertising id. | No. |
 | Map tiles | Loading the map fetches tiles from OpenFreeMap over HTTPS. That connection reveals the usual IP and the tile area to that service. XHere does not add an account or an API key, and it does not get an identifier back. | Same. |
+| Camera and sensors for AR | Only if the person opens AR. The camera and precise location are processed by Google Play Services for AR for that session, under Google's privacy policy. XHere does not store the frames or a pose trail. The in-app notice is shown first. Declare this: the code is in the APK. Not sold. | Same. |
 
 Location is optional. Onboarding has **Not now**. The app still opens the map.
 
@@ -110,7 +126,7 @@ In Play Console, under App content, for the location permissions:
 
 Paste this as the purpose:
 
-> XHere uses location only while the app is open, and only if the person allows it. It uses that position to show drops near them, to place a drop they create, to show how far away a drop is, and to unlock a drop when they are inside its reveal radius. "Still true?" is accepted only when they are close enough. The app does not use location for ads. It does not ask for background location, and it does not keep a history of where someone walked. The in-app disclosure is the screen titled "While you're here", and it is shown before the system permission dialog. "Not now" skips the request. They can turn location off later in the phone's settings.
+> XHere uses location only while the app is open, and only if the person allows it. It uses that position to show drops near them, to place a drop they create, to show how far away a drop is, and to unlock a drop when they are inside its reveal radius. "Still true?" is accepted only when they are close enough. If they open the AR view, the same foreground location and the camera are used for that session, and Google Play Services for AR processes those sensors under Google's privacy policy. The app shows that notice before the camera starts. The app does not use location for ads. It does not ask for background location, and it does not keep a history of where someone walked. The in-app disclosure is the screen titled "While you're here", and it is shown before the system permission dialog. "Not now" skips the request. They can turn location off later in the phone's settings.
 
 That matches `onboarding_body` and `onboarding_background` in `android/app/src/main/res/values/strings.xml`.
 
@@ -140,7 +156,7 @@ Do these in order. Steps 1 and 2 unblock the URLs Play checks. Step 3 is the $25
 8. **After the first upload, open Play Console → App signing.** Copy the **App signing key certificate** SHA-256 (not the upload key). Replace `fingerprintPlaceholder` in `web/src/lib/site.mjs`. That string is what `/.well-known/assetlinks.json` serves. It is not a certificate today. Redeploy the site. App Links for `https://xhere.world/d/…` stay unverified until that value is the real fingerprint.
 9. **Give hello@xhere.world a mailbox**, or change the address on the site and in the app guidelines. The address in the repo is a placeholder and may not receive mail.
 10. **Turn on a free Supabase project** when you want sign-in, photo upload, and live drops (PLAN §8). Put the URL and the anon key in `local.properties` and, for the site, in the Pages environment. Do not put the service-role key in the app or the site. Apply every migration through `20261018001100_tip_lines.sql`. Deploy the `suggest-category` and `strip-exif` functions. Leave embeddings on hash-v1. Then rebuild the AAB so the closed test talks to that project, bump `versionCode`, and update Data safety to the "with Supabase" column.
-11. **Add a free Google Cloud OAuth web client id** before Google sign-in works. The same id goes in `GOOGLE_WEB_CLIENT_ID` and in the Supabase Google provider.
+11. **Add a free Google Cloud OAuth web client id** before Google sign-in works. The same id goes in `GOOGLE_WEB_CLIENT_ID` and in the Supabase Google provider. Leave it out of git. The AR view does not use that web client. Before a release APK can open AR, add the upload keystore SHA-1, and the Play App Signing SHA-1, as Android OAuth clients in project `xhere-512103`. See the ARCore section above. The debug SHA-1 is already registered.
 12. **Make your account the admin** once the project exists: `update public.profiles set role = 'admin' where handle = '<your handle>';` (`supabase/README.md`). Check **Settings → Moderation queue** about once a day. The terms say reports are reviewed, aiming for within 24 hours.
 13. **Optional:** a free Sentry project, only if you want crash reports. Set `SENTRY_DSN`, rebuild, and update Data safety. Skip this for the first upload.
 

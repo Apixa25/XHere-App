@@ -1,6 +1,11 @@
 package world.xhere.app
 
 import android.app.Application
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import kotlin.time.Instant
 import kotlin.uuid.Uuid
 import org.koin.android.ext.koin.androidContext
@@ -19,6 +24,13 @@ import world.xhere.app.drop.DropCapture
 import world.xhere.app.drop.DropViewModel
 import world.xhere.app.drop.PendingDropSpot
 import world.xhere.app.drop.ImageLabeler
+import world.xhere.app.ar.ArFrame
+import world.xhere.app.ar.ArRuntime
+import world.xhere.app.ar.ArStatus
+import world.xhere.app.ar.ArSupport
+import world.xhere.app.ar.ArTarget
+import world.xhere.app.ar.ArViewModel
+import world.xhere.app.ar.ResolvedAnchor
 import world.xhere.app.location.DeviceLocation
 import world.xhere.app.map.FilterPresetStore
 import world.xhere.app.map.MapCanvas
@@ -30,6 +42,7 @@ import world.xhere.app.profile.ProfileViewModel
 import world.xhere.app.safety.ModerationViewModel
 import world.xhere.app.safety.SafetyListsViewModel
 import world.xhere.app.session.SessionViewModel
+import world.xhere.app.ui.TestTags
 import world.xhere.app.session.SignOutNotice
 import world.xhere.app.settings.DataExporter
 import world.xhere.app.settings.SettingsViewModel
@@ -46,8 +59,12 @@ import world.xhere.shared.model.Profile
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.callbackFlow
 import world.xhere.app.location.LocationReading
+import world.xhere.shared.ar.ArPose
 import world.xhere.shared.integrity.LocationSignal
 import kotlinx.coroutines.launch
 
@@ -70,6 +87,7 @@ object TestGraph {
     lateinit var exporter: RecordingDataExporter
     lateinit var links: IncomingLinks
     lateinit var conditions: ScriptedConditions
+    lateinit var ar: ScriptedArRuntime
 
     fun isReady(): Boolean = ::services.isInitialized
 }
@@ -141,9 +159,13 @@ fun testModule() = module {
     single<DropCapture> { FakeDropCapture() }
     single<ImageLabeler> { FakeImageLabeler() }
     val conditions = ScriptedConditions()
+    val ar = ScriptedArRuntime()
     TestGraph.conditions = conditions
+    TestGraph.ar = ar
     single<LiveConditions> { conditions }
-    viewModel { MapViewModel(get(), get(), get(), get(), debounceMs = 0, conditions = get()) }
+    single<ArRuntime> { ar }
+    viewModel { MapViewModel(get(), get(), get(), get(), get(), debounceMs = 0, conditions = get()) }
+    viewModel { ArViewModel(get(), get(), get()) }
     viewModel { DropViewModel(get(), get(), get(), get()) }
     viewModel { ProfileViewModel(get()) }
     viewModel {
@@ -175,6 +197,65 @@ private fun jpegWithExif(): ByteArray {
     return byteArrayOf(0xFF.toByte(), 0xD8.toByte(), 0xFF.toByte(), 0xE1.toByte(), (length shr 8).toByte(), length.toByte()) +
         payload +
         byteArrayOf(0xFF.toByte(), 0xDA.toByte(), 0x00, 0x02, 0x00, 0xFF.toByte(), 0xD9.toByte())
+}
+
+/**
+ * Geospatial stand-in. Support stays [ArSupport.UNSUPPORTED] until a test
+ * opts in, so the map button stays hidden for every other test.
+ */
+class ScriptedArRuntime : ArRuntime {
+    private val _support = MutableStateFlow(ArSupport.UNSUPPORTED)
+    private val _frames = MutableStateFlow(ArFrame(pose = null, status = ArStatus.WAITING))
+    override val support: StateFlow<ArSupport> = _support.asStateFlow()
+    override val frames: StateFlow<ArFrame> = _frames.asStateFlow()
+    private val checksAtomic = java.util.concurrent.atomic.AtomicInteger(0)
+    val checks: Int get() = checksAtomic.get()
+    var nextSupport: ArSupport = ArSupport.UNSUPPORTED
+    var scriptedPose: ArPose? = null
+    var scriptedAnchors: List<ResolvedAnchor> = emptyList()
+    var started: Boolean = false
+
+    override suspend fun refreshSupport(latitude: Double, longitude: Double) {
+        checksAtomic.incrementAndGet()
+        _support.value = nextSupport
+    }
+
+    override fun setTargets(targets: List<ArTarget>) = Unit
+
+    override fun start() {
+        started = true
+        publish()
+    }
+
+    override fun stop() {
+        started = false
+        _frames.value = ArFrame(pose = null, status = ArStatus.WAITING)
+    }
+
+    fun publish() {
+        _frames.value = ArFrame(
+            pose = scriptedPose,
+            status = if (started && scriptedPose != null) ArStatus.TRACKING else ArStatus.WAITING,
+            anchors = scriptedAnchors,
+            widthPx = 1080,
+            heightPx = 1920,
+        )
+    }
+
+    fun reset() {
+        checksAtomic.set(0)
+        nextSupport = ArSupport.UNSUPPORTED
+        _support.value = ArSupport.UNSUPPORTED
+        scriptedPose = null
+        scriptedAnchors = emptyList()
+        started = false
+        _frames.value = ArFrame(pose = null, status = ArStatus.WAITING)
+    }
+
+    @Composable
+    override fun Camera() {
+        Box(Modifier.fillMaxSize().testTag(TestTags.AR_CAMERA))
+    }
 }
 
 /** Foreground fixes the detail tests can push. Permission stays off until a test allows it. */

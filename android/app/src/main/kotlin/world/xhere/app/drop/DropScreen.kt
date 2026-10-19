@@ -48,9 +48,9 @@ fun DropScreen(
     pending: PendingDropSpot = koinInject(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    LaunchedEffect(pending.spot, pending.label) {
+    LaunchedEffect(pending.spot, pending.label, pending.signal) {
         val spot = pending.spot
-        if (spot == null) viewModel.clearPin() else viewModel.pin(spot, pending.label)
+        if (spot == null) viewModel.clearPin() else viewModel.pin(spot, pending.label, pending.signal)
     }
     val context = LocalContext.current
     val cameraPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->

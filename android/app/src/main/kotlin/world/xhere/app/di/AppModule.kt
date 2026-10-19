@@ -4,6 +4,9 @@ import org.koin.android.ext.koin.androidContext
 import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
 import world.xhere.app.R
+import world.xhere.app.ar.ArCoreRuntime
+import world.xhere.app.ar.ArRuntime
+import world.xhere.app.ar.ArViewModel
 import world.xhere.app.auth.AuthStrings
 import world.xhere.app.auth.AuthViewModel
 import world.xhere.app.auth.CredentialManagerGoogleSignIn
@@ -67,6 +70,7 @@ val appModule = module {
         }
     }
     single<DeviceLocation> { AndroidDeviceLocation(androidContext()) }
+    single<ArRuntime> { ArCoreRuntime(androidContext()) }
     single { IncomingLinks() }
     single<DropSharer> { AndroidDropSharer(androidContext()) }
     single<DataExporter> { AndroidDataExporter(androidContext()) }
@@ -87,7 +91,8 @@ val appModule = module {
             providers = listOf(NwsWeatherAlertProvider()),
         )
     }
-    viewModel { MapViewModel(get(), get(), get(), get(), conditions = get()) }
+    viewModel { MapViewModel(get(), get(), get(), get(), get(), conditions = get()) }
+    viewModel { ArViewModel(get(), get(), get()) }
     viewModel { (shortId: String) -> DropDetailViewModel(shortId, get(), get()) }
     viewModel { AuthViewModel(get(), get(), get(), get(), get()) }
     viewModel { ProfileViewModel(get()) }

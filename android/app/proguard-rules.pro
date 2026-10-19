@@ -77,6 +77,10 @@
 -keep class androidx.camera.** { *; }
 -dontwarn androidx.camera.**
 
+# --- ARCore (Geospatial, JNI). Keyless: no API key to keep. ---
+-keep class com.google.ar.** { *; }
+-dontwarn com.google.ar.**
+
 # Koin builds the graph with constructor references. Keep the Android helpers
 # it looks up, and the module that names every ViewModel.
 -keep class org.koin.** { *; }

@@ -37,6 +37,20 @@ With no `SUPABASE_URL`, the app binds the in-memory fake seeded with Jamestown d
 
 Onboarding explains foreground location, then requests `ACCESS_FINE_LOCATION` and `ACCESS_COARSE_LOCATION` only. "Not now" continues without a request. The map's location button asks for those same two permissions if they are still off. Background location is not in the manifest. That permission is M13 and stays opt-in.
 
+## AR view
+
+PLAN §3 lists an AR view as later work. The Android app now has the first cut: an **AR** button on the map, and a camera screen of nearby drops. It uses ARCore 1.56 Geospatial directly (no SceneView, no Filament). Labels are Compose. The camera image is a small OpenGL texture. Play Services for AR is installed on the phone by Google; it is not inside the APK.
+
+The button is shown only when ARCore is already installed, Geospatial is supported, and VPS covers the latest fine-location fix. Otherwise it stays hidden. The manifest marks `com.google.ar.core` as `optional` and `android.hardware.camera.ar` as not required, so a phone without ARCore can still install XHere. The map check does not prompt an install.
+
+Authorization is keyless. There is no `com.google.android.ar.API_KEY` and no key in `BuildConfig`. Google matches package `world.xhere.app` to an Android OAuth client in Cloud project `xhere-512103` (number `1059257603719`). The debug keystore's SHA-1 is already registered. A release build, and a Play install, need another Android OAuth client for the certificate the phone actually verifies. See `docs/PLAY-RELEASE.md`. Do not put an API key in the manifest to "make release work."
+
+Before the camera session, the screen shows Google's required notice, including the sentences about Play Services for AR and sensor data, with links to Google's privacy policy and the AR data page. XHere does not keep the frames or a pose trail. The session needs the camera permission and a precise location. Coarse location alone cannot run Geospatial.
+
+Labels are the nearest 25 drops inside 500 m. Terrain anchors are preferred, then rooftop, then an eye-level anchor. Size and opacity fade with distance. Color comes from the category, or from its group. A locked body is never drawn. A user drop that the reveal radius would open still hides its body when the location-integrity check would withhold that reveal. Public records stay readable. Tapping a label opens the existing drop detail. **Drop here in AR** posts at the Geospatial pose and sends that pose's accuracy as a device fix, not a map pin.
+
+`ArRuntime` is the seam. Robolectric binds a fake, so CI does not start ARCore. The ranking and the projection are `ArView` in `shared/` and run under `:shared:jvmTest`.
+
 ## Settings
 
 Sign out, Community guidelines, Blocked and hidden, Download my data, and delete account. Moderators and admins also see Moderation queue. Delete calls `AccountRepository.deleteMyAccount()`, which `SupabaseXHereClient` implements as the `delete_my_account` RPC (soft-delete now, hard-delete within 30 days via the M1 cron) and then signs out.
@@ -73,7 +87,7 @@ Java 21. `ANDROID_HOME` with platforms `android-36` (shared) and `android-37.0` 
 
 `versionName` `0.9.0`, `versionCode` `900`. See `docs/PLAY-RELEASE.md` for the scheme, the Play Console checklist, and the Data safety answers.
 
-Release builds are minified (R8) and resource-shrunk. Keep rules for supabase-kt, Ktor, kotlinx.serialization, MapLibre, ML Kit, CameraX, and Sentry are in `proguard-rules.pro`.
+Release builds are minified (R8) and resource-shrunk. Keep rules for supabase-kt, Ktor, kotlinx.serialization, MapLibre, ML Kit, CameraX, ARCore, and Sentry are in `proguard-rules.pro`.
 
 ```bash
 ./gradlew :android:app:bundleRelease

@@ -22,6 +22,10 @@ mlkitImageLabeling = "17.0.9"
 # Crash reports. The SDK stays off unless SENTRY_DSN is set at build time.
 # No Sentry account is created in CI. The free developer plan is enough at this scale.
 sentry = "8.61.0"
+# Geospatial client only. Play Services for AR is a separate install, not in the APK.
+# Keyless: no API key. The Cloud project is matched by package name + signing SHA-1.
+arcore = "1.56.0"
+playServicesLocation = "21.3.0"
 
 [libraries]
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }
@@ -65,6 +69,8 @@ androidx-camera-lifecycle = { module = "androidx.camera:camera-lifecycle", versi
 androidx-camera-view = { module = "androidx.camera:camera-view", version.ref = "camerax" }
 mlkit-image-labeling = { module = "com.google.mlkit:image-labeling", version.ref = "mlkitImageLabeling" }
 sentry-android-core = { module = "io.sentry:sentry-android-core", version.ref = "sentry" }
+arcore = { module = "com.google.ar:core", version.ref = "arcore" }
+play-services-location = { module = "com.google.android.gms:play-services-location", version.ref = "playServicesLocation" }
 
 [plugins]
 kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }

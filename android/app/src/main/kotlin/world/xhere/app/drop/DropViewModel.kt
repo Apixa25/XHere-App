@@ -56,17 +56,21 @@ class DropViewModel(
     private var filters: List<ContentFilter> = emptyList()
     private var tier: UserTier = UserTier.NEW
     private var lastHere: LatLng? = null
-    /** Set when the Here Card asked to drop at a tapped spot. GPS is not used. */
+    /** Set when the Here Card or AR asked to drop at a spot. GPS is not used. */
     private var pinned: LatLng? = null
+    /** Null for a map pin. A Geospatial pose keeps its accuracy and device-fix bit. */
+    private var pinnedSignal: LocationSignal? = null
 
-    fun pin(spot: LatLng, label: String?) {
+    fun pin(spot: LatLng, label: String?, signal: LocationSignal? = null) {
         pinned = spot
+        pinnedSignal = signal
         lastHere = spot
         _state.update { it.copy(pinnedLabel = Here.pinLabel(label, spot)) }
     }
 
     fun clearPin() {
         pinned = null
+        pinnedSignal = null
         _state.update { it.copy(pinnedLabel = null) }
     }
 
@@ -276,7 +280,7 @@ class DropViewModel(
     }
 
     private suspend fun here(): HerePoint {
-        pinned?.let { return HerePoint(it, LocationSignal(deviceFix = false)) }
+        pinned?.let { return HerePoint(it, pinnedSignal ?: LocationSignal(deviceFix = false)) }
         if (!location.hasPermission()) return HerePoint(JamestownDemo.center, LocationSignal(deviceFix = false))
         val reading = withTimeoutOrNull(250) { location.fixes().first() }
         return if (reading == null) {
