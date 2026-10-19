@@ -66,26 +66,27 @@ class ClaimsAndCapsulesTest {
         }
         rule.openMap()
         rule.onNodeWithTag(TestTags.MAP_TAP_SPOT).performClick()
-        rule.waitForTag(TestTags.HERE_OFFICIAL)
-        rule.onNodeWithTag(TestTags.HERE_OFFICIAL, useUnmergedTree = true).assertTextContains("Official", substring = true)
-        rule.onNodeWithTag(TestTags.HERE_OFFICIAL, useUnmergedTree = true).assertTextContains("Mill", substring = true)
+        rule.waitForTag(TestTags.HERE_OFFICIAL, unmerged = true)
+        rule.onNodeWithText("Official · Mill", substring = true, useUnmergedTree = true).assertIsDisplayed()
     }
 
     @Test
     fun anOralHistoryCapsuleStaysSealedOnTheCard() {
         rule.openMap()
         rule.onNodeWithTag(TestTags.MAP_TAP_SPOT).performClick()
-        rule.waitForTag(TestTags.HERE_ORAL)
-        rule.onNodeWithTag(TestTags.HERE_ORAL).performClick()
-        rule.waitForTag(TestTags.CAPSULE_PROMPTS)
-        rule.onNodeWithText("What did this place look like when you were young?", substring = true).assertIsDisplayed()
+        rule.waitForTag(TestTags.HERE_ORAL, unmerged = true)
+        rule.onNodeWithTag(TestTags.HERE_ORAL, useUnmergedTree = true).performScrollTo().performClick()
+        rule.waitForTag(TestTags.CAPSULE_PROMPTS, unmerged = true)
+        rule.onNodeWithText("What did this place look like when you were young?", substring = true, useUnmergedTree = true).assertIsDisplayed()
         rule.onNodeWithTag(TestTags.CAPSULE_BODY).performScrollTo().performTextInput("grandmother walked to the theater")
         rule.onNodeWithTag(TestTags.CAPSULE_SAVE).performScrollTo().performClick()
         rule.waitUntil(8_000) {
             rule.onAllNodesWithTag(TestTags.CAPSULE_SHEET).fetchSemanticsNodes().isEmpty()
         }
-        rule.onNodeWithText("grandmother walked to the theater", substring = true).assertDoesNotExist()
-        rule.onNodeWithText("Sealed until someone stands here", substring = true).assertIsDisplayed()
+        rule.onNodeWithText("grandmother walked to the theater", substring = true, useUnmergedTree = true).assertDoesNotExist()
+        rule.onNodeWithText("Sealed until someone stands here", substring = true, useUnmergedTree = true)
+            .performScrollTo()
+            .assertIsDisplayed()
         val stored = TestGraph.services.store.drops.values.first { it.oralHistory }
         assertEquals(null, stored.body)
         assertEquals("grandmother walked to the theater", stored.capsuleSecret)
@@ -120,8 +121,10 @@ class ClaimsAndCapsulesTest {
         assertFalse(TestGraph.services.store.drops.values.first { it.shortId == shortId }.body.isNullOrBlank())
         rule.openMap()
         rule.onNodeWithTag(TestTags.NAV_PROFILE).performClick()
-        rule.waitForTag(TestTags.impactCapsule(shortId))
-        rule.onNodeWithTag(TestTags.impactCapsule(shortId)).assertTextContains("Opened by someone standing there", substring = true)
+        rule.waitForTag(TestTags.impactCapsule(shortId), unmerged = true)
+        rule.onNodeWithTag(TestTags.impactCapsule(shortId), useUnmergedTree = true)
+            .performScrollTo()
+            .assertTextContains("Opened by someone standing there", substring = true)
     }
 
     @Test
@@ -150,9 +153,12 @@ class ClaimsAndCapsulesTest {
             ticket.claimId
         }
         TestGraph.services.viewer = admin
+        val queued = runBlocking { TestGraph.services.desk.reviewQueue() }
+        assertTrue(queued.any { it.id == claimId })
         rule.openSettings()
         rule.onNodeWithTag(TestTags.SETTINGS_MODERATION).performScrollTo().performClick()
-        rule.waitForTag(TestTags.CLAIM_QUEUE)
+        rule.waitForTag(TestTags.SCREEN_MODERATION)
+        rule.waitForTag(TestTags.CLAIM_QUEUE, unmerged = true)
         rule.onNodeWithTag(TestTags.claimApprove(claimId.toString())).performScrollTo().performClick()
         rule.waitUntil(8_000) {
             TestGraph.services.store.placeClaims.any { it.id == claimId && it.status == "active" }
@@ -199,8 +205,8 @@ private fun AndroidComposeTestRule<*, MainActivity>.openSettings() {
     waitForTag(TestTags.SETTINGS_SIGN_OUT)
 }
 
-private fun AndroidComposeTestRule<*, MainActivity>.waitForTag(tag: String) {
+private fun AndroidComposeTestRule<*, MainActivity>.waitForTag(tag: String, unmerged: Boolean = false) {
     waitUntil(timeoutMillis = 8_000) {
-        onAllNodesWithTag(tag).fetchSemanticsNodes().isNotEmpty()
+        onAllNodesWithTag(tag, useUnmergedTree = unmerged).fetchSemanticsNodes().isNotEmpty()
     }
 }

@@ -108,30 +108,6 @@ internal fun HereCardSheet(
                 )
             }
             sheet.official?.let { official -> OfficialBanner(official) }
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TextButton(
-                    onClick = onClaim,
-                    modifier = Modifier
-                        .weight(1f)
-                        .testTag(TestTags.HERE_CLAIM),
-                ) {
-                    Text(stringResource(R.string.here_claim))
-                }
-                TextButton(
-                    onClick = onMemory,
-                    modifier = Modifier
-                        .weight(1f)
-                        .testTag(TestTags.HERE_MEMORY),
-                ) {
-                    Text(stringResource(R.string.here_memory))
-                }
-            }
-            TextButton(
-                onClick = onOral,
-                modifier = Modifier.testTag(TestTags.HERE_ORAL),
-            ) {
-                Text(stringResource(R.string.here_oral))
-            }
             Button(
                 onClick = onDropHere,
                 modifier = Modifier
@@ -212,6 +188,7 @@ internal fun HereCardSheet(
                         style = MaterialTheme.typography.bodyLarge,
                     )
                     if (sheet.clippings.isNotEmpty()) ThisDayHere(sheet.clippings)
+                    PlaceActions(onClaim, onMemory, onOral)
                 }
                 else -> {
                     Column(
@@ -234,6 +211,7 @@ internal fun HereCardSheet(
                             }
                         }
                         if (sheet.clippings.isNotEmpty()) ThisDayHere(sheet.clippings)
+                        PlaceActions(onClaim, onMemory, onOral)
                     }
                 }
             }
@@ -376,6 +354,39 @@ private fun ThisDayHere(clippings: List<Clipping>) {
                 }
             }
         }
+    }
+}
+
+/** Claim and memory actions sit under the drops so the first rows stay on screen. */
+@Composable
+private fun PlaceActions(
+    onClaim: () -> Unit,
+    onMemory: () -> Unit,
+    onOral: () -> Unit,
+) {
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        TextButton(
+            onClick = onClaim,
+            modifier = Modifier
+                .weight(1f)
+                .testTag(TestTags.HERE_CLAIM),
+        ) {
+            Text(stringResource(R.string.here_claim))
+        }
+        TextButton(
+            onClick = onMemory,
+            modifier = Modifier
+                .weight(1f)
+                .testTag(TestTags.HERE_MEMORY),
+        ) {
+            Text(stringResource(R.string.here_memory))
+        }
+    }
+    TextButton(
+        onClick = onOral,
+        modifier = Modifier.testTag(TestTags.HERE_ORAL),
+    ) {
+        Text(stringResource(R.string.here_oral))
     }
 }
 

@@ -167,7 +167,7 @@ class InMemoryXHere(
     private val placeDesk: MemoryPlaceDesk by lazy {
         MemoryPlaceDesk(
             store = store,
-            viewer = { viewer },
+            viewer = { this.viewer },
             clock = clock,
             claimEmail = { claimEmail },
             decide = ::decideLocation,
