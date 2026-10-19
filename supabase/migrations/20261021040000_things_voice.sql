@@ -384,10 +384,12 @@ declare
   v_category text := nullif(btrim(coalesce(p_category_slug, '')), '');
   v_visibility text := coalesce(nullif(btrim(coalesce(p_visibility, '')), ''), 'public');
 begin
-  if p_title is null or char_length(btrim(p_title)) not between 1 and 80 or position(chr(0) in p_title) > 0 then
+  if p_title is null or char_length(btrim(p_title)) not between 1 and 80
+     or pg_catalog.strpos(pg_catalog.encode(pg_catalog.convert_to(p_title, 'UTF8'), 'hex'), '00') > 0 then
     raise exception 'invalid_title' using errcode = '22023';
   end if;
-  if p_story is null or char_length(p_story) not between 1 and 2000 or position(chr(0) in p_story) > 0 then
+  if p_story is null or char_length(p_story) not between 1 and 2000
+     or pg_catalog.strpos(pg_catalog.encode(pg_catalog.convert_to(p_story, 'UTF8'), 'hex'), '00') > 0 then
     raise exception 'invalid_story' using errcode = '22023';
   end if;
   if v_visibility not in ('public', 'unlisted') then
@@ -644,7 +646,7 @@ declare
   v_raw text;
   v_key text;
   v_id uuid;
-  v_ids uuid[] := '{}';
+  v_ids uuid[] := '{}'::uuid[];
   v_count integer;
 begin
   if v_uid is null then
@@ -722,19 +724,19 @@ begin
   end if;
 
   if v_key ~ '^xhere:' then
-    v_format := 'xhere';
+    v_format := 'xhere'::public.ble_format;
     v_voice := split_part(v_key, ':', 2);
   elsif v_key ~ '^uid:' then
-    v_format := 'eddystone_uid';
+    v_format := 'eddystone_uid'::public.ble_format;
     v_namespace := split_part(v_key, ':', 2);
     v_instance := split_part(v_key, ':', 3);
     v_voice := null;
   elsif v_key ~ '^url:' then
-    v_format := 'eddystone_url';
+    v_format := 'eddystone_url'::public.ble_format;
     v_url := substr(v_key, 5);
     v_voice := null;
   else
-    v_format := 'ibeacon';
+    v_format := 'ibeacon'::public.ble_format;
     v_uuid := split_part(v_key, ':', 2)::uuid;
     v_major := split_part(v_key, ':', 3)::integer;
     v_minor := split_part(v_key, ':', 4)::integer;
