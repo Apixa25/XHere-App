@@ -117,6 +117,8 @@ enum class LocationAction(val wire: String) {
     CONFIRM_DROP("confirm_drop"),
     REVEAL("reveal"),
     WALK_CHECK_IN("walk_check_in"),
+    CLAIM_PLACE("claim_place"),
+    OPEN_CAPSULE("open_capsule"),
 }
 
 /**

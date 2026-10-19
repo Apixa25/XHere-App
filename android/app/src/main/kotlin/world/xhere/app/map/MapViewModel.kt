@@ -503,6 +503,7 @@ class MapViewModel(
         _state.update { it.copy(focusedExperienceId = action.id) }
         val point = action.anchor
         if (point != null && Geo.isValid(point)) moveCamera(point, 16.0, fromUser = true)
+        if (action.id.startsWith("capsule:") && point != null && Geo.isValid(point)) openHere(point)
         if (action.openTimeMachine) openTimeMachine(point)
         if (action.startWalk) {
             val id = runCatching { Uuid.parse(action.id) }.getOrNull()
@@ -570,6 +571,11 @@ class MapViewModel(
         }
     }
 
+    fun refreshHere() {
+        val spot = _state.value.here?.spot ?: return
+        openHere(spot)
+    }
+
     private fun openHere(spot: LatLng) {
         if (!Geo.isValid(spot)) return
         teaserJob?.cancel()
@@ -594,6 +600,17 @@ class MapViewModel(
                 null
             }
             val access = if (drops != null) accessFor(spot) else null
+            val official = if (drops != null) {
+                try {
+                    services.desk.officialAt(spot)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (_: Exception) {
+                    null
+                }
+            } else {
+                null
+            }
             val place = try {
                 places.describe(spot)
             } catch (e: CancellationException) {
@@ -612,6 +629,7 @@ class MapViewModel(
                         failed = drops == null,
                         access = open.access ?: access,
                         accessKey = open.access?.placeKey ?: access?.placeKey ?: AccessPlaces.cell(spot),
+                        official = official,
                     ),
                 )
             }
@@ -822,6 +840,17 @@ class MapViewModel(
             try {
                 val result = services.walks.checkIn(fix, walkId, reading.signal)
                 lastCheckIn = fix
+                val opened = try {
+                    services.desk.openCapsulesHere(fix, reading.signal)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (_: Exception) {
+                    0
+                }
+                if (opened > 0) {
+                    val frame = lastFrame
+                    if (frame != null) fetch(frame)
+                }
                 val previous = _state.value.quests
                 val flipped = questJustCompleted(previous, result.quests)
                 questsLoaded = true

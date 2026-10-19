@@ -146,6 +146,11 @@ internal fun SubcategorySheet(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            Column(
+                modifier = Modifier
+                    .heightIn(max = 360.dp)
+                    .verticalScroll(rememberScrollState()),
+            ) {
             categories.forEach { category ->
                 val checked = category.slug in selected
                 Row(
@@ -165,6 +170,7 @@ internal fun SubcategorySheet(
                         style = MaterialTheme.typography.titleMedium,
                     )
                 }
+            }
             }
             Button(
                 onClick = { onApply(selected) },

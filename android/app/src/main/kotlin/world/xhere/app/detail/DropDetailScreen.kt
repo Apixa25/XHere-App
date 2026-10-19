@@ -23,6 +23,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
@@ -221,6 +222,8 @@ fun DropDetailScreen(
                         accessDraft = SurveyDraft()
                         surveying = true
                     },
+                    onReply = viewModel::sendReply,
+                    onDispute = viewModel::disputeClaim,
                 )
                 if (surveying) {
                     AccessSurveySheet(
@@ -360,7 +363,24 @@ private fun DetailBody(
     onShare: () -> Unit,
     onUseLocation: () -> Unit,
     onAccess: () -> Unit,
+    onReply: (String) -> Unit = {},
+    onDispute: () -> Unit = {},
 ) {
+    var reply by remember { mutableStateOf("") }
+    state.officialBadge?.let { badge ->
+        Text(
+            text = badge,
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.testTag(TestTags.DETAIL_OFFICIAL),
+        )
+    }
+    state.officialSummary?.takeIf { it.isNotBlank() }?.let { summary ->
+        Text(summary, style = MaterialTheme.typography.bodyLarge)
+    }
+    state.officialHours?.let { hours ->
+        Text(hours, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.testTag(TestTags.DETAIL_HOURS))
+    }
     Text(state.icon, style = MaterialTheme.typography.headlineLarge)
     Text(
         text = state.categoryLabel,
@@ -453,6 +473,41 @@ private fun DetailBody(
         )
     } else if (!state.showBody) {
         LockedCard(state = state, onUseLocation = onUseLocation)
+    }
+    if (state.ownerReplies.isNotEmpty()) {
+        Text(
+            text = stringResource(R.string.detail_owner_replies),
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.testTag(TestTags.DETAIL_REPLIES),
+        )
+        state.ownerReplies.forEach { reply ->
+            Text(reply, style = MaterialTheme.typography.bodyLarge)
+        }
+    }
+    if (state.canReply) {
+        OutlinedTextField(
+            value = reply,
+            onValueChange = { reply = it },
+            label = { Text(stringResource(R.string.detail_reply_hint)) },
+            modifier = Modifier
+                .fillMaxWidth()
+                .testTag(TestTags.DETAIL_REPLY),
+        )
+        TextButton(
+            onClick = {
+                onReply(reply)
+                reply = ""
+            },
+            enabled = reply.isNotBlank() && !state.sending,
+            modifier = Modifier.testTag(TestTags.DETAIL_REPLY_SEND),
+        ) {
+            Text(stringResource(R.string.detail_reply_send))
+        }
+    }
+    if (state.canDispute) {
+        TextButton(onClick = onDispute, modifier = Modifier.testTag(TestTags.DETAIL_DISPUTE)) {
+            Text(stringResource(R.string.detail_dispute))
+        }
     }
     if (state.showBody && !inscription.isNullOrBlank()) {
         Text(
@@ -570,6 +625,7 @@ private fun LockedCard(state: DetailUiState, onUseLocation: () -> Unit) {
             val gap = state.distanceM?.let { Geo.revealGapMeters(it, state.revealRadiusM) }
             Text(
                 text = when {
+                    state.capsuleLocked -> state.capsuleCondition ?: stringResource(R.string.detail_capsule_sealed)
                     state.locationWithheld -> stringResource(R.string.detail_location_withheld)
                     gap != null && gap > 0 -> stringResource(R.string.detail_walk_closer, gap)
                     else -> stringResource(R.string.detail_locked)

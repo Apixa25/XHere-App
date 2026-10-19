@@ -125,6 +125,8 @@ data class HereSheet(
     val access: world.xhere.shared.access.AccessSummary? = null,
     /** Place key the 3-tap survey writes. A cell when nothing is stored yet. */
     val accessKey: String = "",
+    /** Official block for a claimed place within 80 m. Null when no claim is active. */
+    val official: world.xhere.shared.model.OfficialPlace? = null,
 )
 
 /**
@@ -291,6 +293,7 @@ internal fun guideLine(state: MapUiState): List<LatLng> {
 
 internal fun markerLabel(feature: MapFeature, taxonomy: Taxonomy?): String {
     if (!feature.isCluster) {
+        if (feature.capsuleSealed) return "🔒"
         return iconFor(taxonomy, feature.categorySlug, feature.groupSlug)
     }
     val icons = feature.categoryCounts.orEmpty().entries

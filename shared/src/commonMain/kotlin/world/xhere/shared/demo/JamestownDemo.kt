@@ -264,6 +264,11 @@ object JamestownDemo {
             category(22, history, "story", "Story", "📖", 150, 2, attributes = HISTORICAL_SCHEMA),
             category(30, history, "memorial", "Memorial", "🕯️", 150, 3, attributes = HISTORICAL_SCHEMA),
             category(53, history, "historical_marker", "Historical marker", "🪧", 150, 4, attributes = MARKER_SCHEMA),
+            category(
+                60, history, "time_capsule", "Time capsule", "✉️", 150, 5,
+                filters = listOf("contact_info"),
+                postingNotice = "The story stays sealed until it unlocks.",
+            ),
             category(23, nature, "viewpoint", "Viewpoint", "🏞️", 300, 1),
             category(31, nature, "trail_note", "Trail note", "🥾", 300, 2),
             category(32, nature, "wildlife", "Wildlife sighting", "🦉", 300, 3),
@@ -284,6 +289,14 @@ object JamestownDemo {
                 maxTtlNew = 30.days,
                 expiresAtAttribute = "ends_at",
                 confirmations = 2,
+            ),
+            category(
+                62, events, "special", "Special", "📣", 300, 3,
+                filters = listOf("contact_info"),
+                postingNotice = "Official specials expire.",
+                defaultTtl = 7.days,
+                maxTtl = 30.days,
+                maxTtlNew = 30.days,
             ),
             category(
                 35, events, "popup", "Pop-up", "⛺", 1000, 2,
@@ -351,6 +364,11 @@ object JamestownDemo {
             category(40, community, "place_of_worship", "Place of worship", "🛐", 300, 1),
             category(41, community, "community_space", "Community space", "🏘️", 300, 2),
             category(42, community, "notice_board", "Notice", "📌", 300, 3, minTier = UserTier.REGULAR),
+            category(
+                61, community, "place", "Place", "🏪", 300, 4,
+                filters = listOf("contact_info"),
+                postingNotice = "Claiming a place is a separate step.",
+            ),
             category(43, works, "infrastructure", "Infrastructure", "🌉", 200, 1),
             category(44, works, "construction", "Construction", "🚧", 200, 2),
             category(45, works, "underground", "Underground", "🚇", 200, 3),

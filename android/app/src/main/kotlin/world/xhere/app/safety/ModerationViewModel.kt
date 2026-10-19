@@ -17,6 +17,7 @@ import world.xhere.shared.model.ModerateDropAction
 import world.xhere.shared.model.ModerationQueueItem
 import world.xhere.shared.model.QueueItemKind
 import world.xhere.shared.integrity.LocationIntegrityFlag
+import world.xhere.shared.model.ClaimQueueItem
 import world.xhere.shared.model.ReportStatus
 
 enum class ModAction(val slug: String) {
@@ -37,6 +38,7 @@ data class ModerationUiState(
     val failed: Boolean = false,
     val items: List<ModerationQueueItem> = emptyList(),
     val flags: List<LocationIntegrityFlag> = emptyList(),
+    val claims: List<ClaimQueueItem> = emptyList(),
     val busy: Boolean = false,
     val message: ModMessage? = null,
 )
@@ -76,6 +78,65 @@ class ModerationViewModel(
         }
     }
 
+    fun approveClaim(item: ClaimQueueItem) {
+        if (_state.value.busy) return
+        viewModelScope.launch {
+            _state.update { it.copy(busy = true, message = null) }
+            try {
+                if (item.kind == "claim") {
+                    services.desk.review(item.id, approve = true, note = null)
+                } else {
+                    services.desk.resolveDispute(item.id, dismiss = false)
+                }
+                reload()
+                _state.update { it.copy(busy = false, message = ModMessage.DONE) }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                reload()
+                _state.update { it.copy(busy = false, message = ModMessage.FAILED) }
+            }
+        }
+    }
+
+    fun rejectClaim(item: ClaimQueueItem) {
+        if (_state.value.busy) return
+        viewModelScope.launch {
+            _state.update { it.copy(busy = true, message = null) }
+            try {
+                if (item.kind == "claim") {
+                    services.desk.review(item.id, approve = false, note = null)
+                } else {
+                    services.desk.resolveDispute(item.id, dismiss = true)
+                }
+                reload()
+                _state.update { it.copy(busy = false, message = ModMessage.DONE) }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                reload()
+                _state.update { it.copy(busy = false, message = ModMessage.FAILED) }
+            }
+        }
+    }
+
+    fun revokeClaim(claimId: kotlin.uuid.Uuid) {
+        if (_state.value.busy) return
+        viewModelScope.launch {
+            _state.update { it.copy(busy = true, message = null) }
+            try {
+                services.desk.revoke(claimId, "revoked")
+                reload()
+                _state.update { it.copy(busy = false, message = ModMessage.DONE) }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                reload()
+                _state.update { it.copy(busy = false, message = ModMessage.FAILED) }
+            }
+        }
+    }
+
     fun act(item: ModerationQueueItem, action: ModAction) {
         if (_state.value.busy) return
         viewModelScope.launch {
@@ -107,7 +168,14 @@ class ModerationViewModel(
         try {
             val items = services.moderation.queue()
             val flags = runCatching { services.moderation.integrityQueue() }.getOrDefault(emptyList())
-            _state.update { it.copy(loading = false, denied = false, failed = false, items = items, flags = flags) }
+            val claims = try {
+                services.desk.reviewQueue()
+            } catch (e: XHereApiException) {
+                if (e.code == "not_admin") emptyList() else throw e
+            }
+            _state.update {
+                it.copy(loading = false, denied = false, failed = false, items = items, flags = flags, claims = claims)
+            }
         } catch (e: CancellationException) {
             throw e
         } catch (e: XHereApiException) {

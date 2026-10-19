@@ -171,6 +171,14 @@ class FreshSessionRule : TestRule {
                     TestGraph.services.auth.signOut()
                     TestGraph.services.store.deleted.clear()
                     TestGraph.services.store.pendingEmail = null
+                    TestGraph.services.claimEmail = null
+                    TestGraph.services.store.claimedPlaces.clear()
+                    TestGraph.services.store.placeTeams.clear()
+                    TestGraph.services.store.placeMembers.clear()
+                    TestGraph.services.store.placeClaims.clear()
+                    TestGraph.services.store.placeOfficial.clear()
+                    TestGraph.services.store.ownerReplies.clear()
+                    TestGraph.services.store.claimDisputes.clear()
                     val demoShortIds = setOf(
                         "fenton", "lunch", "truck", "concert", "hazard", "benches", "lake", "buffalo",
                         "records",
@@ -198,6 +206,12 @@ class FreshSessionRule : TestRule {
                         drop.deletedAt = null
                         drop.statusBeforeDelete = null
                         drop.extraBadges = emptyList()
+                        drop.capsuleMode = null
+                        drop.capsuleUnlockAt = null
+                        drop.capsuleOpenedAt = null
+                        drop.capsuleSecret = null
+                        drop.capsuleSecretMedia = emptyList()
+                        drop.oralHistory = false
                     }
                 }
             }

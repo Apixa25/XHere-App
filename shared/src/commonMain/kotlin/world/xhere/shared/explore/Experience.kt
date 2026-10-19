@@ -1,9 +1,11 @@
 package world.xhere.shared.explore
 
+import world.xhere.shared.capsule.Capsules
 import world.xhere.shared.geo.Geo
 import world.xhere.shared.geo.LatLng
 import world.xhere.shared.live.WeatherAlert
 import world.xhere.shared.model.CampaignProgress
+import world.xhere.shared.model.DropCard
 import world.xhere.shared.model.QuestProgress
 import world.xhere.shared.model.ThingCard
 import world.xhere.shared.model.Walk
@@ -64,8 +66,9 @@ data class ExperienceDismissal(val id: String, val revision: String)
 /**
  * Builds the catalog from the reads the app already makes.
  * [things] come from `my_things` and from whatever the phone has heard.
- * An empty thing list leaves one placeholder. Time capsules have no RPC yet,
- * so that section is a placeholder a later feed can replace.
+ * An empty thing list leaves one placeholder. An empty capsule list leaves
+ * one placeholder. Real capsules replace it. The summary is the unlock
+ * condition, never the story.
  */
 object Experiences {
     const val TIME_MACHINE_ID: String = "experience:time-machine"
@@ -100,6 +103,7 @@ object Experiences {
         things: List<ThingCard>,
         here: LatLng?,
         heardMeters: Map<String, Double> = emptyMap(),
+        capsules: List<DropCard> = emptyList(),
     ): List<Experience> = buildList {
         walks.forEach { add(walk(it, here)) }
         quests.forEach { add(quest(it)) }
@@ -107,7 +111,7 @@ object Experiences {
         alerts.forEach { add(alert(it)) }
         add(timeMachine(here))
         addAll(thingCards(things, here, heardMeters))
-        add(timeCapsulePlaceholder())
+        addAll(capsuleCards(capsules, here))
     }
 
     fun sort(items: List<Experience>, mode: ExperienceSort): List<Experience> = when (mode) {
@@ -250,6 +254,36 @@ object Experiences {
         hints = false,
         placeholder = true,
     )
+
+    fun capsule(card: DropCard, here: LatLng?): Experience {
+        val anchor = card.displayLocation
+        val distance = if (here != null) Geo.distanceMeters(here, anchor) else card.distanceM
+        return Experience(
+            id = "capsule:${card.id}",
+            kind = ExperienceKind.TIME_CAPSULE,
+            title = card.title,
+            summary = Capsules.condition(card.capsuleMode, card.capsuleUnlockAt, card.capsuleOpenedAt),
+            distanceM = distance,
+            durationMin = null,
+            progressCurrent = null,
+            progressTotal = null,
+            revision = listOf(
+                card.title,
+                card.capsuleMode.orEmpty(),
+                card.capsuleUnlockAt?.toString().orEmpty(),
+                card.capsuleLocked.toString(),
+            ).joinToString("|"),
+            anchor = anchor,
+            cta = ExperienceCta.FOCUS,
+            hints = false,
+        )
+    }
+
+    fun capsuleCards(cards: List<DropCard>, here: LatLng?): List<Experience> {
+        val real = cards.filter { it.categorySlug == "time_capsule" || it.capsuleMode != null }.distinctBy { it.id }
+        if (real.isEmpty()) return listOf(timeCapsulePlaceholder())
+        return real.map { capsule(it, here) }
+    }
 
     fun timeCapsulePlaceholder(): Experience = Experience(
         id = CAPSULE_PLACEHOLDER_ID,

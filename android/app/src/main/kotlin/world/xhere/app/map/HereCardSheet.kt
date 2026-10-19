@@ -28,6 +28,9 @@ import world.xhere.app.R
 import world.xhere.app.access.AccessStatusChip
 import world.xhere.app.reputation.TierChip
 import world.xhere.app.ui.TestTags
+import world.xhere.shared.capsule.Capsules
+import world.xhere.shared.model.OfficialPlace
+import world.xhere.shared.place.PlaceClaims
 import world.xhere.shared.reputation.Reputation
 import world.xhere.shared.here.Here
 import world.xhere.shared.here.isPublicRecord
@@ -51,6 +54,9 @@ internal fun HereCardSheet(
     onDropHere: () -> Unit,
     onTimeMachine: () -> Unit,
     onAccess: () -> Unit = {},
+    onClaim: () -> Unit = {},
+    onMemory: () -> Unit = {},
+    onOral: () -> Unit = {},
     onDismiss: () -> Unit,
 ) {
     val groups = Here.groups(sheet.drops)
@@ -101,6 +107,7 @@ internal fun HereCardSheet(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
+            sheet.official?.let { official -> OfficialBanner(official) }
             Button(
                 onClick = onDropHere,
                 modifier = Modifier
@@ -181,6 +188,7 @@ internal fun HereCardSheet(
                         style = MaterialTheme.typography.bodyLarge,
                     )
                     if (sheet.clippings.isNotEmpty()) ThisDayHere(sheet.clippings)
+                    PlaceActions(onClaim, onMemory, onOral)
                 }
                 else -> {
                     Column(
@@ -203,6 +211,7 @@ internal fun HereCardSheet(
                             }
                         }
                         if (sheet.clippings.isNotEmpty()) ThisDayHere(sheet.clippings)
+                        PlaceActions(onClaim, onMemory, onOral)
                     }
                 }
             }
@@ -280,10 +289,21 @@ private fun HereRow(card: DropCard) {
             )
         } else if (!card.revealed) {
             Text(
-                text = stringResource(R.string.here_locked),
+                text = if (card.capsuleLocked) {
+                    Capsules.condition(card.capsuleMode, card.capsuleUnlockAt, card.capsuleOpenedAt)
+                } else {
+                    stringResource(R.string.here_locked)
+                },
                 modifier = Modifier.testTag(TestTags.hereBody(card.shortId)),
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        if (card.official) {
+            Text(
+                text = PlaceClaims.BADGE,
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary,
             )
         }
     }
@@ -332,6 +352,73 @@ private fun ThisDayHere(clippings: List<Clipping>) {
                 ) {
                     Text(stringResource(R.string.this_day_open))
                 }
+            }
+        }
+    }
+}
+
+/** Claim and memory actions sit under the drops so the first rows stay on screen. */
+@Composable
+private fun PlaceActions(
+    onClaim: () -> Unit,
+    onMemory: () -> Unit,
+    onOral: () -> Unit,
+) {
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        TextButton(
+            onClick = onClaim,
+            modifier = Modifier
+                .weight(1f)
+                .testTag(TestTags.HERE_CLAIM),
+        ) {
+            Text(stringResource(R.string.here_claim))
+        }
+        TextButton(
+            onClick = onMemory,
+            modifier = Modifier
+                .weight(1f)
+                .testTag(TestTags.HERE_MEMORY),
+        ) {
+            Text(stringResource(R.string.here_memory))
+        }
+    }
+    TextButton(
+        onClick = onOral,
+        modifier = Modifier.testTag(TestTags.HERE_ORAL),
+    ) {
+        Text(stringResource(R.string.here_oral))
+    }
+}
+
+@Composable
+private fun OfficialBanner(official: OfficialPlace) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag(TestTags.HERE_OFFICIAL),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Text(
+            text = stringResource(R.string.official_badge, official.badge, official.name),
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.primary,
+        )
+        official.summary?.takeIf { it.isNotBlank() }?.let { summary ->
+            Text(summary, style = MaterialTheme.typography.bodyLarge)
+        }
+        if (official.hours.isNotEmpty()) {
+            val names = listOf(
+                stringResource(R.string.hours_mon),
+                stringResource(R.string.hours_tue),
+                stringResource(R.string.hours_wed),
+                stringResource(R.string.hours_thu),
+                stringResource(R.string.hours_fri),
+                stringResource(R.string.hours_sat),
+                stringResource(R.string.hours_sun),
+            )
+            official.hours.forEach { row ->
+                val day = names.getOrNull(row.day - 1) ?: row.day.toString()
+                Text("$day ${row.open}–${row.close}", style = MaterialTheme.typography.bodyMedium)
             }
         }
     }

@@ -45,6 +45,7 @@ import world.xhere.shared.live.NwsWeatherAlertProvider
 import world.xhere.app.map.SpotNames
 import world.xhere.app.onboarding.OnboardingStore
 import world.xhere.app.profile.ProfileViewModel
+import world.xhere.app.place.PlaceDeskViewModel
 import world.xhere.app.safety.ModerationViewModel
 import world.xhere.app.safety.SafetyListsViewModel
 import world.xhere.app.session.SessionViewModel
@@ -143,6 +144,7 @@ val appModule = module {
     viewModel { ProfileViewModel(get(), get()) }
     viewModel { SafetyListsViewModel(get()) }
     viewModel { ModerationViewModel(get()) }
+    viewModel { PlaceDeskViewModel(get()) }
     viewModel {
         val context = androidContext()
         SettingsViewModel(

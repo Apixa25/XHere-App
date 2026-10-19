@@ -12,6 +12,7 @@ import world.xhere.shared.json.UuidSerializer
 import world.xhere.shared.model.ConfirmationVerdict
 import world.xhere.shared.model.CreateThingRequest
 import world.xhere.shared.model.MediaUpload
+import world.xhere.shared.model.PlaceHours
 import world.xhere.shared.model.ReportReason
 import world.xhere.shared.model.ReportStatus
 import world.xhere.shared.model.ReportTarget
@@ -380,4 +381,134 @@ internal data class AccessBoxParams(
     @SerialName("p_min_lat") val minLat: Double,
     @SerialName("p_max_lng") val maxLng: Double,
     @SerialName("p_max_lat") val maxLat: Double,
+)
+
+@Serializable
+internal data class CreatePlaceParams(
+    @SerialName("p_name") val name: String,
+    @SerialName("p_lat") val lat: Double,
+    @SerialName("p_lng") val lng: Double,
+    @SerialName("p_website") val website: String? = null,
+    @SerialName("p_integrity") val integrity: LocationSignal? = null,
+)
+
+@Serializable
+internal data class StartClaimParams(
+    @Serializable(with = UuidSerializer::class)
+    @SerialName("p_anchor_drop_id") val anchorDropId: Uuid,
+    @SerialName("p_website") val website: String? = null,
+    @SerialName("p_lat") val lat: Double,
+    @SerialName("p_lng") val lng: Double,
+    @SerialName("p_integrity") val integrity: LocationSignal? = null,
+)
+
+@Serializable
+internal data class ClaimIdParams(
+    @Serializable(with = UuidSerializer::class)
+    @SerialName("p_claim_id") val claimId: Uuid,
+)
+
+@Serializable
+internal data class SubmitClaimParams(
+    @Serializable(with = UuidSerializer::class)
+    @SerialName("p_claim_id") val claimId: Uuid,
+    @SerialName("p_note") val note: String? = null,
+)
+
+@Serializable
+internal data class ReviewClaimParams(
+    @Serializable(with = UuidSerializer::class)
+    @SerialName("p_claim_id") val claimId: Uuid,
+    @SerialName("p_approve") val approve: Boolean,
+    @SerialName("p_note") val note: String? = null,
+)
+
+@Serializable
+internal data class RevokeClaimParams(
+    @Serializable(with = UuidSerializer::class)
+    @SerialName("p_claim_id") val claimId: Uuid,
+    @SerialName("p_reason") val reason: String,
+)
+
+@Serializable
+internal data class InviteCoownerParams(
+    @Serializable(with = UuidSerializer::class)
+    @SerialName("p_place_id") val placeId: Uuid,
+    @SerialName("p_handle") val handle: String,
+)
+
+@Serializable
+internal data class PlaceIdParams(
+    @Serializable(with = UuidSerializer::class)
+    @SerialName("p_place_id") val placeId: Uuid,
+)
+
+@Serializable
+internal data class SetHoursParams(
+    @Serializable(with = UuidSerializer::class)
+    @SerialName("p_place_id") val placeId: Uuid,
+    @SerialName("p_hours") val hours: List<PlaceHours>,
+    @SerialName("p_summary") val summary: String? = null,
+)
+
+@Serializable
+internal data class AnnouncementParams(
+    @Serializable(with = UuidSerializer::class)
+    @SerialName("p_place_id") val placeId: Uuid,
+    @SerialName("p_title") val title: String,
+    @SerialName("p_body") val body: String,
+    @Serializable(with = InstantSerializer::class)
+    @SerialName("p_expires_at") val expiresAt: Instant,
+    @SerialName("p_lat") val lat: Double,
+    @SerialName("p_lng") val lng: Double,
+    @SerialName("p_integrity") val integrity: LocationSignal? = null,
+)
+
+@Serializable
+internal data class OwnerReplyParams(
+    @Serializable(with = UuidSerializer::class)
+    @SerialName("p_drop_id") val dropId: Uuid,
+    @SerialName("p_body") val body: String,
+)
+
+@Serializable
+internal data class DisputeClaimParams(
+    @Serializable(with = UuidSerializer::class)
+    @SerialName("p_place_id") val placeId: Uuid,
+    @SerialName("p_reason") val reason: String,
+    @SerialName("p_details") val details: String? = null,
+)
+
+@Serializable
+internal data class ResolveDisputeParams(
+    @Serializable(with = UuidSerializer::class)
+    @SerialName("p_dispute_id") val disputeId: Uuid,
+    @SerialName("p_dismiss") val dismiss: Boolean,
+)
+
+@Serializable
+internal data class OfficialAtParams(
+    @SerialName("p_lat") val lat: Double,
+    @SerialName("p_lng") val lng: Double,
+)
+
+@Serializable
+internal data class CreateCapsuleParams(
+    @SerialName("p_title") val title: String,
+    @SerialName("p_body") val body: String?,
+    @SerialName("p_lat") val lat: Double,
+    @SerialName("p_lng") val lng: Double,
+    @SerialName("p_mode") val mode: String,
+    @Serializable(with = InstantSerializer::class)
+    @SerialName("p_unlock_at") val unlockAt: Instant? = null,
+    @SerialName("p_oral_history") val oralHistory: Boolean = false,
+    @SerialName("p_media") val media: List<MediaUpload> = emptyList(),
+    @SerialName("p_integrity") val integrity: LocationSignal? = null,
+)
+
+@Serializable
+internal data class OpenCapsulesParams(
+    @SerialName("p_lat") val lat: Double,
+    @SerialName("p_lng") val lng: Double,
+    @SerialName("p_integrity") val integrity: LocationSignal? = null,
 )

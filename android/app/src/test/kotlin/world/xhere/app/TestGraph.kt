@@ -49,6 +49,7 @@ import world.xhere.app.map.PreviewMapCanvas
 import world.xhere.app.map.SpotNames
 import world.xhere.app.onboarding.OnboardingStore
 import world.xhere.app.profile.ProfileViewModel
+import world.xhere.app.place.PlaceDeskViewModel
 import world.xhere.app.safety.ModerationViewModel
 import world.xhere.app.safety.SafetyListsViewModel
 import world.xhere.app.session.SessionViewModel
@@ -169,6 +170,7 @@ fun testModule() = module {
     viewModel { SafetyListsViewModel(get()) }
     viewModel { ModerationViewModel(get()) }
     single { MapPins() }
+    viewModel { PlaceDeskViewModel(get()) }
     viewModel { (shortId: String) -> DropDetailViewModel(shortId, get(), get(), get()) }
     viewModel { SessionViewModel(get(), get(), get()) }
     viewModel { AuthViewModel(get(), get(), get(), get(), get()) }

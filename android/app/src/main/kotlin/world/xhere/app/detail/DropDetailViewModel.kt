@@ -20,6 +20,7 @@ import kotlinx.serialization.json.contentOrNull
 import world.xhere.app.location.DeviceLocation
 import world.xhere.app.location.LocationReading
 import world.xhere.app.map.MapPins
+import world.xhere.shared.capsule.Capsules
 import world.xhere.shared.access.AccessAnswer
 import world.xhere.shared.access.AccessPlaces
 import world.xhere.shared.access.AccessSummary
@@ -30,6 +31,10 @@ import world.xhere.shared.geo.LatLng
 import world.xhere.shared.model.BadgeAward
 import world.xhere.shared.model.ConfirmationVerdict
 import world.xhere.shared.model.DropCard
+import world.xhere.shared.model.OfficialPlace
+import world.xhere.shared.model.OwnerReply
+import world.xhere.shared.model.PlaceHours
+import world.xhere.shared.place.PlaceClaims
 import world.xhere.shared.model.DropSource
 import world.xhere.shared.model.DropStatus
 import world.xhere.shared.model.MediaKind
@@ -126,6 +131,14 @@ data class DetailUiState(
     val access: AccessSummary? = null,
     val accessBusy: Boolean = false,
     val accessFailed: Boolean = false,
+    val officialBadge: String? = null,
+    val officialSummary: String? = null,
+    val officialHours: String? = null,
+    val capsuleLocked: Boolean = false,
+    val capsuleCondition: String? = null,
+    val ownerReplies: List<String> = emptyList(),
+    val canReply: Boolean = false,
+    val canDispute: Boolean = false,
 )
 
 /**
@@ -164,6 +177,8 @@ class DropDetailViewModel(
     private var photoKey: String? = null
     private var pendingEdit: Boolean = false
     private var undoArmed: Boolean = false
+    private var official: OfficialPlace? = null
+    private var replies: List<OwnerReply> = emptyList()
 
     init {
         viewModelScope.launch { load() }
@@ -433,6 +448,7 @@ class DropDetailViewModel(
             mine = teaser.isMine
             // drop_detail is what counts a unique view. The teaser does not.
             card = services.drops.dropDetail(teaser.id, null)
+            refreshPlace(teaser.id)
             accessSummary = runCatching { services.access.summary(accessKey!!) }.getOrNull()
             publish()
         } catch (e: CancellationException) {
@@ -466,6 +482,7 @@ class DropDetailViewModel(
                 val detailed = services.drops.dropDetail(id, fix, reading.signal)
                 if (lastReading != reading) return@launch
                 card = detailed
+                refreshPlace(id)
                 lastFetchedKey = key
                 fetchedInside = detailed.isMine || (distance != null && distance!! <= revealRadius)
                 publish()
@@ -485,7 +502,10 @@ class DropDetailViewModel(
         val current = card ?: return
         val publicRecord = current.source == DropSource.OPEN_DATA
         val insideReveal = distance != null && distance!! <= current.revealRadiusM
-        val showBody = publicRecord || current.isMine || (current.revealed && insideReveal)
+        val officialReadable = current.source == DropSource.OFFICIAL && current.revealed
+        val showBody = !current.capsuleLocked && (
+            publicRecord || officialReadable || current.isMine || (current.revealed && insideReveal)
+            )
         val live = current.status == DropStatus.ACTIVE || current.status == DropStatus.CONFIRMED
         val canAnswer = !publicRecord &&
             !current.isMine &&
@@ -555,7 +575,7 @@ class DropDetailViewModel(
                 safetyMessage = previous.safetyMessage,
                 gone = previous.gone,
                 canUndoHide = previous.canUndoHide,
-                locationWithheld = current.locationWithheld && !publicRecord && !current.isMine,
+                locationWithheld = current.locationWithheld && !publicRecord && !current.isMine && !current.capsuleLocked,
                 photos = if (keepPhotos) previous.photos else emptyList(),
                 editing = previous.editing,
                 editTitle = previous.editTitle,
@@ -573,6 +593,21 @@ class DropDetailViewModel(
                 access = accessSummary,
                 accessBusy = previous.accessBusy,
                 accessFailed = previous.accessFailed,
+                officialBadge = if (current.official || official != null) (official?.badge ?: PlaceClaims.BADGE) else null,
+                officialSummary = official?.summary ?: current.officialSummary,
+                officialHours = hoursLabel(if (official != null) official!!.hours else current.officialHours),
+                capsuleLocked = current.capsuleLocked,
+                capsuleCondition = if (current.capsuleLocked) {
+                    Capsules.condition(current.capsuleMode, current.capsuleUnlockAt, current.capsuleOpenedAt)
+                } else {
+                    null
+                },
+                ownerReplies = replies.map { reply ->
+                    val who = reply.authorHandle?.let { "@$it: " }.orEmpty()
+                    who + reply.body
+                },
+                canReply = official?.canReply == true,
+                canDispute = official != null && official?.canReply != true,
             )
         }
         openEditorIfReady()
@@ -609,6 +644,47 @@ class DropDetailViewModel(
         publish()
     }
 
+    fun sendReply(text: String) {
+        val id = dropId ?: return
+        if (_state.value.sending) return
+        viewModelScope.launch {
+            _state.update { it.copy(sending = true) }
+            try {
+                services.desk.reply(id, text)
+                refreshPlace(id)
+                _state.update { it.copy(sending = false) }
+                publish()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                _state.update { it.copy(sending = false, notice = DetailNotice.FAILED) }
+            }
+        }
+    }
+
+    fun disputeClaim() {
+        val placeId = official?.placeId ?: return
+        if (_state.value.sending) return
+        viewModelScope.launch {
+            _state.update { it.copy(sending = true) }
+            try {
+                services.desk.dispute(placeId, "Wrong owner", null)
+                refreshPlace(dropId ?: return@launch)
+                _state.update { it.copy(sending = false) }
+                publish()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                _state.update { it.copy(sending = false, notice = DetailNotice.FAILED) }
+            }
+        }
+    }
+
+    private suspend fun refreshPlace(id: Uuid) {
+        official = runCatching { services.desk.officialForDrop(id) }.getOrNull()
+        replies = runCatching { services.desk.repliesFor(id) }.getOrDefault(emptyList())
+    }
+
     fun submitAccess(stepFree: AccessAnswer, ramp: AccessAnswer, restroom: AccessAnswer, notes: String?) {
         val key = accessKey ?: return
         val here = place ?: return
@@ -643,6 +719,15 @@ class DropDetailViewModel(
         "rate_limited" -> DetailNotice.RATE_LIMITED
         "drop_not_found" -> DetailNotice.UNAVAILABLE
         else -> DetailNotice.FAILED
+    }
+
+    private fun hoursLabel(hours: List<PlaceHours>): String? {
+        if (hours.isEmpty()) return null
+        val names = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
+        return hours.joinToString("\n") { row ->
+            val day = names.getOrNull(row.day - 1) ?: row.day.toString()
+            "$day ${row.open}–${row.close}"
+        }
     }
 
     private fun signalKey(reading: LocationReading): String =
