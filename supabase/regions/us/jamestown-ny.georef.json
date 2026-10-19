@@ -1,0 +1,26 @@
+{
+  "region_id": "us-ny-jamestown",
+  "note": "Control points are native pixels on the main map, origin top left. The inset at the top left of the 1886 sheet is a different drawing. Do not put points on it. The overlay stays off until control_points has at least three verified points. Guides are OpenStreetMap intersections measured for this sheet. They are not pixels.",
+  "sheets": [
+    {
+      "sheet_id": "sanborn06011_001-2",
+      "title": "Jamestown, March 1886, sheet 2",
+      "year": 1886,
+      "width": 6450,
+      "height": 7650,
+      "image_url": "https://tile.loc.gov/image-services/iiif/service:gmd:gmd380m:g3804m:g3804jm:g3804jm_g060111886:06011_1886-0002/full/6450,/0/default.jpg",
+      "iiif_service": "https://tile.loc.gov/image-services/iiif/service:gmd:gmd380m:g3804m:g3804jm:g3804jm_g060111886:06011_1886-0002",
+      "item_url": "https://www.loc.gov/resource/g3804jm.g3804jm_g060111886/?sp=2",
+      "attribution": "Library of Congress, Geography and Map Division, Sanborn Maps Collection. Public domain.",
+      "guides": [
+        {"label": "North Main and East 7th", "latitude": 42.099927, "longitude": -79.241835},
+        {"label": "North Main and East 6th", "latitude": 42.098959, "longitude": -79.242051},
+        {"label": "North Main and East 8th", "latitude": 42.100892, "longitude": -79.241513},
+        {"label": "Cherry and West 6th", "latitude": 42.098756, "longitude": -79.243297},
+        {"label": "Pine and East 6th", "latitude": 42.099168, "longitude": -79.240839},
+        {"label": "East 6th and Spring", "latitude": 42.099351, "longitude": -79.239696}
+      ],
+      "control_points": []
+    }
+  ]
+}

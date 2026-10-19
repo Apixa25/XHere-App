@@ -285,6 +285,20 @@ interface MediaRepository {
     suspend fun uploadPhoto(bytes: ByteArray, mimeType: String): MediaUpload
 }
 
+/**
+ * Time Machine and "This day here".
+ *
+ * Both calls read the region cache. They do not call loc.gov. [historyAt]
+ * returns every cached sheet for the town, town-level photos, and point
+ * photos within 800 m. [clippingsAt] returns newspaper lines whose terms
+ * overlap [terms]. The phone ranks those lines for the calendar day.
+ */
+interface HistoryRepository {
+    suspend fun historyAt(point: LatLng): world.xhere.shared.history.HistoryPlace
+
+    suspend fun clippingsAt(point: LatLng, terms: List<String>): List<world.xhere.shared.history.Clipping>
+}
+
 /** The surface the app injects. Both the Supabase client and the in-memory fake implement it. */
 interface XHereServices {
     val auth: AuthRepository
@@ -301,6 +315,7 @@ interface XHereServices {
     val impact: ImpactRepository
     val walks: WalkRepository
     val campaigns: CampaignRepository
+    val history: HistoryRepository
     val account: AccountRepository
     val moderation: ModerationRepository
 }

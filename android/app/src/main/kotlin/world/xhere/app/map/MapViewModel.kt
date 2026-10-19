@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import java.time.LocalDate
 import kotlin.uuid.Uuid
 import world.xhere.app.ar.ArRuntime
 import world.xhere.app.ar.ArSupport
@@ -25,6 +26,7 @@ import world.xhere.shared.demo.JamestownDemo
 import world.xhere.shared.geo.Geo
 import world.xhere.shared.geo.LatLng
 import world.xhere.shared.here.Here
+import world.xhere.shared.history.History
 import world.xhere.shared.live.LiveConditions
 import world.xhere.shared.live.QuietConditions
 import world.xhere.shared.model.MapFeature
@@ -64,6 +66,7 @@ class MapViewModel(
     private val locationKick = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     private var cameraJob: Job? = null
     private var hereJob: Job? = null
+    private var timeJob: Job? = null
     private var teaserJob: Job? = null
     private var nearJob: Job? = null
     private var arJob: Job? = null
@@ -187,12 +190,122 @@ class MapViewModel(
         _state.update { it.copy(here = null) }
     }
 
+    /** Map button. Uses the camera center when the person has not tapped a spot. */
+    fun openTimeMachine(spot: LatLng? = null) {
+        val point = spot ?: _state.value.camera.point
+        if (!Geo.isValid(point)) return
+        hereJob?.cancel()
+        teaserJob?.cancel()
+        nearJob?.cancel()
+        timeJob?.cancel()
+        timeJob = viewModelScope.launch {
+            _state.update {
+                it.copy(
+                    here = null,
+                    teaser = null,
+                    teaserLoading = false,
+                    nearMe = null,
+                    timeMachine = TimeMachineUi(spot = point, loading = true),
+                )
+            }
+            val place = try {
+                services.history.historyAt(point)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                null
+            }
+            if (!isActive) return@launch
+            _state.update { current ->
+                val open = current.timeMachine
+                if (open == null || open.spot != point) return@update current
+                if (place == null) {
+                    return@update current.copy(timeMachine = open.copy(loading = false, failed = true))
+                }
+                val year = place.let { History.eras(it.sheets, it.photos).maxOrNull() }
+                current.copy(
+                    timeMachine = open.copy(
+                        loading = false,
+                        failed = false,
+                        place = place,
+                        year = year,
+                        sheetId = pickHistorySheet(place, year),
+                    ),
+                )
+            }
+        }
+    }
+
+    fun dismissTimeMachine() {
+        timeJob?.cancel()
+        _state.update { it.copy(timeMachine = null) }
+    }
+
+    fun selectHistoryYear(year: Int) {
+        _state.update { current ->
+            val open = current.timeMachine ?: return@update current
+            current.copy(
+                timeMachine = open.copy(
+                    year = year,
+                    sheetId = pickHistorySheet(open.place, year),
+                    viewerService = null,
+                ),
+            )
+        }
+    }
+
+    fun selectHistorySheet(sheetId: String) {
+        _state.update { current ->
+            val open = current.timeMachine ?: return@update current
+            val sheet = open.place.sheets.firstOrNull { it.id == sheetId } ?: return@update current
+            current.copy(
+                timeMachine = open.copy(
+                    sheetId = sheetId,
+                    year = sheet.year ?: open.year,
+                    viewerService = null,
+                ),
+            )
+        }
+    }
+
+    fun setHistoryOpacity(opacity: Float) {
+        _state.update { current ->
+            val open = current.timeMachine ?: return@update current
+            current.copy(timeMachine = open.copy(opacity = opacity.coerceIn(0.15f, 0.9f)))
+        }
+    }
+
+    fun openHistoryViewer(sheetId: String) {
+        _state.update { current ->
+            val open = current.timeMachine ?: return@update current
+            val sheet = open.place.sheets.firstOrNull { it.id == sheetId } ?: return@update current
+            val service = sheet.iiifService
+            if (service.isNullOrBlank()) return@update current
+            current.copy(
+                timeMachine = open.copy(
+                    sheetId = sheetId,
+                    viewerService = service,
+                    viewerTitle = sheet.title,
+                    viewerYear = sheet.dateLabel.ifBlank { sheet.year?.toString().orEmpty() },
+                ),
+            )
+        }
+    }
+
+    fun closeHistoryViewer() {
+        _state.update { current ->
+            val open = current.timeMachine ?: return@update current
+            current.copy(timeMachine = open.copy(viewerService = null))
+        }
+    }
+
     fun openTeaser(shortId: String, distanceM: Double?) {
         hereJob?.cancel()
         nearJob?.cancel()
         teaserJob?.cancel()
+        timeJob?.cancel()
         teaserJob = viewModelScope.launch {
-            _state.update { it.copy(teaserLoading = true, nearMe = null, here = null) }
+            _state.update { it.copy(teaserLoading = true, nearMe = null, here = null, timeMachine = null) }
             try {
                 val card = services.drops.dropTeaser(shortId)
                 if (!isActive) return@launch
@@ -219,7 +332,8 @@ class MapViewModel(
         hereJob?.cancel()
         teaserJob?.cancel()
         nearJob?.cancel()
-        _state.update { it.copy(here = null, teaser = null, teaserLoading = false) }
+        timeJob?.cancel()
+        _state.update { it.copy(here = null, teaser = null, teaserLoading = false, timeMachine = null) }
         nearJob = viewModelScope.launch {
             val origin = _state.value.myLocation ?: JamestownDemo.center
             val slugs = _state.value.selection.slugs
@@ -322,12 +436,14 @@ class MapViewModel(
         teaserJob?.cancel()
         nearJob?.cancel()
         hereJob?.cancel()
+        timeJob?.cancel()
         hereJob = viewModelScope.launch {
             _state.update {
                 it.copy(
                     teaser = null,
                     teaserLoading = false,
                     nearMe = null,
+                    timeMachine = null,
                     here = HereSheet(spot = spot, loading = true),
                 )
             }
@@ -356,6 +472,38 @@ class MapViewModel(
                         failed = drops == null,
                     ),
                 )
+            }
+            val history = try {
+                services.history.historyAt(spot)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                null
+            }
+            val terms = History.placeTerms(
+                place?.name,
+                place?.address,
+                history?.town.orEmpty(),
+                history?.state.orEmpty(),
+            )
+            val clippings = if (history?.regionId == null || terms.isEmpty()) {
+                emptyList()
+            } else {
+                try {
+                    services.history.clippingsAt(spot, terms)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (_: Exception) {
+                    emptyList()
+                }
+            }
+            val today = LocalDate.now()
+            val ranked = History.rankClippings(clippings, today.monthValue, today.dayOfMonth)
+            if (!isActive) return@launch
+            _state.update { current ->
+                val open = current.here
+                if (open == null || open.spot != spot) return@update current
+                current.copy(here = open.copy(clippings = ranked))
             }
         }
     }

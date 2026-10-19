@@ -343,4 +343,20 @@
     <string name="ar_camera_settings">Open Settings</string>
     <string name="ar_walk_closer">Walk closer to read this.</string>
     <string name="ar_distance">%1$d m</string>
+
+    <string name="time_machine">Time Machine</string>
+    <string name="time_year">%1$d</string>
+    <string name="time_empty">No fire maps or photos are cached for this area yet.</string>
+    <string name="time_failed">Couldn\'t load the history for this spot. Sign in, then try again.</string>
+    <string name="time_opacity">Map opacity</string>
+    <string name="time_not_lined_up">This sheet is not lined up on the map yet. Open it in the viewer. Control points are added per region, not guessed.</string>
+    <string name="time_on_map">On the map</string>
+    <string name="time_show_on_map">Show on the map</string>
+    <string name="time_open_viewer">Open the map</string>
+    <string name="time_open_loc">Open at the Library of Congress</string>
+    <string name="time_open_photo">Open the photo</string>
+    <string name="this_day_here">This day here</string>
+    <string name="this_day_on_this_date">On this day, %1$s · %2$s</string>
+    <string name="this_day_other_date">%1$s · %2$s</string>
+    <string name="this_day_open">Read the page</string>
 </resources>

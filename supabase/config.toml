@@ -69,7 +69,7 @@ schema_paths = []
 enabled = true
 # Specifies an ordered list of seed files to load during db reset.
 # Supports glob patterns relative to supabase directory: "./seeds/*.sql"
-sql_paths = ["./seed.sql", "./seed/open-data/jamestown-ny.sql", "./seed/walks/jamestown-ny.sql", "./seed/live/us-ny-jamestown.sql", "./seed/campaigns/jamestown-ny.sql"]
+sql_paths = ["./seed.sql", "./seed/open-data/jamestown-ny.sql", "./seed/walks/jamestown-ny.sql", "./seed/live/us-ny-jamestown.sql", "./seed/campaigns/jamestown-ny.sql", "./seed/history/jamestown-ny.sql"]
 
 [db.network_restrictions]
 # Enable management of network restrictions.
@@ -384,6 +384,11 @@ verify_jwt = true
 # the SQL, so this HTTP function is the rate-limited door.
 [functions.public-api]
 verify_jwt = false
+
+# Time Machine refresh. The signed-in JWT only opens the door. The function
+# writes with the service role. CI tests it and does not deploy it.
+[functions.history]
+verify_jwt = true
 
 [edge_runtime]
 enabled = true

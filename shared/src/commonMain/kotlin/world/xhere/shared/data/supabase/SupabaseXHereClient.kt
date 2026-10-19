@@ -51,6 +51,7 @@ import world.xhere.shared.data.AuthRepository
 import world.xhere.shared.data.BlockRepository
 import world.xhere.shared.data.DropRepository
 import world.xhere.shared.data.HiddenDropRepository
+import world.xhere.shared.data.HistoryRepository
 import world.xhere.shared.data.ImpactRepository
 import world.xhere.shared.data.IdentityProvider
 import world.xhere.shared.data.MediaRepository
@@ -67,6 +68,8 @@ import world.xhere.shared.data.WalkRepository
 import world.xhere.shared.data.XHereApiException
 import world.xhere.shared.data.XHereServices
 import world.xhere.shared.data.remote.CampaignsForMapParams
+import world.xhere.shared.data.remote.ClippingsAtParams
+import world.xhere.shared.data.remote.HistoryAtParams
 import world.xhere.shared.data.remote.CategoryRow
 import world.xhere.shared.data.remote.LeaderboardVisibilityParams
 import world.xhere.shared.data.remote.CheckInParams
@@ -100,6 +103,8 @@ import world.xhere.shared.integrity.LocationIntegrityFlag
 import world.xhere.shared.integrity.LocationSignal
 import world.xhere.shared.media.ExifGps
 import world.xhere.shared.geo.Geo
+import world.xhere.shared.history.Clipping
+import world.xhere.shared.history.HistoryPlace
 import world.xhere.shared.geo.LatLng
 import world.xhere.shared.live.LiveRegion
 import world.xhere.shared.here.Here
@@ -181,6 +186,7 @@ class SupabaseXHereClient(
     override val impact: ImpactRepository = ImpactRepo()
     override val walks: WalkRepository = WalkRepo()
     override val campaigns: CampaignRepository = CampaignRepo()
+    override val history: HistoryRepository = HistoryRepo()
     override val account: AccountRepository = AccountRepo()
     override val moderation: ModerationRepository = ModerationRepo()
 
@@ -442,6 +448,34 @@ class SupabaseXHereClient(
         override suspend fun markRead(noticeId: Uuid?) = call {
             supabase.postgrest.rpc("mark_impact_notice_read", MarkImpactReadParams(noticeId).rpcJson())
             Unit
+        }
+    }
+
+    private inner class HistoryRepo : HistoryRepository {
+        override suspend fun historyAt(point: LatLng): HistoryPlace = call {
+            if (!Geo.isValid(point)) {
+                throw invalid("invalid_location", "lat=${point.latitude} lng=${point.longitude}")
+            }
+            decode(
+                supabase.postgrest.rpc(
+                    "history_at",
+                    HistoryAtParams(point.latitude, point.longitude).rpcJson(),
+                ).data,
+            )
+        }
+
+        override suspend fun clippingsAt(point: LatLng, terms: List<String>): List<Clipping> = call {
+            if (!Geo.isValid(point)) {
+                throw invalid("invalid_location", "lat=${point.latitude} lng=${point.longitude}")
+            }
+            val kept = terms.map { it.trim() }.filter { it.length in 3..80 }.distinct().take(8)
+            if (kept.isEmpty()) return@call emptyList()
+            decode(
+                supabase.postgrest.rpc(
+                    "clippings_at",
+                    ClippingsAtParams(point.latitude, point.longitude, kept).rpcJson(),
+                ).data,
+            )
         }
     }
 

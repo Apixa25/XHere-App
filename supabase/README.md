@@ -211,6 +211,7 @@ curl -sS "https://jpeuldzegtbqfezijhuy.supabase.co/functions/v1/public-api/v1/he
 | `suggest-category` | POST `{text, labels, lat, lng, hour, recent_slugs}`. Calls `suggest_categories` for hash-v1. Calls `match_categories` only when `XHERE_EMBEDDING_MODEL=gte-small` and the on-platform gte-small session is actually available. A caller who is not signed in (no user JWT, or the RPC returns 401/403) gets **401** `{"error":"not_authenticated"}`, the same JSON as `strip-exif`. |
 | `strip-exif` | POST raw JPEG, PNG, or WebP (10 MB max). Strips Exif/XMP, then stores `drop-media/<user id>/<uuid>.<ext>` with the caller's JWT. No service-role key. |
 | `public-api` | GET `/v1/here`, `/v1/drops/{id}`, `/v1/categories`, `/v1/walks`. `verify_jwt = false`. Reads with the service role through `public_api_*`. 30 requests per minute per hashed address. CI does not deploy it. |
+| `history` | POST `{region_id}`. `verify_jwt = true`. One loc.gov Sanborn fetch when that region's cache is older than a day, through `history_claim_fetch` and `history_upsert`. Signed-in clients cannot call those RPCs. CI does not deploy it. |
 
 Moderator/admin is `profiles.role`. There's no UI to grant it yet. On a hosted project, the first admin is set once with SQL from the dashboard: `update public.profiles set role = 'admin' where handle = '...';`. Since M7 that edit is itself logged (`set_role` in `moderation_actions`), and the audit log rejects updates and deletes.
 
@@ -264,3 +265,20 @@ psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/seed/campaigns/jamestown-ny.
 ```
 
 `db push` applies the migration. It does not load the seed. Do not paste the migration into the SQL editor. It does not change Auth. Re-running the seed keeps the start and end that were written the first time. Another city is another region file and another seed, not a change to the migration.
+
+## History cache (hosted)
+
+`20261020180000_history.sql` is Time Machine and "This day here". It has no town rows. The Jamestown cache is `supabase/seed/history/jamestown-ny.sql`, generated from `supabase/regions/us/jamestown-ny.yaml`. `supabase db push` does not load that file. CI does not deploy the `history` function.
+
+From a machine that already has the CLI linked, after the repair commands in [Before `supabase db push`](#before-supabase-db-push) if that repair has not been done yet:
+
+```bash
+supabase link --project-ref jpeuldzegtbqfezijhuy
+supabase db push
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/seed/history/jamestown-ny.sql
+supabase functions deploy history
+```
+
+`db push` applies `20261020180000_history.sql` and any earlier migration that is not on the project yet. Do not paste the migration into the SQL editor. It does not change Auth. The seed runs as the database owner and calls `private.upsert_history`. The anon key cannot. `[functions.history] verify_jwt = true` matches `supabase functions deploy history` with no `--no-verify-jwt`. The platform injects `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`. Do not put that key in the repo or the app. The phone does not call this function. It calls `history_at` and `clippings_at`.
+
+Another town is a `history:` block in its region file, then the same importer (`docs/HISTORY.md`). Control points live in the region's `.georef.json`. Fewer than three points is not an overlay.

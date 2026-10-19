@@ -13,6 +13,7 @@ import world.xhere.shared.data.AuthRepository
 import world.xhere.shared.data.BlockRepository
 import world.xhere.shared.data.DropRepository
 import world.xhere.shared.data.HiddenDropRepository
+import world.xhere.shared.data.HistoryRepository
 import world.xhere.shared.data.ImpactRepository
 import world.xhere.shared.data.IdentityProvider
 import world.xhere.shared.data.MediaRepository
@@ -133,6 +134,7 @@ class InMemoryXHere(
     override val impact: ImpactRepository = ImpactRepo()
     override val walks: WalkRepository = WalkRepo()
     override val campaigns: CampaignRepository = CampaignRepo()
+    override val history: HistoryRepository = HistoryRepo()
     override val account: AccountRepository = AccountRepo()
     override val moderation: ModerationRepository = ModerationRepo()
 
@@ -1291,6 +1293,26 @@ class InMemoryXHere(
             val profile = requireViewer()
             if (!profile.isModerator) throw XHereApiException("not_moderator", sqlState = XHereApiException.SQL_PERMISSION)
             return integrityQueue(profile.id, limit)
+        }
+    }
+
+    private inner class HistoryRepo : HistoryRepository {
+        override suspend fun historyAt(point: LatLng): world.xhere.shared.history.HistoryPlace {
+            if (!Geo.isValid(point) || !world.xhere.shared.demo.HistoryDemo.contains(point)) {
+                return world.xhere.shared.history.HistoryPlace()
+            }
+            return world.xhere.shared.demo.HistoryDemo.place
+        }
+
+        override suspend fun clippingsAt(
+            point: LatLng,
+            terms: List<String>,
+        ): List<world.xhere.shared.history.Clipping> {
+            if (!Geo.isValid(point) || !world.xhere.shared.demo.HistoryDemo.contains(point)) return emptyList()
+            val wanted = terms.map { world.xhere.shared.history.History.normalize(it) }.toSet()
+            return world.xhere.shared.demo.HistoryDemo.clippings.filter { clipping ->
+                clipping.terms.any { world.xhere.shared.history.History.normalize(it) in wanted }
+            }
         }
     }
 }

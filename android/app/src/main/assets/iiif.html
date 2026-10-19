@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Time Machine</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #111; color: #f4f1ea; font: 14px sans-serif; }
+  #bar { padding: 8px 12px; background: #1b1b1b; }
+  #stage { position: relative; overflow: hidden; height: calc(100% - 36px); touch-action: none; background: #222; }
+  .tile { position: absolute; pointer-events: none; }
+</style>
+</head>
+<body>
+<div id="bar">Loading the map…</div>
+<div id="stage"></div>
+<script>
+var view = { service: "", width: 0, height: 0, scale: 0.2, x: 0, y: 0 };
+function startViewer(doc) {
+  view.service = doc.service;
+  document.getElementById("bar").textContent = (doc.year ? doc.year + " — " : "") + (doc.title || "Sanborn map");
+  fetch(doc.service.replace(/\/$/, "") + "/info.json")
+    .then(function (response) { return response.json(); })
+    .then(function (info) {
+      view.width = info.width;
+      view.height = info.height;
+      fit();
+      draw();
+    })
+    .catch(function () {
+      document.getElementById("bar").textContent = "The map image did not load.";
+    });
+}
+function fit() {
+  var stage = document.getElementById("stage");
+  view.scale = Math.min(stage.clientWidth / view.width, stage.clientHeight / view.height);
+  view.x = (stage.clientWidth - view.width * view.scale) / 2;
+  view.y = (stage.clientHeight - view.height * view.scale) / 2;
+}
+function draw() {
+  var stage = document.getElementById("stage");
+  stage.innerHTML = "";
+  var tile = 512;
+  var scale = view.scale;
+  var left = Math.max(0, Math.floor(-view.x / scale / tile) * tile);
+  var top = Math.max(0, Math.floor(-view.y / scale / tile) * tile);
+  var right = Math.min(view.width, Math.ceil((stage.clientWidth - view.x) / scale / tile) * tile);
+  var bottom = Math.min(view.height, Math.ceil((stage.clientHeight - view.y) / scale / tile) * tile);
+  for (var y = top; y < bottom; y += tile) {
+    for (var x = left; x < right; x += tile) {
+      var w = Math.min(tile, view.width - x);
+      var h = Math.min(tile, view.height - y);
+      var size = Math.max(1, Math.round(w * scale));
+      var img = document.createElement("img");
+      img.className = "tile";
+      img.alt = "";
+      img.src = view.service.replace(/\/$/, "") + "/" + x + "," + y + "," + w + "," + h + "/" + size + ",/0/default.jpg";
+      img.style.left = (view.x + x * scale) + "px";
+      img.style.top = (view.y + y * scale) + "px";
+      img.style.width = (w * scale) + "px";
+      img.style.height = (h * scale) + "px";
+      stage.appendChild(img);
+    }
+  }
+}
+var drag = null;
+document.getElementById("stage").addEventListener("pointerdown", function (event) {
+  drag = { id: event.pointerId, x: event.clientX, y: event.clientY, ox: view.x, oy: view.y };
+});
+document.getElementById("stage").addEventListener("pointermove", function (event) {
+  if (!drag || drag.id !== event.pointerId) return;
+  view.x = drag.ox + (event.clientX - drag.x);
+  view.y = drag.oy + (event.clientY - drag.y);
+  draw();
+});
+document.getElementById("stage").addEventListener("pointerup", function () { drag = null; });
+document.getElementById("stage").addEventListener("wheel", function (event) {
+  event.preventDefault();
+  var next = view.scale * (event.deltaY < 0 ? 1.15 : 0.87);
+  view.scale = Math.max(0.05, Math.min(2, next));
+  draw();
+}, { passive: false });
+</script>
+</body>
+</html>

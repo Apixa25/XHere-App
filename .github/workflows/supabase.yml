@@ -43,6 +43,7 @@ jobs:
           deno check supabase/functions/suggest-category/index.ts
           deno check supabase/functions/strip-exif/index.ts
           deno check supabase/functions/public-api/index.ts
+          deno check supabase/functions/history/index.ts
 
   # The importer is stdlib Python. This job does not call the network and
   # does not start Docker. It checks the committed Jamestown snapshot
@@ -61,6 +62,12 @@ jobs:
           python3 supabase/scripts/import_open_data.py --self-test
           python3 supabase/scripts/import_open_data.py \
             --check supabase/seed/open-data/jamestown-ny.json \
+            --region supabase/regions/us/jamestown-ny.yaml
+          python3 supabase/scripts/import_history.py --self-test
+          python3 supabase/scripts/georef_control_points.py \
+            --check supabase/regions/us/jamestown-ny.georef.json
+          python3 supabase/scripts/import_history.py \
+            --check supabase/seed/history/jamestown-ny.json \
             --region supabase/regions/us/jamestown-ny.yaml
 
   pgtap:

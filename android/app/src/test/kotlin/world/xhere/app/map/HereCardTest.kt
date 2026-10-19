@@ -118,6 +118,36 @@ class HereCardTest {
         assertEquals(JamestownDemo.library.longitude, posted.trueLocation.longitude, 1e-6)
         assertTrue(abs(posted.trueLocation.latitude - JamestownDemo.center.latitude) > 0.001)
     }
+
+    @Test
+    fun timeMachineAndThisDayUseTheCachedHistory() {
+        rule.openMap()
+        rule.onNodeWithTag(TestTags.MAP_TIME).performClick()
+        rule.awaitTime("1905|1886,1905|none")
+        rule.onNodeWithText("Third Street, Jamestown, N.Y.", substring = true).assertIsDisplayed()
+        rule.onNodeWithText("Library of Congress", substring = true).assertIsDisplayed()
+        rule.onNodeWithTag(TestTags.timeYear(1886)).performClick()
+        rule.awaitTime("1886|1886,1905|${world.xhere.shared.demo.HistoryDemo.SHEET_ID}")
+        rule.onNodeWithTag(TestTags.TIME_OPACITY).assertIsDisplayed()
+        rule.onNodeWithText("Demo alignment", substring = true).assertIsDisplayed()
+        rule.onNodeWithTag(TestTags.TIME_CLOSE).performClick()
+        rule.onNodeWithTag(TestTags.TIME_SHEET).assertDoesNotExist()
+
+        rule.onNodeWithTag(TestTags.MAP_TAP_SPOT).performClick()
+        rule.awaitHere(
+            "West 3rd Street|eatery_tip:lunch:false:user;food_truck:truck:false:user;event:concert:false:user",
+        )
+        rule.waitUntil(timeoutMillis = 8_000) {
+            rule.onAllNodesWithTag(TestTags.HERE_THIS_DAY, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
+        }
+        rule.here(TestTags.HERE_THIS_DAY).performScrollTo().assertIsDisplayed()
+        rule.onNodeWithText("pavement on West 3rd Street", substring = true, useUnmergedTree = true)
+            .assertIsDisplayed()
+        rule.onNodeWithText("Chronicling America", substring = true, useUnmergedTree = true).assertIsDisplayed()
+        rule.here(TestTags.HERE_TIME).performClick()
+        rule.waitForTag(TestTags.TIME_SHEET)
+        rule.onNodeWithTag(TestTags.HERE_SHEET).assertDoesNotExist()
+    }
 }
 
 private fun AndroidComposeTestRule<*, MainActivity>.openMap() {
@@ -141,6 +171,19 @@ private fun AndroidComposeTestRule<*, MainActivity>.waitForTag(tag: String) {
 
 private fun AndroidComposeTestRule<*, MainActivity>.here(tag: String) =
     onNodeWithTag(tag, useUnmergedTree = true)
+
+private fun AndroidComposeTestRule<*, MainActivity>.awaitTime(expected: String) {
+    waitForTag(TestTags.TIME_SHEET)
+    var seen = ""
+    try {
+        waitUntil(timeoutMillis = 8_000) {
+            seen = property(world.xhere.app.map.TimeSemantics, TestTags.TIME_SHEET) ?: "null"
+            seen == expected
+        }
+    } catch (error: Throwable) {
+        throw AssertionError("Time Machine was [$seen]", error)
+    }
+}
 
 private fun AndroidComposeTestRule<*, MainActivity>.awaitHere(expected: String) {
     waitForTag(TestTags.HERE_SHEET)
