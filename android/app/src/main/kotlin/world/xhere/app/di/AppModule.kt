@@ -45,6 +45,12 @@ import world.xhere.app.session.SignOutNotice
 import world.xhere.app.settings.AndroidDataExporter
 import world.xhere.app.settings.DataExporter
 import world.xhere.app.settings.SettingsViewModel
+import world.xhere.app.voice.AndroidVoiceRadio
+import world.xhere.app.voice.ThingsViewModel
+import world.xhere.app.voice.VoiceBattery
+import world.xhere.app.voice.VoicePreferences
+import world.xhere.app.voice.VoiceRadio
+import world.xhere.app.voice.VoiceSession
 import world.xhere.shared.data.XHereServices
 import world.xhere.shared.data.fake.InMemoryXHere
 import world.xhere.shared.data.supabase.SupabaseXHereClient
@@ -90,6 +96,11 @@ val appModule = module {
     single<SnapSuggester> { GeminiNanoSnapSuggester(androidContext(), LabelSnapSuggester(get())) }
     viewModel { SessionViewModel(get(), get(), get()) }
     viewModel { DropViewModel(get(), get(), get(), get(), get()) }
+    single { VoicePreferences(androidContext()) }
+    single { VoiceBattery(androidContext()) }
+    single<VoiceRadio> { AndroidVoiceRadio(androidContext(), get(), get()) }
+    single { VoiceSession(get(), get()) }
+    viewModel { ThingsViewModel(get(), get()) }
     single<LiveConditions> {
         CachingLiveConditions(
             live = get<world.xhere.shared.data.XHereServices>().live,

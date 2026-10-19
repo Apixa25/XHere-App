@@ -8,6 +8,17 @@
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.CAMERA" />
 
+    <!-- Pre-Android 12 scan and advertise. Not a background-location grant. -->
+    <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30" />
+    <!-- neverForLocation: hearing an object is not a location permission. -->
+    <uses-permission
+        android:name="android.permission.BLUETOOTH_SCAN"
+        android:usesPermissionFlags="neverForLocation" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE" />
+    <uses-permission android:name="android.permission.NFC" />
+
     <uses-feature
         android:name="android.hardware.location.gps"
         android:required="false" />
@@ -17,6 +28,12 @@
     <!-- ARCore stays optional so a phone without it can still install. -->
     <uses-feature
         android:name="android.hardware.camera.ar"
+        android:required="false" />
+    <uses-feature
+        android:name="android.hardware.bluetooth_le"
+        android:required="false" />
+    <uses-feature
+        android:name="android.hardware.nfc"
         android:required="false" />
 
     <application
@@ -59,7 +76,30 @@
                     android:host="xhere.world"
                     android:pathPrefix="/d/" />
             </intent-filter>
+            <!-- Object links. autoVerify stays unverified while xhere.world hosting is suspended
+                 and until the Play signing SHA-256 replaces the placeholder in assetlinks.json. -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="https"
+                    android:host="xhere.world"
+                    android:pathPrefix="/t/" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="xhere"
+                    android:host="t"
+                    android:pathPrefix="/" />
+            </intent-filter>
         </activity>
+        <receiver
+            android:name=".voice.VoiceScanReceiver"
+            android:exported="false" />
         <!-- Settings, Download my data (M7). Read access is granted per share, never exported. -->
         <provider
             android:name="androidx.core.content.FileProvider"

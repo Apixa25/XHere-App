@@ -14,6 +14,7 @@ The function name on Supabase is `public-api`. Paths are under `/functions/v1/pu
 |---|---|---|
 | `GET` | `/v1/here?lat&lon&radius` | What is public within `radius` meters of this point? |
 | `GET` | `/v1/drops/{id}` | The share-page teaser for one drop. `id` is the 12-character short id or the uuid. |
+| `GET` | `/v1/things/{id}` | The public story of one object. `id` is the 12-hex voice id or the uuid. No owner, and no list of who heard it. |
 | `GET` | `/v1/categories` | Active groups and categories (labels, sensitivity, default reveal, blur). |
 | `GET` | `/v1/walks?lat&lon` | Walks whose box contains this point, and the public-record stops on them. |
 | `GET` | `/v1` | The list above. |
@@ -45,7 +46,7 @@ There is no reveal route. Sending a user JWT does not unlock a teaser. The SQL f
 
 The address is the last hop of `X-Forwarded-For` when that header is present, otherwise `X-Real-IP` when it is an IP, otherwise one shared `unknown` bucket. A client-supplied list cannot mint a new bucket by putting a fresh address first.
 
-Responses send `X-RateLimit-Limit`, `X-RateLimit-Remaining`, and `Cache-Control`. A `429` also sends `Retry-After`. Successful reads use `public, max-age=60` for `/v1/here` and `/v1/walks`, 120 seconds for a drop, and 3600 seconds for categories. Errors that are not a missing row use `no-store`. `Referrer-Policy: no-referrer` is set so a URL that contains coordinates is not forwarded.
+Responses send `X-RateLimit-Limit`, `X-RateLimit-Remaining`, and `Cache-Control`. A `429` also sends `Retry-After`. Successful reads use `public, max-age=60` for `/v1/here` and `/v1/walks`, 120 seconds for a drop or a thing, and 3600 seconds for categories. Errors that are not a missing row use `no-store`. `Referrer-Policy: no-referrer` is set so a URL that contains coordinates is not forwarded.
 
 `OPTIONS` is a CORS preflight (`Access-Control-Allow-Origin: *`) and does not spend a request. `POST` and the other methods return `405`.
 

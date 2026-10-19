@@ -44,8 +44,17 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
 import world.xhere.app.R
+import world.xhere.app.detail.IncomingLinks
 import world.xhere.app.location.ForegroundLocation
 import world.xhere.app.ui.TestTags
+import world.xhere.app.voice.ThingsViewModel
+import world.xhere.app.voice.VoicePermissions
+import world.xhere.app.voice.VoiceSession
+import world.xhere.app.voice.VoiceSurface
+import world.xhere.app.voice.NfcWriteEffect
+import world.xhere.app.voice.SpeakingBanner
+import world.xhere.app.voice.ThingStoryCard
+import world.xhere.app.voice.ThingsAroundSheet
 import world.xhere.app.ui.hapticClick
 import world.xhere.app.ui.openAppSettings
 import world.xhere.shared.model.Taxonomy
@@ -87,8 +96,13 @@ fun MapScreen(
     onOpenAr: () -> Unit = {},
     viewModel: MapViewModel = koinViewModel(),
     canvas: MapCanvas = koinInject(),
+    things: ThingsViewModel = koinViewModel(),
+    voice: VoiceSession = koinInject(),
+    links: IncomingLinks = koinInject(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val voiceState by things.state.collectAsStateWithLifecycle()
+    val pendingThing by links.pendingThing.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     DisposableEffect(lifecycle, viewModel) {
@@ -98,8 +112,23 @@ fun MapScreen(
         lifecycle.addObserver(observer)
         onDispose { lifecycle.removeObserver(observer) }
     }
+    DisposableEffect(voice) {
+        voice.watch(VoiceSurface.MAP)
+        onDispose { voice.unwatch(VoiceSurface.MAP) }
+    }
+    androidx.compose.runtime.LaunchedEffect(pendingThing) {
+        val id = pendingThing ?: return@LaunchedEffect
+        things.openFromLink(id)
+        links.consumeThing()
+    }
     val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { granted ->
         if (granted.values.any { it }) viewModel.goToMyLocation() else viewModel.locationDenied()
+    }
+    val hearPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
+        things.openAround()
+    }
+    val speakPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { granted ->
+        if (granted.values.all { it }) things.speak()
     }
     val walk = state.walk?.takeIf { walk -> walk.stops.any { it.available } }
     val quest = state.quests.firstOrNull()
@@ -155,6 +184,9 @@ fun MapScreen(
                 .padding(horizontal = 12.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
+            if (voiceState.speakingId != null) {
+                SpeakingBanner(onStop = things::stopSpeaking)
+            }
             quest?.let { card ->
                 QuestCard(quest = card, onDismiss = { viewModel.dismissQuest(card.id) })
             }
@@ -260,6 +292,24 @@ fun MapScreen(
                     }
                 }
                 Surface(
+                    onClick = {
+                        val missing = VoicePermissions.missingScan(context)
+                        if (missing.isEmpty()) things.openAround() else hearPermission.launch(missing)
+                    },
+                    shape = MaterialTheme.shapes.large,
+                    color = MaterialTheme.colorScheme.tertiaryContainer,
+                    modifier = Modifier
+                        .defaultMinSize(minHeight = 48.dp)
+                        .testTag(TestTags.THINGS_AROUND),
+                ) {
+                    Text(
+                        text = stringResource(R.string.things_around),
+                        modifier = Modifier.padding(horizontal = 18.dp, vertical = 12.dp),
+                        color = MaterialTheme.colorScheme.onTertiaryContainer,
+                        style = MaterialTheme.typography.labelLarge,
+                    )
+                }
+                Surface(
                     onClick = viewModel::openNearMe,
                     shape = MaterialTheme.shapes.large,
                     color = MaterialTheme.colorScheme.primary,
@@ -354,6 +404,40 @@ fun MapScreen(
                 onSave = viewModel::savePreset,
                 onDismiss = viewModel::dismissSavePreset,
                 modifier = Modifier.align(Alignment.Center),
+            )
+        }
+        if (voiceState.around) {
+            ThingsAroundSheet(
+                state = voiceState,
+                latitude = state.myLocation?.latitude,
+                longitude = state.myLocation?.longitude,
+                onDismiss = things::closeAround,
+                onGive = things::openGive,
+                onCloseGive = things::closeGive,
+                onCreate = { title, story ->
+                    things.create(title, story, state.myLocation?.latitude, state.myLocation?.longitude)
+                },
+                onSelect = things::select,
+                onBind = things::bind,
+                onSpeak = {
+                    val missing = VoicePermissions.missingAdvertise(context)
+                    if (missing.isEmpty()) things.speak() else speakPermission.launch(missing)
+                },
+                onNfc = { things.waitForNfc(true) },
+            )
+        }
+        if (voiceState.nfcWaiting) {
+            NfcWriteEffect(voiceState.created?.voiceId, things::nfcFinished)
+        }
+        voiceState.selected?.let { card ->
+            ThingStoryCard(
+                thing = card,
+                reporting = voiceState.reporting,
+                busy = voiceState.busy,
+                onReport = things::startReport,
+                onSendReport = things::report,
+                onDismissReport = things::dismissReport,
+                onDismiss = things::dismissCard,
             )
         }
         if (state.celebrateWalk || state.celebrateQuest) {

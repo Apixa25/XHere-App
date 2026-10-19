@@ -58,6 +58,7 @@ export interface PublicApiDeps {
   drop(id: string): Promise<unknown>;
   categories(): Promise<unknown>;
   walks(lat: number, lon: number): Promise<unknown>;
+  thing(id: string): Promise<unknown>;
 }
 
 /** The database could not answer. The response stays generic. */
@@ -82,10 +83,13 @@ export type Route =
   | { kind: "categories" }
   | { kind: "walks" }
   | { kind: "drop"; id: string }
+  | { kind: "thing"; id: string }
   | { kind: "unknown" }
-  | { kind: "bad_id" };
+  | { kind: "bad_id" }
+  | { kind: "bad_thing" };
 
 const SHORT_ID = /^[A-Za-z0-9_-]{12}$/;
+const VOICE_ID = /^[0-9a-f]{12}$/;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const HANDLE = /^[a-z0-9_]{3,24}$/;
 
@@ -114,11 +118,29 @@ export function parseDropId(raw: string): string | null {
   return null;
 }
 
+/** A 12-hex voice id, or the thing's uuid. Advertising keys are not accepted here. */
+export function parseThingId(raw: string): string | null {
+  let id: string;
+  try {
+    id = decodeURIComponent(raw);
+  } catch {
+    return null;
+  }
+  if (VOICE_ID.test(id)) return id;
+  if (UUID.test(id)) return id.toLowerCase();
+  return null;
+}
+
 export function matchRoute(path: string): Route {
   if (path === "/" || path === "/v1") return { kind: "index" };
   if (path === "/v1/here") return { kind: "here" };
   if (path === "/v1/categories") return { kind: "categories" };
   if (path === "/v1/walks") return { kind: "walks" };
+  const thing = path.match(/^\/v1\/things\/([^/]+)$/);
+  if (thing) {
+    const id = parseThingId(thing[1]);
+    return id ? { kind: "thing", id } : { kind: "bad_thing" };
+  }
   const drop = path.match(/^\/v1\/drops\/([^/]+)$/);
   if (!drop) return { kind: "unknown" };
   const id = parseDropId(drop[1]);
@@ -175,8 +197,11 @@ export async function handlePublicApi(req: Request, deps: PublicApiDeps): Promis
   }
 
   try {
-    if (route.kind === "bad_id") {
-      return json({ error: "invalid_id", detail: "id must be a 12-character short id or a uuid", terms: API_TERMS }, 400, "none", decision);
+    if (route.kind === "bad_id" || route.kind === "bad_thing") {
+      const detail = route.kind === "bad_thing"
+        ? "id must be a 12-character voice id or a uuid"
+        : "id must be a 12-character short id or a uuid";
+      return json({ error: "invalid_id", detail, terms: API_TERMS }, 400, "none", decision);
     }
     if (route.kind === "unknown") {
       return json({ error: "not_found", terms: API_TERMS }, 404, "short", decision);
@@ -188,6 +213,7 @@ export async function handlePublicApi(req: Request, deps: PublicApiDeps): Promis
         endpoints: [
           { method: "GET", path: "/v1/here", query: ["lat", "lon", "radius"] },
           { method: "GET", path: "/v1/drops/{id}" },
+          { method: "GET", path: "/v1/things/{id}" },
           { method: "GET", path: "/v1/categories" },
           { method: "GET", path: "/v1/walks", query: ["lat", "lon"] },
         ],
@@ -211,6 +237,15 @@ export async function handlePublicApi(req: Request, deps: PublicApiDeps): Promis
       if (!point.ok) return json({ error: point.error, detail: point.detail, terms: API_TERMS }, 400, "none", decision);
       const raw = await deps.walks(point.lat, point.lon);
       return json(presentWalks(raw, point.lat, point.lon), 200, "walks", decision);
+    }
+    if (route.kind === "thing") {
+      const raw = await deps.thing(route.id);
+      const item = presentThing(raw);
+      if (!item) return json({ error: "not_found", terms: API_TERMS }, 404, "short", decision);
+      return json({ item, terms: API_TERMS }, 200, "thing", decision);
+    }
+    if (route.kind !== "drop") {
+      return json({ error: "not_found", terms: API_TERMS }, 404, "short", decision);
     }
     const raw = await deps.drop(route.id);
     const item = presentItem(raw);
@@ -397,6 +432,51 @@ export function presentItem(raw: unknown): Record<string, unknown> | null {
   };
 }
 
+/**
+ * Open lookup for one object. Allowlisted fields only.
+ * `owner_id` is dropped even when the SQL row includes it.
+ * Media is the https url and alt, never a storage path.
+ */
+export function presentThing(raw: unknown): Record<string, unknown> | null {
+  const row = asRecord(raw);
+  if (!row) return null;
+  if (typeof row.voice_id !== "string" || !VOICE_ID.test(row.voice_id)) return null;
+  if (typeof row.title !== "string" || row.title.trim() === "") return null;
+  if (typeof row.story !== "string" || row.story.trim() === "") return null;
+  const voiceId = row.voice_id;
+  return {
+    id: typeof row.id === "string" ? row.id : null,
+    voice_id: voiceId,
+    title: row.title,
+    story: row.story,
+    category_slug: typeof row.category_slug === "string" ? row.category_slug : null,
+    category_label: typeof row.category_label === "string" ? row.category_label : null,
+    place_name: typeof row.place_name === "string" ? row.place_name : null,
+    lat: typeof row.lat === "number" ? row.lat : null,
+    lon: typeof row.lon === "number" ? row.lon : null,
+    media: presentThingMedia(row.media),
+    seen_count: typeof row.seen_count === "number" ? row.seen_count : 0,
+    url: typeof row.url === "string" && row.url.startsWith("https://") ? row.url : `https://xhere.world/t/${voiceId}`,
+    attribution: "Story posted on XHere. This API does not say who heard the object.",
+    license: "xhere-thing",
+    share_alike: false,
+  };
+}
+
+function presentThingMedia(raw: unknown): { url: string; alt: string | null }[] {
+  if (!Array.isArray(raw)) return [];
+  const media: { url: string; alt: string | null }[] = [];
+  for (const entry of raw) {
+    const row = asRecord(entry);
+    if (!row || typeof row.url !== "string") continue;
+    if (!row.url.startsWith("https://") || row.url.length > 288) continue;
+    const alt = typeof row.alt === "string" && row.alt.length <= 140 ? row.alt : null;
+    media.push({ url: row.url, alt });
+    if (media.length >= 8) break;
+  }
+  return media;
+}
+
 function stripForbidden(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(stripForbidden);
   if (!value || typeof value !== "object") return value;
@@ -413,7 +493,7 @@ function asRecord(value: unknown): Record<string, unknown> | null {
   return value as Record<string, unknown>;
 }
 
-type CacheKind = "here" | "drop" | "categories" | "walks" | "index" | "short" | "none";
+type CacheKind = "here" | "drop" | "thing" | "categories" | "walks" | "index" | "short" | "none";
 
 function cacheControl(kind: CacheKind): string {
   switch (kind) {
@@ -421,6 +501,7 @@ function cacheControl(kind: CacheKind): string {
     case "walks":
       return "public, max-age=60";
     case "drop":
+    case "thing":
       return "public, max-age=120";
     case "categories":
       return "public, max-age=3600";

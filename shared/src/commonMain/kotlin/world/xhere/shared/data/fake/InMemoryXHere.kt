@@ -23,6 +23,7 @@ import world.xhere.shared.data.ReportRepository
 import world.xhere.shared.data.SessionInfo
 import world.xhere.shared.data.SuggestionRepository
 import world.xhere.shared.data.TaxonomyRepository
+import world.xhere.shared.data.ThingRepository
 import world.xhere.shared.data.WalkRepository
 import world.xhere.shared.data.XHereApiException
 import world.xhere.shared.data.LiveRepository
@@ -135,6 +136,11 @@ class InMemoryXHere(
     override val walks: WalkRepository = WalkRepo()
     override val campaigns: CampaignRepository = CampaignRepo()
     override val history: HistoryRepository = HistoryRepo()
+    override val things: ThingRepository = MemoryThings(
+        viewer = { requireViewer() },
+        taxonomy = { store.taxonomy },
+        clock = clock,
+    )
     override val account: AccountRepository = AccountRepo()
     override val moderation: ModerationRepository = ModerationRepo()
 

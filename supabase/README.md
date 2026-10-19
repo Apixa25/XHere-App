@@ -109,6 +109,7 @@ Postgres listens on `127.0.0.1:54322` (user `postgres`, password `postgres`, loc
 | `20261020031500_location_integrity.sql` | Location integrity: mock-location and plausibility checks, `counts_for_credit` / `location_trust`, one private checkpoint, soft flags. The standing predicate still skips demo accounts. Not applied on the hosted project from this repo's agents |
 | `20261020050000_public_read_api.sql` | Public read API SQL used only by the `public-api` Edge Function (`service_role`). Teasers and public records, demo and `location_trust = reduced` excluded, per-address quota in `private.public_api_quota`. Not applied on the hosted project from this repo's agents |
 | `20261020052000_reputation_tiers.sql` | M11 reputation. Points on `profiles.points` from `reputation_ledger`, tiers New / Local (the `regular` value) / Trusted / Guide, five badges on the existing shelf, trust-weighted `drops_nearby` and `here_card`, and two extra reports before a Trusted or Guide drop is held. Demo accounts do not earn. `spoof_flag` and `counts_for_credit = false` are left out of the score. No city rows and no seed |
+| `20261021040000_things_voice.sql` | Everything Has a Voice. `things`, `ble_tags`, `nfc_tags`, `thing_reports`. Owners edit, everyone reads a public story. `resolve_things` and `hear_things` are signed-in and rate-limited. The quota row has no tag id. `public_api_thing` is service_role only. Not applied on the hosted project from this repo's agents |
 
 The taxonomy lives in a migration rather than `seed.sql` so a hosted project gets it too. Categories are rows, so adding one doesn't need a new migration type. Every change bumps `categories.version`, and each drop records the version it was validated against (`category_versions`).
 
@@ -143,6 +144,18 @@ supabase functions deploy public-api --no-verify-jwt
 `supabase db push` applies `20261020050000_public_read_api.sql` and any other migration the host does not have yet (including `20261020023000_exclude_demo_from_standing.sql`, `20261020031500_location_integrity.sql`, and `20261020052000_reputation_tiers.sql` if those are still pending). It does not load `seed.sql`. Do not paste the migration into the dashboard SQL editor. It does not change Auth.
 
 `supabase functions deploy public-api` publishes the Edge Function. `[functions.public-api] verify_jwt = false` in `config.toml` is the same setting as `--no-verify-jwt`. The platform injects `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`. Do not put that key in the repo, the app, or the website. Callers send the publishable key in the `apikey` header. The function ignores a user JWT.
+
+## Everything Has a Voice (hosted)
+
+Not applied from this repo's agents, and not applied by CI. The protocol is [docs/EVERYTHING-HAS-A-VOICE.md](../docs/EVERYTHING-HAS-A-VOICE.md). From a machine linked to `jpeuldzegtbqfezijhuy`, after the history repair in [Before `supabase db push`](#before-supabase-db-push):
+
+```bash
+supabase link --project-ref jpeuldzegtbqfezijhuy
+supabase db push
+supabase functions deploy public-api --no-verify-jwt
+```
+
+`db push` applies `supabase/migrations/20261021040000_things_voice.sql` and any earlier migration the host does not have yet. Do not paste that file into the dashboard SQL editor. It does not change Auth. There is no new Edge Function. Redeploy the existing `public-api` function so `GET /v1/things/{id}` is on the host. The phone calls the signed-in RPCs (`create_thing`, `resolve_things`, `hear_things`, `bind_ble_tag`, `bind_nfc`, `report_thing`) and does not call the Edge Function for scanning.
 
 After deploy, a signed-out read is:
 

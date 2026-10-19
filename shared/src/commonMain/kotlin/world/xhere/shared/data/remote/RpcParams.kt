@@ -9,10 +9,12 @@ import world.xhere.shared.integrity.LocationSignal
 import world.xhere.shared.json.InstantSerializer
 import world.xhere.shared.json.UuidSerializer
 import world.xhere.shared.model.ConfirmationVerdict
+import world.xhere.shared.model.CreateThingRequest
 import world.xhere.shared.model.MediaUpload
 import world.xhere.shared.model.ReportReason
 import world.xhere.shared.model.ReportStatus
 import world.xhere.shared.model.ReportTarget
+import world.xhere.shared.model.ThingMedia
 import world.xhere.shared.rules.CreateDropRequest
 
 /**
@@ -238,6 +240,87 @@ internal data class ClippingsAtParams(
     @SerialName("p_lat") val lat: Double,
     @SerialName("p_lng") val lng: Double,
     @SerialName("p_terms") val terms: List<String>,
+)
+
+@Serializable
+internal data class CreateThingParams(
+    @SerialName("p_title") val title: String,
+    @SerialName("p_story") val story: String,
+    @SerialName("p_category_slug") val categorySlug: String? = null,
+    @Serializable(with = UuidSerializer::class)
+    @SerialName("p_drop_id") val dropId: Uuid? = null,
+    @SerialName("p_place_name") val placeName: String? = null,
+    @SerialName("p_lat") val lat: Double? = null,
+    @SerialName("p_lng") val lng: Double? = null,
+    @SerialName("p_media") val media: List<ThingMedia>? = null,
+    @SerialName("p_visibility") val visibility: String? = null,
+)
+
+@Serializable
+internal data class UpdateThingParams(
+    @Serializable(with = UuidSerializer::class)
+    @SerialName("p_thing_id") val thingId: Uuid,
+    @SerialName("p_title") val title: String,
+    @SerialName("p_story") val story: String,
+    @SerialName("p_category_slug") val categorySlug: String? = null,
+    @Serializable(with = UuidSerializer::class)
+    @SerialName("p_drop_id") val dropId: Uuid? = null,
+    @SerialName("p_place_name") val placeName: String? = null,
+    @SerialName("p_lat") val lat: Double? = null,
+    @SerialName("p_lng") val lng: Double? = null,
+    @SerialName("p_media") val media: List<ThingMedia>? = null,
+    @SerialName("p_visibility") val visibility: String? = null,
+)
+
+@Serializable
+internal data class ThingKeysParams(
+    @SerialName("p_keys") val keys: List<String>,
+)
+
+@Serializable
+internal data class BindBeaconParams(
+    @Serializable(with = UuidSerializer::class)
+    @SerialName("p_thing_id") val thingId: Uuid,
+    @SerialName("p_key") val key: String,
+)
+
+@Serializable
+internal data class ThingIdParams(
+    @Serializable(with = UuidSerializer::class)
+    @SerialName("p_thing_id") val thingId: Uuid,
+)
+
+@Serializable
+internal data class ReportThingParams(
+    @Serializable(with = UuidSerializer::class)
+    @SerialName("p_thing_id") val thingId: Uuid,
+    @SerialName("p_reason") val reason: ReportReason,
+    @SerialName("p_details") val details: String? = null,
+)
+
+internal fun CreateThingRequest.toThingParams(): CreateThingParams = CreateThingParams(
+    title = title,
+    story = story,
+    categorySlug = categorySlug,
+    dropId = dropId,
+    placeName = placeName,
+    lat = latitude,
+    lng = longitude,
+    media = media,
+    visibility = visibility,
+)
+
+internal fun CreateThingRequest.toUpdateParams(thingId: Uuid): UpdateThingParams = UpdateThingParams(
+    thingId = thingId,
+    title = title,
+    story = story,
+    categorySlug = categorySlug,
+    dropId = dropId,
+    placeName = placeName,
+    lat = latitude,
+    lng = longitude,
+    media = media,
+    visibility = visibility,
 )
 
 internal fun CreateDropRequest.toParams(): CreateDropParams = CreateDropParams(

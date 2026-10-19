@@ -15,6 +15,7 @@ function liveDeps(): PublicApiDeps {
     drop: (id) => rpc("public_api_drop", { p_id: id }),
     categories: () => rpc("public_api_categories", {}),
     walks: (lat, lon) => rpc("public_api_walks", { p_lat: lat, p_lon: lon }),
+    thing: (id) => rpc("public_api_thing", { p_id: id }),
   };
 }
 

@@ -48,6 +48,11 @@ import world.xhere.app.ui.TestTags
 import world.xhere.app.session.SignOutNotice
 import world.xhere.app.settings.DataExporter
 import world.xhere.app.settings.SettingsViewModel
+import world.xhere.app.voice.FakeVoiceRadio
+import world.xhere.app.voice.ThingsViewModel
+import world.xhere.app.voice.VoicePreferences
+import world.xhere.app.voice.VoiceRadio
+import world.xhere.app.voice.VoiceSession
 import world.xhere.shared.SupabaseConfig
 import world.xhere.shared.data.XHereServices
 import world.xhere.shared.data.fake.InMemoryXHere
@@ -90,6 +95,7 @@ object TestGraph {
     lateinit var links: IncomingLinks
     lateinit var conditions: ScriptedConditions
     lateinit var ar: ScriptedArRuntime
+    lateinit var radio: FakeVoiceRadio
 
     fun isReady(): Boolean = ::services.isInitialized
 }
@@ -167,6 +173,12 @@ fun testModule() = module {
     TestGraph.ar = ar
     single<LiveConditions> { conditions }
     single<ArRuntime> { ar }
+    val radio = FakeVoiceRadio()
+    TestGraph.radio = radio
+    single { VoicePreferences(androidContext()) }
+    single<VoiceRadio> { radio }
+    single { VoiceSession(get(), get()) }
+    viewModel { ThingsViewModel(get(), get()) }
     viewModel { MapViewModel(get(), get(), get(), get(), get(), debounceMs = 0, conditions = get()) }
     viewModel { ArViewModel(get(), get(), get()) }
     viewModel { DropViewModel(get(), get(), get(), get(), get()) }
