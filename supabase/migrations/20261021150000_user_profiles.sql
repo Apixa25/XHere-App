@@ -1,5 +1,10 @@
 -- Public profiles: a picture, a unique @handle, a short bio, a home town, and a link.
 --
+-- This file is ordered after 20261021140000_claims_and_capsules.sql. That
+-- migration replaces private.to_drop_card. The avatar column is added here,
+-- then filled on the card that is current: the owner card, or the claims card
+-- when that migration has already run. Both versions share the same name select.
+--
 -- The owner is the only person who can change their row (profiles_update_own).
 -- tier, role, and points stay server-managed. Demo accounts are unchanged:
 -- the new columns are optional, and is_demo is still not a client column.

@@ -323,7 +323,7 @@ supabase db push
 
 ## User profiles (hosted)
 
-`20261021120000_user_profiles.sql` adds `profiles.bio` and `profiles.website`, `update_my_profile`, `handle_available`, a richer `public_profile`, `drop_card.author_avatar_path`, an optional `avatar_path` on campaign leaderboards, and the public Storage bucket `avatars`. It does not change Auth. Demo accounts keep working: the new columns are optional, and `is_demo` is still not a client-writable column.
+`20261021150000_user_profiles.sql` adds `profiles.bio` and `profiles.website`, `update_my_profile`, `handle_available`, a richer `public_profile`, `drop_card.author_avatar_path`, an optional `avatar_path` on campaign leaderboards, and the public Storage bucket `avatars`. It is ordered after `20261021140000_claims_and_capsules.sql` so a replaced drop card still receives the picture. It does not change Auth. Demo accounts keep working: the new columns are optional, and `is_demo` is still not a client-writable column.
 
 Not applied from this repo's agents, and not applied by CI. From a machine already linked, after the history repair in [Before `supabase db push`](#before-supabase-db-push) if that repair has not been done yet:
 
@@ -332,7 +332,7 @@ supabase link --project-ref jpeuldzegtbqfezijhuy
 supabase db push
 ```
 
-`db push` applies `20261021120000_user_profiles.sql` and any earlier migration that is not on the project yet. Do not paste the file into the dashboard SQL editor.
+`db push` applies `20261021150000_user_profiles.sql` and any earlier migration that is not on the project yet. Do not paste the file into the dashboard SQL editor.
 
 Storage policies created in that migration:
 
