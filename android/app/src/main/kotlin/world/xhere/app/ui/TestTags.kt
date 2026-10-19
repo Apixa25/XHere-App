@@ -55,6 +55,17 @@ internal object TestTags {
     const val SUBCATEGORY_SHEET = "subcategory_sheet"
     const val SUBCATEGORY_APPLY = "subcategory_apply"
     const val MAP_DROP_FAB = "map_drop_fab"
+    const val MAP_AR = "map_ar"
+    const val AR_SCREEN = "ar_screen"
+    const val AR_PRIVACY = "ar_privacy"
+    const val AR_CONTINUE = "ar_continue"
+    const val AR_CAMERA = "ar_camera"
+    const val AR_DROP = "ar_drop"
+    const val AR_CLOSE = "ar_close"
+
+    fun arLabel(shortId: String): String = "ar_label_$shortId"
+
+    fun arBody(shortId: String): String = "ar_body_$shortId"
     const val WALK_CARD = "walk_card"
     const val WALK_TITLE = "walk_title"
     const val WALK_META = "walk_meta"

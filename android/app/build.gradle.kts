@@ -140,6 +140,10 @@ dependencies {
     implementation(libs.androidx.camera.view)
     implementation(libs.mlkit.image.labeling)
     implementation(libs.sentry.android.core)
+    // Keyless ARCore Geospatial. Play Services Location is required by that API.
+    // Play Services for AR is a device install, not these two artifacts.
+    implementation(libs.arcore)
+    implementation(libs.play.services.location)
 
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)

@@ -53,6 +53,7 @@ import androidx.navigation.navArgument
 import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
 import world.xhere.app.R
+import world.xhere.app.ar.ArScreen
 import world.xhere.app.detail.DropDetailScreen
 import world.xhere.app.detail.IncomingLinks
 import world.xhere.app.drop.DropScreen
@@ -79,9 +80,10 @@ private object Routes {
     const val LISTS = "blocked"
     const val MODERATION = "moderation"
     const val DETAIL = "detail/{shortId}"
+    const val AR = "ar"
 
     /** Full-screen pages with their own back arrow and no bottom bar. */
-    val fullScreen = setOf(SETTINGS, GUIDELINES, LISTS, MODERATION, DETAIL)
+    val fullScreen = setOf(SETTINGS, GUIDELINES, LISTS, MODERATION, DETAIL, AR)
 
     fun detail(shortId: String): String = "detail/$shortId"
 }
@@ -153,6 +155,21 @@ fun MainShell() {
                     },
                     onOpenDrop = { shortId ->
                         nav.navigate(Routes.detail(shortId)) { launchSingleTop = true }
+                    },
+                    onOpenAr = {
+                        nav.navigate(Routes.AR) { launchSingleTop = true }
+                    },
+                )
+            }
+            composable(Routes.AR) {
+                ArScreen(
+                    onBack = { nav.popBackStack() },
+                    onOpenDrop = { shortId ->
+                        nav.navigate(Routes.detail(shortId)) { launchSingleTop = true }
+                    },
+                    onDropHere = { spot, label, signal ->
+                        pendingDrop.set(spot, label, signal)
+                        nav.navigate(Routes.DROP) { launchSingleTop = true }
                     },
                 )
             }

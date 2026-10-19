@@ -14,6 +14,10 @@
     <uses-feature
         android:name="android.hardware.camera"
         android:required="false" />
+    <!-- ARCore stays optional so a phone without it can still install. -->
+    <uses-feature
+        android:name="android.hardware.camera.ar"
+        android:required="false" />
 
     <application
         android:name=".XHereApplication"
@@ -28,6 +32,12 @@
         <meta-data
             android:name="io.sentry.auto-init"
             android:value="false" />
+        <!-- Keyless Geospatial. No key meta-data belongs here.
+             Authorization is package world.xhere.app plus the signing certificate
+             in Cloud project xhere-512103. optional: non-AR phones still install. -->
+        <meta-data
+            android:name="com.google.ar.core"
+            android:value="optional" />
         <activity
             android:name=".MainActivity"
             android:exported="true"

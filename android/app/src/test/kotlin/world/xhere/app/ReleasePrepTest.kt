@@ -46,6 +46,7 @@ class ReleasePrepTest {
             "com.google.mlkit",
             "androidx.camera",
             "io.sentry",
+            "com.google.ar",
         ).forEach { name ->
             assertTrue("missing keep for $name", name in rules)
         }

@@ -192,6 +192,7 @@ class FreshSessionRule : TestRule {
             runCatching { GlobalContext.get().get<world.xhere.app.drop.PendingDropSpot>().clear() }
             if (TestGraph.isReady()) {
                 TestGraph.location.reset()
+                TestGraph.ar.reset()
                 TestGraph.sharer.last = null
                 TestGraph.exporter.fileName = null
                 TestGraph.exporter.json = null

@@ -38,6 +38,7 @@
     <string name="map_filter_all">All</string>
     <string name="map_filter_save">Save</string>
     <string name="map_near_me">Near me</string>
+    <string name="map_ar">AR</string>
     <string name="map_tap_here">What\'s here</string>
     <string name="here_empty">Nothing is dropped within 300 m of this spot.</string>
     <string name="here_failed">Couldn\'t load what\'s known about this spot.</string>
@@ -300,4 +301,22 @@
     <string name="tier_regular">Regular</string>
     <string name="tier_trusted">Trusted</string>
     <string name="tier_guide">Guide</string>
+
+    <string name="ar_title">Look around</string>
+    <string name="ar_privacy_arcore">This application runs on Google Play Services for AR (ARCore), which is provided by Google and governed by the Google Privacy Policy.</string>
+    <string name="ar_privacy_sensors">To power this session, Google will process sensor data (e.g., camera and location). Learn more</string>
+    <string name="ar_privacy_xhere">XHere does not keep the camera frames or a trail of where you walked. The pose is used for this view and, if you drop, for that one post.</string>
+    <string name="ar_privacy_policy">Google Privacy Policy</string>
+    <string name="ar_privacy_learn">Learn more</string>
+    <string name="ar_continue">Continue</string>
+    <string name="ar_close">Close</string>
+    <string name="ar_drop_here">Drop here in AR</string>
+    <string name="ar_waiting">Point the camera around so the street can be recognized.</string>
+    <string name="ar_coarse">AR needs a precise location. Allow precise location, then come back.</string>
+    <string name="ar_unauthorized">This build is not authorized for Geospatial yet. A release build needs its signing certificate added in Google Cloud.</string>
+    <string name="ar_unavailable">Street-level AR is not available at this spot.</string>
+    <string name="ar_failed">The camera view stopped. Close it and try again.</string>
+    <string name="ar_camera_denied">The camera permission is needed to show the street.</string>
+    <string name="ar_walk_closer">Walk closer to read this.</string>
+    <string name="ar_distance">%1$d m</string>
 </resources>

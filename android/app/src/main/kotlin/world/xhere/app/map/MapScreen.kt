@@ -71,11 +71,15 @@ internal val HereSemantics = SemanticsPropertyKey<String>("HereCard")
 /** Straight-line walk route, and the guide to the next stop when one is underway. */
 internal val WalkRouteSemantics = SemanticsPropertyKey<String>("WalkRoute")
 
+/** `yes` when the AR button is shown. `no` when the phone or the spot cannot do Geospatial. */
+internal val ArReadySemantics = SemanticsPropertyKey<String>("ArReady")
+
 @Composable
 fun MapScreen(
     onDrop: () -> Unit = {},
     onDropHere: (world.xhere.shared.geo.LatLng, String?) -> Unit = { _, _ -> },
     onOpenDrop: (String) -> Unit = {},
+    onOpenAr: () -> Unit = {},
     viewModel: MapViewModel = koinViewModel(),
     canvas: MapCanvas = koinInject(),
 ) {
@@ -105,6 +109,7 @@ fun MapScreen(
                 set(NearCountSemantics, state.nearMe?.size?.toString() ?: "none")
                 set(SubcategorySemantics, state.subcategoryGroup ?: "none")
                 set(WalkRouteSemantics, describeRoute(state))
+                set(ArReadySemantics, if (state.arReady) "yes" else "no")
             },
     ) {
         canvas.Content(
@@ -204,6 +209,21 @@ fun MapScreen(
                         modifier = Modifier.padding(end = 8.dp),
                         strokeWidth = 2.dp,
                     )
+                }
+                if (state.arReady) {
+                    Surface(
+                        onClick = onOpenAr,
+                        shape = MaterialTheme.shapes.large,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.testTag(TestTags.MAP_AR),
+                    ) {
+                        Text(
+                            text = stringResource(R.string.map_ar),
+                            modifier = Modifier.padding(horizontal = 18.dp, vertical = 12.dp),
+                            color = MaterialTheme.colorScheme.onPrimary,
+                            style = MaterialTheme.typography.labelLarge,
+                        )
+                    }
                 }
                 Surface(
                     onClick = viewModel::openNearMe,
