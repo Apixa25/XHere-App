@@ -65,7 +65,8 @@ class DropDetailTest {
         rule.onNodeWithText("outdoor tables", substring = true).assertDoesNotExist()
         rule.onNodeWithTag(TestTags.DETAIL_BODY).assertDoesNotExist()
         rule.onNodeWithTag(TestTags.DETAIL_STILL_TRUE).assertDoesNotExist()
-        rule.onNodeWithTag(TestTags.DETAIL_FRESHNESS).assertTextContains("Not confirmed yet")
+        rule.onNodeWithTag(TestTags.DETAIL_IMPACT).assertTextContains("1 person checked · 0 said still there")
+        rule.onNodeWithTag(TestTags.DETAIL_FRESHNESS).assertDoesNotExist()
         rule.onNodeWithTag(TestTags.DETAIL_SHARE).performScrollTo().performClick()
         assertEquals(ShareLinks.url("lunch"), TestGraph.sharer.last)
     }
@@ -106,7 +107,7 @@ class DropDetailTest {
         rule.onNodeWithTag(TestTags.DETAIL_LOCKED).assertDoesNotExist()
         rule.onNodeWithTag(TestTags.DETAIL_STILL_TRUE).performScrollTo().performClick()
         rule.waitUntil(timeoutMillis = 5_000) {
-            rule.onAllNodesWithText("1 of 3 say it's still true", substring = true).fetchSemanticsNodes().isNotEmpty()
+            rule.onAllNodesWithText("said still there", substring = true).fetchSemanticsNodes().isNotEmpty()
         }
         rule.onNodeWithTag(TestTags.DETAIL_NOT_TRUE).performScrollTo().performClick()
         rule.waitUntil(timeoutMillis = 5_000) {
@@ -155,7 +156,7 @@ class DropDetailTest {
         rule.onNodeWithTag(TestTags.DETAIL_IMPACT).assertTextContains("Seen by 4, Confirmed by 1")
         rule.onNodeWithTag(TestTags.TEASER_OPEN).performClick()
         rule.waitForTag(TestTags.DETAIL_IMPACT)
-        rule.onNodeWithTag(TestTags.DETAIL_IMPACT).assertTextContains("Seen by 5, Confirmed by 1")
+        rule.onNodeWithTag(TestTags.DETAIL_IMPACT).assertTextContains("5 people checked · 1 said still there")
         rule.waitUntil(timeoutMillis = 5_000) { TestGraph.location.collectionCount >= 1 }
         TestGraph.location.emit(lunch.displayLocation)
         rule.waitForTag(TestTags.DETAIL_STILL_TRUE)
@@ -163,7 +164,7 @@ class DropDetailTest {
         rule.onNodeWithTag(TestTags.DETAIL_STILL_TRUE).performClick()
         rule.waitForTag(TestTags.DETAIL_YOU_CONFIRMED)
         rule.onNodeWithTag(TestTags.DETAIL_STILL_TRUE).assertDoesNotExist()
-        rule.onNodeWithTag(TestTags.DETAIL_IMPACT).assertTextContains("Seen by 5, Confirmed by 2")
+        rule.onNodeWithTag(TestTags.DETAIL_IMPACT).assertTextContains("5 people checked · 2 said still there")
     }
 
     @Test
@@ -201,7 +202,8 @@ class DropDetailTest {
         rule.onNodeWithTag(TestTags.TEASER_OPEN).performClick()
         rule.waitForTag(TestTags.DETAIL_BADGE)
         rule.onNodeWithTag(TestTags.DETAIL_BADGE).assertTextContains("Confirmed", substring = true)
-        rule.onNodeWithTag(TestTags.DETAIL_PROGRESS).assertTextContains("3 of 3", substring = true)
+        rule.onNodeWithTag(TestTags.DETAIL_IMPACT).assertTextContains("1 person checked · 3 said still there")
+        rule.onNodeWithTag(TestTags.DETAIL_PROGRESS).assertDoesNotExist()
         rule.onNodeWithTag(TestTags.DETAIL_FRESHNESS).assertTextContains("5 hours ago", substring = true)
         rule.onNodeWithText("public museum", substring = true).assertDoesNotExist()
     }

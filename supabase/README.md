@@ -295,3 +295,16 @@ supabase functions deploy history
 `db push` applies `20261020180000_history.sql` and any earlier migration that is not on the project yet. Do not paste the migration into the SQL editor. It does not change Auth. The seed runs as the database owner and calls `private.upsert_history`. The anon key cannot. `[functions.history] verify_jwt = true` matches `supabase functions deploy history` with no `--no-verify-jwt`. The platform injects `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`. Do not put that key in the repo or the app. The phone does not call this function. It calls `history_at` and `clippings_at`.
 
 Another town is a `history:` block in its region file, then the same importer (`docs/HISTORY.md`). Control points live in the region's `.georef.json`. Fewer than three points is not an overlay.
+
+## Owner drops (hosted)
+
+`20261021050000_owner_drops.sql` lets the author edit and soft-delete their own drop (`deleted_at`, `status = removed`, `removed_reason = author`). It also grants a short-lived read of a revealed photo and adds `author_display_name` on `drop_card`. It applies after `20261021040000_things_voice.sql`. It does not change Auth.
+
+Not applied from this repo's agents, and not applied by CI. From a machine already linked, after the history repair in [Before `supabase db push`](#before-supabase-db-push) if that repair has not been done yet:
+
+```bash
+supabase link --project-ref jpeuldzegtbqfezijhuy
+supabase db push
+```
+
+`db push` applies `20261021050000_owner_drops.sql` and any earlier migration that is not on the project yet. Do not paste the file into the dashboard SQL editor.

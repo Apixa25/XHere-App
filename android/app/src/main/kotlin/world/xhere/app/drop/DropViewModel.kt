@@ -19,6 +19,7 @@ import world.xhere.shared.data.XHereApiException
 import world.xhere.shared.data.XHereServices
 import world.xhere.shared.demo.JamestownDemo
 import world.xhere.shared.form.AttributeFields
+import world.xhere.shared.profile.AuthorNames
 import world.xhere.shared.form.FieldKind
 import world.xhere.shared.geo.LatLng
 import world.xhere.shared.here.Here
@@ -66,6 +67,20 @@ class DropViewModel(
     /** Null for a map pin. A Geospatial pose keeps its accuracy and device-fix bit. */
     private var pinnedSignal: LocationSignal? = null
 
+    init {
+        viewModelScope.launch {
+            val profile = runCatching { services.profiles.currentProfile() }.getOrNull() ?: return@launch
+            tier = profile.tier
+            _state.update {
+                it.copy(
+                    needsName = AuthorNames.needsChoice(profile.displayName, profile.handle),
+                    nameDraft = profile.displayName.orEmpty(),
+                    handleDraft = if (AuthorNames.needsChoice(profile.displayName, profile.handle)) "" else profile.handle,
+                )
+            }
+        }
+    }
+
     fun pin(spot: LatLng, label: String?, signal: LocationSignal? = null) {
         pinned = spot
         pinnedSignal = signal
@@ -77,6 +92,37 @@ class DropViewModel(
         pinned = null
         pinnedSignal = null
         _state.update { it.copy(pinnedLabel = null) }
+    }
+
+    fun onNameDraft(value: String) {
+        _state.update { it.copy(nameDraft = value.take(50), nameFailed = false) }
+    }
+
+    fun onHandleDraft(value: String) {
+        _state.update { it.copy(handleDraft = value.take(24), nameFailed = false) }
+    }
+
+    fun saveName() {
+        val snapshot = _state.value
+        if (snapshot.savingName || snapshot.nameDraft.isBlank()) return
+        viewModelScope.launch {
+            _state.update { it.copy(savingName = true, nameFailed = false) }
+            try {
+                val saved = services.profiles.setPublicName(snapshot.nameDraft, snapshot.handleDraft.trim().ifBlank { null })
+                _state.update {
+                    it.copy(
+                        savingName = false,
+                        needsName = AuthorNames.needsChoice(saved.displayName, saved.handle),
+                        nameDraft = saved.displayName.orEmpty(),
+                        handleDraft = saved.handle,
+                    )
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                _state.update { it.copy(savingName = false, nameFailed = true) }
+            }
+        }
     }
 
     fun onText(value: String) {
@@ -435,6 +481,11 @@ data class DropUiState(
     val description: String = "",
     val altText: String = "",
     val previewBytes: ByteArray? = null,
+    val needsName: Boolean = false,
+    val nameDraft: String = "",
+    val handleDraft: String = "",
+    val savingName: Boolean = false,
+    val nameFailed: Boolean = false,
 )
 
 /** A suggestion sitting in the composer. [suggestedSlug] is the category it picked. */

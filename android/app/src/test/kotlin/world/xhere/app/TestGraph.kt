@@ -23,6 +23,7 @@ import world.xhere.app.drop.CapturedPhoto
 import world.xhere.app.drop.DropCapture
 import world.xhere.app.drop.DropViewModel
 import world.xhere.app.drop.PendingDropSpot
+import world.xhere.app.map.MapPins
 import world.xhere.app.drop.ImageLabeler
 import world.xhere.app.ar.ArAdvice
 import world.xhere.app.ar.ArFrame
@@ -167,7 +168,8 @@ fun testModule() = module {
     single<DataExporter> { exporter }
     viewModel { SafetyListsViewModel(get()) }
     viewModel { ModerationViewModel(get()) }
-    viewModel { (shortId: String) -> DropDetailViewModel(shortId, get(), get()) }
+    single { MapPins() }
+    viewModel { (shortId: String) -> DropDetailViewModel(shortId, get(), get(), get()) }
     viewModel { SessionViewModel(get(), get(), get()) }
     viewModel { AuthViewModel(get(), get(), get(), get(), get()) }
     single<DeviceLocation> { location }
@@ -217,6 +219,7 @@ fun testModule() = module {
             get(),
             get(),
             get(),
+            get(),
             debounceMs = 0,
             conditions = get(),
             experiences = get(),
@@ -227,7 +230,7 @@ fun testModule() = module {
     viewModel { VoiceViewModel(get(), get(), get(), get(), get(), get(), get(), get()) }
     viewModel { ArViewModel(get(), get(), get()) }
     viewModel { DropViewModel(get(), get(), get(), get(), get()) }
-    viewModel { ProfileViewModel(get()) }
+    viewModel { ProfileViewModel(get(), get()) }
     viewModel {
         val context = androidContext()
         SettingsViewModel(

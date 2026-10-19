@@ -255,6 +255,30 @@ internal object TestTags {
     const val DETAIL_BLOCK_AUTHOR = "detail_block_author"
     const val DETAIL_SAFETY_MESSAGE = "detail_safety_message"
     const val DETAIL_UNDO_HIDE = "detail_undo_hide"
+    const val DETAIL_OWNER_MENU = "detail_owner_menu"
+    const val DETAIL_EDIT = "detail_edit"
+    const val DETAIL_DELETE = "detail_delete"
+    const val DETAIL_DELETE_CONFIRM = "detail_delete_confirm"
+    const val DETAIL_UNDO = "detail_undo"
+    const val DETAIL_EDIT_TITLE = "detail_edit_title"
+    const val DETAIL_EDIT_BODY = "detail_edit_body"
+    const val DETAIL_EDIT_ALT = "detail_edit_alt"
+    const val DETAIL_EDIT_SAVE = "detail_edit_save"
+    const val DETAIL_PHOTO_FULL = "detail_photo_full"
+    const val PROFILE_MY_DROPS = "profile_my_drops"
+    const val PROFILE_NAME = "profile_name"
+    const val PROFILE_HANDLE = "profile_handle"
+    const val PROFILE_NAME_SAVE = "profile_name_save"
+
+    fun detailBadge(slug: String): String = "detail_badge_$slug"
+
+    fun myDrop(shortId: String): String = "my_drop_$shortId"
+
+    fun myDropMenu(shortId: String): String = "my_drop_menu_$shortId"
+
+    fun myDropEdit(shortId: String): String = "my_drop_edit_$shortId"
+
+    fun myDropDelete(shortId: String): String = "my_drop_delete_$shortId"
     const val REPORT_FORM = "report_form"
     const val REPORT_DETAILS = "report_details"
     const val REPORT_ALSO_HIDE = "report_also_hide"

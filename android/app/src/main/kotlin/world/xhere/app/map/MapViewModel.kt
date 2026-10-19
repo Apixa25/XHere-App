@@ -59,6 +59,7 @@ class MapViewModel(
     private val presetStore: FilterPresetStore,
     private val places: SpotNames,
     private val ar: ArRuntime,
+    private val mapPins: MapPins = MapPins(),
     private val debounceMs: Long = 320,
     private val conditions: LiveConditions = QuietConditions,
     private val experiences: ExperienceMemory = MemoryExperienceStore(),
@@ -109,6 +110,22 @@ class MapViewModel(
             }
         }
         viewModelScope.launch { reloadQuests(celebrate = false) }
+        viewModelScope.launch {
+            mapPins.hidden.collect { hidden ->
+                _state.update { current ->
+                    current.copy(
+                        features = current.features.filter { feature -> feature.shortId !in hidden },
+                        teaser = current.teaser?.takeIf { it.shortId !in hidden },
+                    )
+                }
+            }
+        }
+        viewModelScope.launch {
+            mapPins.restored.collect {
+                val frame = lastFrame ?: return@collect
+                fetch(frame)
+            }
+        }
         viewModelScope.launch {
             locationKick.onStart { emit(Unit) }.collectLatest {
                 if (!location.hasPermission()) return@collectLatest
@@ -652,7 +669,9 @@ class MapViewModel(
             )
         }
         try {
+            val hidden = mapPins.hidden.value
             val features = services.drops.dropsInView(frame.box, slugs, frame.zoom)
+                .filter { feature -> feature.shortId !in hidden }
             val walks = runCatching { services.walks.walksFor(centerOf(frame)) }.getOrDefault(emptyList())
             val campaigns = runCatching { services.campaigns.campaignsFor(frame.box) }.getOrDefault(emptyList())
             val pins = if (_state.value.accessibilityLayer) accessPins(frame) else emptyList()

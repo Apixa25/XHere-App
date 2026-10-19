@@ -6,6 +6,8 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -21,11 +23,17 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -34,11 +42,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.SemanticsPropertyKey
 import androidx.compose.ui.semantics.clearAndSetSemantics
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
@@ -47,6 +54,8 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlin.time.Clock
 import kotlin.time.Instant
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
 import org.koin.core.parameter.parametersOf
@@ -74,12 +83,33 @@ internal val DetailListeningSemantics = SemanticsPropertyKey<String>("DetailList
 fun DropDetailScreen(
     shortId: String,
     onBack: () -> Unit,
+    startEditing: Boolean = false,
     viewModel: DropDetailViewModel = koinViewModel { parametersOf(shortId) },
     sharer: DropSharer = koinInject(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     var surveying by remember { mutableStateOf(false) }
     var accessDraft by remember { mutableStateOf(SurveyDraft()) }
+    LaunchedEffect(startEditing) {
+        if (startEditing) viewModel.startEditing()
+    }
+    val snackbarHost = remember { SnackbarHostState() }
+    val deletedMessage = stringResource(R.string.detail_deleted)
+    val undoLabel = stringResource(R.string.detail_undo)
+    LaunchedEffect(state.undoToken) {
+        if (state.undoToken == 0) return@LaunchedEffect
+        val dismiss = launch {
+            delay(5_000)
+            snackbarHost.currentSnackbarData?.dismiss()
+        }
+        val result = snackbarHost.showSnackbar(
+            message = deletedMessage,
+            actionLabel = undoLabel,
+            duration = SnackbarDuration.Indefinite,
+        )
+        dismiss.cancel()
+        if (result == SnackbarResult.ActionPerformed) viewModel.undoDelete() else viewModel.expireUndo()
+    }
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     DisposableEffect(lifecycle, viewModel) {
         val observer = LifecycleEventObserver { _, event ->
@@ -108,10 +138,15 @@ fun DropDetailScreen(
         )
     }
 
+    if (state.confirmDelete) {
+        DeleteDropDialog(onConfirm = viewModel::deleteDrop, onDismiss = viewModel::dismissDelete)
+    }
+    Scaffold(snackbarHost = { SnackbarHost(snackbarHost) }) { padding ->
     Column(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
+            .padding(padding)
             .padding(horizontal = 20.dp, vertical = 8.dp)
             .testTag(TestTags.SCREEN_DETAIL)
             .semantics {
@@ -119,6 +154,23 @@ fun DropDetailScreen(
             },
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
+        if (state.editing) {
+            EditDropDialog(
+                title = state.editTitle,
+                body = state.editBody,
+                alt = state.editAlt,
+                fields = state.editFields,
+                values = state.editValues,
+                saving = state.saving,
+                failed = state.editFailed,
+                onTitle = viewModel::onEditTitle,
+                onBody = viewModel::onEditBody,
+                onAlt = viewModel::onEditAlt,
+                onField = viewModel::onEditField,
+                onSave = viewModel::saveEdit,
+                onDismiss = viewModel::dismissEditing,
+            )
+        }
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack, modifier = Modifier.testTag(TestTags.DETAIL_BACK)) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.detail_back))
@@ -127,7 +179,11 @@ fun DropDetailScreen(
                 text = stringResource(R.string.app_name),
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.weight(1f),
             )
+            if (state.isMine && !state.loading && !state.missing && !state.gone && !state.publicRecord) {
+                OwnerOverflow(onEdit = viewModel::startEditing, onDelete = viewModel::requestDelete)
+            }
         }
         when {
             state.loading -> {
@@ -139,6 +195,11 @@ fun DropDetailScreen(
                 if (state.canUndoHide) {
                     OutlinedButton(onClick = viewModel::undoHide, modifier = Modifier.testTag(TestTags.DETAIL_UNDO_HIDE)) {
                         Text(stringResource(R.string.safety_undo))
+                    }
+                }
+                if (state.canUndoDelete) {
+                    OutlinedButton(onClick = viewModel::undoDelete, modifier = Modifier.testTag(TestTags.DETAIL_UNDO)) {
+                        Text(stringResource(R.string.detail_undo))
                     }
                 }
             }
@@ -199,6 +260,7 @@ fun DropDetailScreen(
                 onCancel = viewModel::dismissDialog,
             )
         }
+    }
     }
 }
 
@@ -281,6 +343,7 @@ private fun SafetyMessageText(state: DetailUiState) {
             SafetyMessage.REPORTED_HIDDEN -> stringResource(R.string.safety_report_sent_hidden)
             SafetyMessage.HIDDEN -> stringResource(R.string.safety_hidden)
             SafetyMessage.BLOCKED -> stringResource(R.string.safety_blocked, state.authorHandle.orEmpty())
+            SafetyMessage.DELETED -> stringResource(R.string.detail_deleted)
             SafetyMessage.FAILED -> stringResource(R.string.safety_failed)
         },
         style = MaterialTheme.typography.bodyLarge,
@@ -327,33 +390,9 @@ private fun DetailBody(
     )
     AccessSummaryLine(summary = state.access, onCheck = onAccess)
     if (!state.publicRecord) {
-        Text(
-            text = stringResource(R.string.detail_impact, state.viewCount, state.confirmCount),
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.testTag(TestTags.DETAIL_IMPACT),
-        )
+        ConfirmationSummary(viewCount = state.viewCount, confirmCount = state.confirmCount)
     }
-    state.authorHandle?.let { handle ->
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                text = stringResource(R.string.detail_author, handle),
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            state.authorTierLabel?.let { tier ->
-                TierChip(label = tier, tag = TestTags.DETAIL_TIER)
-            }
-        }
-    }
-    state.authorBadges.forEach { badge ->
-        Text(
-            text = "${badge.icon} ${badge.name}",
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.tertiary,
-            modifier = Modifier.testTag(TestTags.DETAIL_FOUNDING),
-        )
-    }
+    AuthorRow(state)
     if (!state.publicRecord) {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
             if (state.isConfirmed) {
@@ -371,11 +410,6 @@ private fun DetailBody(
                     )
                 }
             }
-            Text(
-                text = stringResource(R.string.detail_progress, state.confirmCount, state.confirmBar),
-                style = MaterialTheme.typography.bodyLarge,
-                modifier = Modifier.testTag(TestTags.DETAIL_PROGRESS),
-            )
         }
         if (state.denyCount > 0) {
             Text(
@@ -384,12 +418,14 @@ private fun DetailBody(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        Text(
-            text = freshnessText(state.lastConfirmedAt, Clock.System.now()),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.testTag(TestTags.DETAIL_FRESHNESS),
-        )
+        if (state.lastConfirmedAt != null) {
+            Text(
+                text = freshnessText(state.lastConfirmedAt, Clock.System.now()),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.testTag(TestTags.DETAIL_FRESHNESS),
+            )
+        }
     }
     if (state.approximate) {
         Text(
@@ -429,15 +465,8 @@ private fun DetailBody(
             modifier = Modifier.testTag(TestTags.DETAIL_INSCRIPTION),
         )
     }
-    state.imageAltTexts.forEachIndexed { index, alt ->
-        val description = alt.ifBlank { stringResource(R.string.detail_photo) }
-        Text(
-            text = description,
-            style = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier
-                .testTag(if (index == 0) TestTags.DETAIL_PHOTO else "${TestTags.DETAIL_PHOTO}_$index")
-                .semantics { contentDescription = description },
-        )
+    if (state.showBody && state.photos.isNotEmpty()) {
+        DropPhotos(state.photos)
     }
     if (state.publicRecord && !state.attribution.isNullOrBlank()) {
         Text(
@@ -566,6 +595,63 @@ private fun LockedCard(state: DetailUiState, onUseLocation: () -> Unit) {
             }
         }
     }
+}
+
+@Composable
+private fun ConfirmationSummary(viewCount: Long, confirmCount: Int) {
+    val text = if (viewCount == 0L && confirmCount == 0) {
+        stringResource(R.string.detail_confirm_none)
+    } else {
+        val people = viewCount.coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
+        val checked = pluralStringResource(R.plurals.detail_people_checked, people, people)
+        val said = pluralStringResource(R.plurals.detail_said_still, confirmCount, confirmCount)
+        "$checked · $said"
+    }
+    Text(
+        text = text,
+        style = MaterialTheme.typography.titleMedium,
+        color = MaterialTheme.colorScheme.primary,
+        modifier = Modifier.testTag(TestTags.DETAIL_IMPACT),
+    )
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun AuthorRow(state: DetailUiState) {
+    val handle = state.authorHandle ?: return
+    val name = state.authorLabel ?: stringResource(R.string.detail_neighbor)
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Text(
+            text = stringResource(R.string.detail_author, name),
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier,
+        )
+        state.authorTierLabel?.let { tier ->
+            TierChip(label = tier, tag = TestTags.DETAIL_TIER)
+        }
+        state.authorBadges.forEach { badge ->
+            Surface(
+                shape = MaterialTheme.shapes.small,
+                color = MaterialTheme.colorScheme.tertiaryContainer,
+            ) {
+                Text(
+                    text = "${badge.icon} ${badge.name}",
+                    modifier = Modifier
+                        .padding(horizontal = 10.dp, vertical = 4.dp)
+                        .testTag(
+                            if (badge.slug == "founding_local") TestTags.DETAIL_FOUNDING else TestTags.detailBadge(badge.slug),
+                        ),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onTertiaryContainer,
+                )
+            }
+        }
+    }
+    if (handle.isEmpty()) return
 }
 
 @Composable

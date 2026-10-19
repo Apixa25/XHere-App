@@ -44,6 +44,7 @@ import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
 import androidx.compose.material3.TextButton
 import world.xhere.app.R
+import world.xhere.app.profile.NamePrompt
 import world.xhere.app.safety.SafetyFooter
 import world.xhere.app.ui.TestTags
 import world.xhere.app.ui.hapticClick
@@ -82,6 +83,17 @@ fun DropScreen(
     ) {
         Text(stringResource(R.string.drop_title), style = MaterialTheme.typography.headlineSmall)
         Text(stringResource(R.string.drop_body), style = MaterialTheme.typography.bodyLarge)
+        if (state.needsName) {
+            NamePrompt(
+                displayName = state.nameDraft,
+                handle = state.handleDraft,
+                saving = state.savingName,
+                failed = state.nameFailed,
+                onDisplayName = viewModel::onNameDraft,
+                onHandle = viewModel::onHandleDraft,
+                onSave = viewModel::saveName,
+            )
+        }
         state.pinnedLabel?.let { label ->
             Text(
                 text = stringResource(R.string.drop_pinned, label),

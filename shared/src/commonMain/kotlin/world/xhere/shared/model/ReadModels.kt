@@ -43,6 +43,8 @@ data class DropCard(
     @Serializable(with = InstantSerializer::class)
     @SerialName("created_at") val createdAt: Instant,
     @SerialName("author_handle") val authorHandle: String? = null,
+    /** Name the author picked. Null on an anonymous drop, a public record, or an automatic handle with no name. */
+    @SerialName("author_display_name") val authorDisplayName: String? = null,
     @SerialName("is_mine") val isMine: Boolean,
     /** `user` when an older payload omits it. Public records are `open_data`. */
     val source: DropSource = DropSource.USER,
@@ -103,6 +105,20 @@ data class DropCard(
         isMine = isMine,
     )
 }
+
+/** One of the signed-in author's live drops (`my_drops`). Deleted drops are not included. */
+@Serializable
+data class OwnDrop(
+    @Serializable(with = UuidSerializer::class)
+    val id: Uuid,
+    @SerialName("short_id") val shortId: String,
+    val title: String,
+    @SerialName("category_slug") val categorySlug: String,
+    val status: DropStatus,
+    @SerialName("confirm_count") val confirmCount: Int = 0,
+    @Serializable(with = InstantSerializer::class)
+    @SerialName("created_at") val createdAt: Instant,
+)
 
 /** One row from `drops_in_view`. [kind] is `drop` or `cluster`. Never includes a body. */
 @Serializable

@@ -2,6 +2,7 @@ package world.xhere.shared.data.fake
 
 import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.hours
+import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Instant
 import kotlin.uuid.Uuid
 import kotlinx.coroutines.flow.Flow
@@ -66,6 +67,7 @@ import world.xhere.shared.model.Confirmation
 import world.xhere.shared.model.ConfirmationVerdict
 import world.xhere.shared.model.CreateDropResult
 import world.xhere.shared.model.DropCard
+import world.xhere.shared.model.OwnDrop
 import world.xhere.shared.model.DropSource
 import world.xhere.shared.model.UserTier
 import world.xhere.shared.reputation.Reputation
@@ -177,8 +179,10 @@ class InMemoryXHere(
         revealDistance: Double? = distance,
     ): DropCard {
         val anonymous = drop.displayAnonymous && drop.category.allowAnonymousDisplay
-        val badges = store.awardsFor(drop.authorId, drop.trueLocation, anonymous, clock())
-        return drop.toCard(viewerId, distance, verdict, revealDistance, badges, rankTier(drop))
+        val profile = store.profiles[drop.authorId]
+        val badges = store.awardsFor(drop.authorId, drop.trueLocation, anonymous, clock()) + drop.extraBadges
+        val displayName = if (anonymous) null else profile?.displayName
+        return drop.toCard(viewerId, distance, verdict, revealDistance, badges, rankTier(drop), displayName)
     }
 
     private fun decideLocation(
@@ -310,6 +314,30 @@ class InMemoryXHere(
             if (known != null) return PublicProfile(known.id, known.handle, known.displayName, known.createdAt)
             val author = store.drops.values.firstOrNull { it.authorHandle == wanted && it.authorId !in store.deleted } ?: return null
             return PublicProfile(author.authorId, author.authorHandle, null, author.createdAt)
+        }
+
+        override suspend fun setPublicName(displayName: String, handle: String?): Profile {
+            val profile = requireViewer()
+            val name = displayName.trim()
+            if (name.length !in 1..50 || name.any { it.isISOControl() }) {
+                throw XHereApiException("invalid_name", sqlState = XHereApiException.SQL_VALIDATION)
+            }
+            val nextHandle = if (handle.isNullOrBlank()) {
+                profile.handle
+            } else {
+                val cleaned = handle.trim().lowercase()
+                if (!cleaned.matches(Regex("^[a-z0-9_]{3,24}$"))) {
+                    throw XHereApiException("invalid_handle", sqlState = XHereApiException.SQL_VALIDATION)
+                }
+                if (store.profiles.values.any { it.id != profile.id && it.handle == cleaned }) {
+                    throw XHereApiException("handle_taken", sqlState = "23505")
+                }
+                cleaned
+            }
+            val updated = profile.copy(displayName = name, handle = nextHandle)
+            viewer = updated
+            store.drops.values.filter { it.authorId == profile.id }.forEach { it.authorHandle = nextHandle }
+            return updated
         }
     }
 
@@ -559,6 +587,99 @@ class InMemoryXHere(
             )
         }
 
+        override suspend fun updateMyDrop(
+            id: Uuid,
+            title: String,
+            body: String?,
+            attributes: kotlinx.serialization.json.JsonObject,
+            altText: String?,
+        ): DropCard {
+            val profile = requireViewer()
+            val drop = store.drops[id] ?: throw XHereApiException("not_owner", sqlState = XHereApiException.SQL_PERMISSION)
+            if (drop.authorId != profile.id || drop.source != DropSource.USER) {
+                throw XHereApiException("not_owner", sqlState = XHereApiException.SQL_PERMISSION)
+            }
+            val now = clock()
+            val expired = drop.expiresAt != null && drop.expiresAt!! <= now
+            if (drop.deletedAt != null || drop.status == DropStatus.REMOVED || drop.status == DropStatus.EXPIRED || expired) {
+                throw XHereApiException("drop_not_found", sqlState = XHereApiException.SQL_NOT_FOUND)
+            }
+            val cleanedTitle = title.trim()
+            if (cleanedTitle.length !in 1..120) {
+                throw XHereApiException("invalid_title", sqlState = XHereApiException.SQL_VALIDATION)
+            }
+            val cleanedBody = body?.trim()?.takeIf { it.isNotEmpty() }
+            if (cleanedBody != null && cleanedBody.length > 2000) {
+                throw XHereApiException("invalid_body", sqlState = XHereApiException.SQL_VALIDATION)
+            }
+            drop.title = cleanedTitle
+            drop.body = cleanedBody
+            drop.attributes = attributes
+            if (altText != null) {
+                val cleanedAlt = altText.trim().take(300).ifBlank { null }
+                drop.media = drop.media.mapIndexed { index, item ->
+                    if (index == drop.media.indexOfFirst { it.mediaKind == MediaKind.IMAGE }) {
+                        item.copy(altText = cleanedAlt)
+                    } else {
+                        item
+                    }
+                }
+            }
+            return card(drop, profile.id, distance = null, store.verdict(drop.id, profile.id), revealDistance = 0.0)
+        }
+
+        override suspend fun deleteMyDrop(id: Uuid) {
+            val profile = requireViewer()
+            val drop = store.drops[id] ?: throw XHereApiException("not_owner", sqlState = XHereApiException.SQL_PERMISSION)
+            if (drop.authorId != profile.id || drop.source != DropSource.USER) {
+                throw XHereApiException("not_owner", sqlState = XHereApiException.SQL_PERMISSION)
+            }
+            if (drop.deletedAt != null || drop.status == DropStatus.REMOVED) return
+            drop.statusBeforeDelete = drop.status
+            drop.status = DropStatus.REMOVED
+            drop.removedReason = "author"
+            drop.deletedAt = clock()
+        }
+
+        override suspend fun restoreMyDrop(id: Uuid) {
+            val profile = requireViewer()
+            val drop = store.drops[id] ?: throw XHereApiException("not_owner", sqlState = XHereApiException.SQL_PERMISSION)
+            if (drop.authorId != profile.id || drop.removedReason != "author" || drop.deletedAt == null) {
+                throw XHereApiException("not_owner", sqlState = XHereApiException.SQL_PERMISSION)
+            }
+            val deletedAt = drop.deletedAt ?: throw XHereApiException("not_owner", sqlState = XHereApiException.SQL_PERMISSION)
+            if (clock() - deletedAt > 10.minutes) {
+                throw XHereApiException("undo_expired", sqlState = XHereApiException.SQL_VALIDATION)
+            }
+            val previous = drop.statusBeforeDelete
+            drop.status = when (previous) {
+                DropStatus.ACTIVE, DropStatus.CONFIRMED, DropStatus.PENDING_REVIEW, DropStatus.DISPUTED -> previous
+                else -> DropStatus.ACTIVE
+            }
+            drop.statusBeforeDelete = null
+            drop.removedReason = null
+            drop.deletedAt = null
+        }
+
+        override suspend fun myDrops(): List<OwnDrop> {
+            val profile = requireViewer()
+            return store.drops.values
+                .filter { it.authorId == profile.id && it.source == DropSource.USER && it.deletedAt == null && it.status != DropStatus.REMOVED }
+                .sortedByDescending { it.createdAt }
+                .take(100)
+                .map { drop ->
+                    OwnDrop(
+                        id = drop.id,
+                        shortId = drop.shortId,
+                        title = drop.title,
+                        categorySlug = drop.category.slug,
+                        status = drop.status,
+                        confirmCount = drop.confirmCount,
+                        createdAt = drop.createdAt,
+                    )
+                }
+        }
+
         override suspend fun confirmDrop(
             dropId: Uuid,
             verdict: ConfirmationVerdict,
@@ -751,6 +872,9 @@ class InMemoryXHere(
                 durationS = durationS,
             )
         }
+
+        override suspend fun photoUrl(bucket: String, path: String): String =
+            "https://media.xhere.test/$bucket/$path"
     }
 
     private inner class AccessRepo : AccessRepository {
@@ -1575,6 +1699,7 @@ class MemoryStore(
         drops.values.filter { canView(it, viewerId, now) }
 
     fun canView(drop: StoredDrop, viewerId: Uuid?, now: Instant): Boolean {
+        if (drop.deletedAt != null) return false
         val expired = drop.expiresAt != null && drop.expiresAt!! <= now
         if (expired) return false
         if (viewerId != null && drop.authorId == viewerId) {
@@ -1684,12 +1809,12 @@ class StoredDrop(
     val id: Uuid,
     val shortId: String,
     val authorId: Uuid,
-    val authorHandle: String,
+    var authorHandle: String,
     val groupSlug: String,
     val category: world.xhere.shared.model.Category,
-    val title: String,
-    val body: String?,
-    val attributes: kotlinx.serialization.json.JsonObject,
+    var title: String,
+    var body: String?,
+    var attributes: kotlinx.serialization.json.JsonObject,
     val tags: List<String>,
     val trueLocation: LatLng,
     val displayLocation: LatLng,
@@ -1702,7 +1827,7 @@ class StoredDrop(
     var viewCount: Long = 0,
     var lastConfirmedAt: Instant? = null,
     val createdAt: Instant,
-    val media: List<DropMedia>,
+    var media: List<DropMedia>,
     var removedReason: String? = null,
     var source: world.xhere.shared.model.DropSource = world.xhere.shared.model.DropSource.USER,
     val sourceName: String? = null,
@@ -1711,6 +1836,9 @@ class StoredDrop(
     val attribution: String? = null,
     var locationTrust: String = "standard",
     var countsForCredit: Boolean = true,
+    var statusBeforeDelete: DropStatus? = null,
+    var deletedAt: Instant? = null,
+    var extraBadges: List<BadgeAward> = emptyList(),
 )
 
 /**
@@ -1732,6 +1860,7 @@ private fun StoredDrop.toCard(
     revealDistance: Double? = distance,
     authorBadges: List<BadgeAward> = emptyList(),
     authorTier: UserTier? = null,
+    authorDisplayName: String? = null,
 ): DropCard {
     val publicRecord = source == world.xhere.shared.model.DropSource.OPEN_DATA
     val mine = viewerId != null && authorId == viewerId && !publicRecord
@@ -1760,6 +1889,7 @@ private fun StoredDrop.toCard(
         lastConfirmedAt = lastConfirmedAt,
         createdAt = createdAt,
         authorHandle = if (publicRecord || (displayAnonymous && category.allowAnonymousDisplay && !mine)) null else authorHandle,
+        authorDisplayName = if (publicRecord || (displayAnonymous && category.allowAnonymousDisplay && !mine)) null else authorDisplayName,
         isMine = mine,
         source = source,
         sourceName = sourceName,
