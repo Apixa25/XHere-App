@@ -16,7 +16,9 @@
     <string name="auth_code_rejected">That code didn\'t match. Request a new one and try again.</string>
     <string name="auth_google_rejected">Google didn\'t accept that sign-in. Try again.</string>
     <string name="auth_google_cancelled">Google sign-in was cancelled.</string>
+    <string name="auth_google_no_account">No Google account is on this phone. Add one, then try again.</string>
     <string name="auth_google_unconfigured">Google sign-in needs a web client id. Set GOOGLE_WEB_CLIENT_ID in local.properties.</string>
+    <string name="auth_network">Couldn\'t reach the network. Check your connection and try again.</string>
     <string name="auth_failed">Sign-in didn\'t go through. Try again.</string>
     <string name="auth_not_connected">XHere isn\'t connected to a server yet.</string>
     <string name="account_deleted_notice">Your account is scheduled for deletion. It will be removed within 30 days.</string>

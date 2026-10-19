@@ -120,6 +120,7 @@ class AuthViewModel(
         launchBusy {
             when (val attempt = google.request()) {
                 is GoogleSignInAttempt.Success -> {
+                    // Same raw nonce returned with the token. Do not hash it and do not mint another.
                     services.auth.signInWithIdToken(
                         provider = IdentityProvider.GOOGLE,
                         idToken = attempt.idToken,
@@ -127,7 +128,8 @@ class AuthViewModel(
                     )
                     _state.update { it.copy(busy = false) }
                 }
-                GoogleSignInAttempt.Cancelled -> _state.update { it.copy(busy = false, error = strings.googleCancelled) }
+                // Dismissing the account sheet is not a failure, so the form stays quiet.
+                GoogleSignInAttempt.Cancelled -> _state.update { it.copy(busy = false, error = null) }
                 is GoogleSignInAttempt.Failed -> _state.update { it.copy(busy = false, error = attempt.message) }
             }
         }
@@ -168,9 +170,11 @@ data class AuthStrings(
     val emailInvalid: String,
     val codeRejected: String,
     val googleRejected: String,
+    /** Reserved. A dismissed Google sheet shows no message. */
     val googleCancelled: String,
     val googleUnconfigured: String,
     val failed: String,
+    val network: String,
     val notConnected: String,
 )
 
@@ -181,12 +185,16 @@ internal fun looksLikeEmail(email: String): Boolean {
     return dot > at + 1 && dot < email.lastIndex
 }
 
-internal fun Throwable.toAuthMessage(strings: AuthStrings): String = when (this) {
-    is XHereApiException -> when (code) {
-        "invalid_email" -> strings.emailInvalid
-        "otp_expired" -> strings.codeRejected
-        "invalid_grant" -> strings.googleRejected
+internal fun Throwable.toAuthMessage(strings: AuthStrings): String {
+    if (isConnectivityFailure()) return strings.network
+    if (mentionsNonceMismatch()) return strings.googleRejected
+    return when (this) {
+        is XHereApiException -> when (code) {
+            "invalid_email" -> strings.emailInvalid
+            "otp_expired" -> strings.codeRejected
+            "invalid_grant", "invalid_nonce" -> strings.googleRejected
+            else -> strings.failed
+        }
         else -> strings.failed
     }
-    else -> strings.failed
 }
