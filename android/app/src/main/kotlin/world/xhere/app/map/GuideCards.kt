@@ -271,6 +271,7 @@ internal fun CampaignCard(
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                world.xhere.app.profile.LeaderboardFaces(campaign.leaderboard)
                 Text(
                     text = board,
                     modifier = Modifier.testTag(TestTags.CAMPAIGN_BOARD),

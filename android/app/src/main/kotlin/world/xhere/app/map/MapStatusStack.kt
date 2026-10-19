@@ -131,6 +131,7 @@ internal fun MapStatusStack(
                 }
                 val board = active.leaderboard.joinToString(" · ") { "${it.displayName} ${it.drops}" }
                     .ifBlank { stringResource(R.string.campaign_board_empty) }
+                world.xhere.app.profile.LeaderboardFaces(active.leaderboard)
                 Text(
                     text = progress,
                     modifier = Modifier.testTag(TestTags.CAMPAIGN_PROGRESS),

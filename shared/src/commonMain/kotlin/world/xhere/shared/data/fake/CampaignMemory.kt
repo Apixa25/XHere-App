@@ -53,6 +53,7 @@ fun MemoryStore.countedDrops(
         createdAt = drop.createdAt,
         displayName = displayNameOf(authorId),
         showOnLeaderboard = showsOnLeaderboard(authorId),
+        avatarPath = profiles[authorId]?.avatarPath,
     )
 }
 

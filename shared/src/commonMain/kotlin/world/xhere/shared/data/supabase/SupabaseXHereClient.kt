@@ -62,6 +62,7 @@ import world.xhere.shared.data.ModerationRepository
 import world.xhere.shared.data.LiveRepository
 import world.xhere.shared.data.PlaceDeskRepository
 import world.xhere.shared.data.PlaceRepository
+import world.xhere.shared.data.ProfileDraft
 import world.xhere.shared.data.ProfileRepository
 import world.xhere.shared.data.ReportRepository
 import world.xhere.shared.data.SessionInfo
@@ -92,6 +93,7 @@ import world.xhere.shared.data.remote.RememberPlaceParams
 import world.xhere.shared.data.remote.MarkImpactReadParams
 import world.xhere.shared.data.remote.DropIdParams
 import world.xhere.shared.data.remote.SetPublicNameParams
+import world.xhere.shared.data.remote.UpdateProfileParams
 import world.xhere.shared.data.remote.UpdateMyDropParams
 import world.xhere.shared.data.remote.HandleParams
 import world.xhere.shared.data.remote.QueueParams
@@ -184,6 +186,7 @@ import world.xhere.shared.model.MediaKind
 import world.xhere.shared.model.MediaUpload
 import world.xhere.shared.model.ModerateDropAction
 import world.xhere.shared.model.Profile
+import world.xhere.shared.profile.ProfileFields
 import world.xhere.shared.model.CreateThingRequest
 import world.xhere.shared.model.HearResult
 import world.xhere.shared.model.OwnedThings
@@ -322,6 +325,24 @@ class SupabaseXHereClient(
                 "set_my_public_name",
                 SetPublicNameParams(displayName, handle?.trim()?.ifBlank { null }).rpcJson(),
             ).decodeAs<Profile>()
+        }
+
+        override suspend fun updateProfile(draft: ProfileDraft): Profile = call {
+            supabase.postgrest.rpc(
+                "update_my_profile",
+                UpdateProfileParams(
+                    displayName = draft.displayName,
+                    handle = draft.handle,
+                    bio = draft.bio,
+                    homeArea = draft.homeArea,
+                    website = draft.website,
+                    avatarPath = draft.avatarPath,
+                ).rpcJson(),
+            ).decodeAs<Profile>()
+        }
+
+        override suspend fun handleAvailable(handle: String): Boolean = call {
+            decode(supabase.postgrest.rpc("handle_available", HandleParams(handle).rpcJson()).data)
         }
     }
 
@@ -802,6 +823,41 @@ class SupabaseXHereClient(
         override suspend fun photoUrl(bucket: String, path: String): String = call {
             supabase.storage.from(bucket).createSignedUrl(path, 20.minutes)
         }
+
+        override suspend fun uploadAvatar(bytes: ByteArray, mimeType: String): String {
+            val mime = mimeType.substringBefore(';').trim().lowercase()
+            val extension = when (mime) {
+                "image/webp" -> "webp"
+                "image/jpeg" -> "jpg"
+                else -> throw XHereApiException("unsupported_type", sqlState = XHereApiException.SQL_VALIDATION, detail = mime)
+            }
+            if (bytes.isEmpty() || bytes.size > ProfileFields.AVATAR_MAX_BYTES) {
+                throw XHereApiException("invalid_avatar", sqlState = XHereApiException.SQL_VALIDATION, detail = "avatar must be 1 byte..512 KB")
+            }
+            val userId = bearerUserId()
+            val path = "$userId/${Uuid.random()}.$extension"
+            try {
+                val response = edge.put(config.url.trimEnd('/') + "/storage/v1/object/${ProfileFields.AVATAR_BUCKET}/$path") {
+                    header(HttpHeaders.Authorization, "Bearer ${bearer() ?: ""}")
+                    header("apikey", config.anonKey)
+                    header("x-upsert", "false")
+                    contentType(ContentType.parse(mime))
+                    setBody(bytes)
+                }
+                if (!response.status.isSuccess()) {
+                    throw XHereApiException("upload_failed", detail = "avatar upload failed")
+                }
+                return path
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: XHereApiException) {
+                throw e
+            } catch (e: Throwable) {
+                throw XHereApiException("upload_failed", detail = "avatar upload failed", cause = e)
+            }
+        }
+
+        override fun avatarUrl(path: String?): String? = ProfileFields.avatarUrl(config.url, path)
     }
 
     private inner class AccessRepo : AccessRepository {

@@ -32,11 +32,15 @@ data class BadgeShelf(
     @SerialName("show_on_leaderboard") val showOnLeaderboard: Boolean = true,
 )
 
-/** One public row. A display name only. No handle, no user id. */
+/**
+ * One public row. A display name, an optional picture, and a count.
+ * No handle and no user id, so the board cannot be used to look someone up.
+ */
 @Serializable
 data class LeaderboardEntry(
     @SerialName("display_name") val displayName: String,
     val drops: Int,
+    @SerialName("avatar_path") val avatarPath: String? = null,
 )
 
 /**

@@ -103,7 +103,29 @@ interface ProfileRepository {
      * A generated `user_…` handle is not a display name.
      */
     suspend fun setPublicName(displayName: String, handle: String? = null): Profile
+
+    /**
+     * Display name, @handle, bio, home town, website, and avatar path.
+     * A blank optional field clears it. Only the signed-in owner is updated.
+     */
+    suspend fun updateProfile(draft: ProfileDraft): Profile
+
+    /**
+     * True when [handle] can be saved. The caller's current handle is available.
+     * Invalid spelling and a handle someone else has are false.
+     */
+    suspend fun handleAvailable(handle: String): Boolean
 }
+
+/** The edit-profile form. Empty strings clear bio, home town, website, and the picture. */
+data class ProfileDraft(
+    val displayName: String,
+    val handle: String,
+    val bio: String = "",
+    val homeArea: String = "",
+    val website: String = "",
+    val avatarPath: String = "",
+)
 
 interface TaxonomyRepository {
     /** Groups, categories, content filters, and tier limits. Cached in memory by the Supabase client. */
@@ -388,6 +410,15 @@ interface MediaRepository {
 
     /** A URL the image loader can fetch. Signed when the bucket is private. */
     suspend fun photoUrl(bucket: String, path: String): String
+
+    /**
+     * A square picture, about 512 px, jpeg or webp, at most 512 KB.
+     * Stored at `avatars/<user id>/<id>.webp`. Returns the storage path.
+     */
+    suspend fun uploadAvatar(bytes: ByteArray, mimeType: String): String
+
+    /** Public URL for an avatar path. Null when there is no picture. */
+    fun avatarUrl(path: String?): String?
 }
 
 /**

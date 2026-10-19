@@ -1,5 +1,6 @@
 package world.xhere.app.map
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -16,6 +17,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import world.xhere.app.R
+import world.xhere.app.profile.ProfileAvatar
 import world.xhere.app.reputation.TierChip
 import world.xhere.app.ui.TestTags
 
@@ -24,6 +26,7 @@ internal fun TeaserCard(
     teaser: TeaserUi,
     onClose: () -> Unit,
     onOpen: () -> Unit,
+    onOpenAuthor: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     Surface(
@@ -54,6 +57,21 @@ internal fun TeaserCard(
                         style = MaterialTheme.typography.titleMedium,
                         modifier = Modifier.testTag(TestTags.TEASER_TITLE),
                     )
+                    teaser.authorLabel?.let { name ->
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .clickable(onClick = onOpenAuthor)
+                                .testTag(TestTags.TEASER_AUTHOR),
+                        ) {
+                            ProfileAvatar(url = teaser.authorAvatarUrl, label = name, size = 28.dp)
+                            Text(
+                                text = name,
+                                modifier = Modifier.padding(start = 8.dp),
+                                style = MaterialTheme.typography.bodyMedium,
+                            )
+                        }
+                    }
                     teaser.tierLabel?.let { tier ->
                         TierChip(label = tier, tag = TestTags.TEASER_TIER)
                     }

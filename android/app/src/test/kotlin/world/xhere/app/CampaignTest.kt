@@ -93,7 +93,7 @@ class CampaignTest {
         rule.onNodeWithTag(TestTags.CAMPAIGN_BOARD).assertTextContains("Steven", substring = true)
         rule.onNodeWithTag(TestTags.CAMPAIGN_BOARD).assertTextContains("Demo guide", substring = true)
 
-        rule.onNodeWithTag(TestTags.OPEN_SETTINGS).performClick()
+        rule.onNodeWithTag(TestTags.OPEN_SETTINGS).performScrollTo().performClick()
         rule.waitForTag(TestTags.SETTINGS_LEADERBOARD)
         rule.onNodeWithTag(TestTags.SETTINGS_LEADERBOARD).performClick()
         rule.waitForIdle()

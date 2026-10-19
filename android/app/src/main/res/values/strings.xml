@@ -204,6 +204,30 @@
     <string name="profile_name_handle">Handle</string>
     <string name="profile_name_save">Save name</string>
     <string name="profile_name_failed">That name didn\'t save. Try a different handle.</string>
+    <string name="profile_edit">Edit profile</string>
+    <string name="profile_edit_title">Edit profile</string>
+    <string name="profile_edit_save">Save profile</string>
+    <string name="profile_edit_saving">Saving…</string>
+    <string name="profile_edit_failed">That profile didn\'t save.</string>
+    <string name="profile_bio">Bio</string>
+    <string name="profile_home">Home town or region</string>
+    <string name="profile_website">Website</string>
+    <string name="profile_avatar_gallery">Choose photo</string>
+    <string name="profile_avatar_camera">Take photo</string>
+    <string name="profile_avatar_remove">Remove photo</string>
+    <string name="profile_avatar_crop">Crop to a circle</string>
+    <string name="profile_avatar_use">Use photo</string>
+    <string name="profile_handle_invalid">Use 3 to 24 letters, numbers, or underscores.</string>
+    <string name="profile_handle_checking">Checking that handle…</string>
+    <string name="profile_handle_available">That handle is available.</string>
+    <string name="profile_handle_taken">That handle is taken.</string>
+    <string name="profile_error_name">Display name needs 1 to 50 characters.</string>
+    <string name="profile_error_bio">Bio needs 160 characters or fewer.</string>
+    <string name="profile_error_home">Home town needs 80 characters or fewer.</string>
+    <string name="profile_error_website">Website needs to start with http:// or https://.</string>
+    <string name="profile_error_avatar">That photo didn\'t work. Try a smaller one.</string>
+    <string name="profile_public_title">Profile</string>
+    <string name="profile_public_missing">That profile isn\'t available.</string>
     <string name="reputation_points">%1$d points</string>
     <string name="reputation_next">Next is %1$s, at %2$d points.</string>
     <string name="reputation_top">Guide is the top. Keep the map honest.</string>
@@ -505,6 +529,11 @@
     <string name="access_status_no">Not accessible</string>
     <string name="access_status_unknown">Unknown</string>
     <string name="access_failed">Couldn’t save that check. Try again.</string>
+
+    <plurals name="profile_public_drops">
+        <item quantity="one">%d public drop</item>
+        <item quantity="other">%d public drops</item>
+    </plurals>
     <plurals name="detail_people_checked">
         <item quantity="one">%d person checked</item>
         <item quantity="other">%d people checked</item>

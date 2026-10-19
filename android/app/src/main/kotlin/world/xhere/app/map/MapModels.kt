@@ -23,6 +23,7 @@ import world.xhere.shared.model.PlaceLabel
 import world.xhere.shared.model.QuestProgress
 import world.xhere.shared.model.Taxonomy
 import world.xhere.shared.model.Walk
+import world.xhere.shared.profile.AuthorNames
 import world.xhere.shared.reputation.Reputation
 import world.xhere.shared.walks.WalkGuide
 
@@ -108,6 +109,10 @@ data class TeaserUi(
     val foundingLabel: String? = null,
     /** Author tier chip. Null on a public record or an anonymous drop. */
     val tierLabel: String? = null,
+    /** Display name, or a handle the person chose. Null means the callout has no person to open. */
+    val authorLabel: String? = null,
+    val authorHandle: String? = null,
+    val authorAvatarUrl: String? = null,
 )
 
 /**
@@ -314,7 +319,7 @@ internal fun iconFor(taxonomy: Taxonomy?, categorySlug: String?, groupSlug: Stri
     return group?.icon ?: "📍"
 }
 
-internal fun DropCard.toTeaser(taxonomy: Taxonomy?, distanceM: Double?): TeaserUi {
+internal fun DropCard.toTeaser(taxonomy: Taxonomy?, distanceM: Double?, avatarUrl: String? = null): TeaserUi {
     val category = taxonomy?.category(categorySlug)
     val group = taxonomy?.group(groupSlug)
     return TeaserUi(
@@ -337,6 +342,9 @@ internal fun DropCard.toTeaser(taxonomy: Taxonomy?, distanceM: Double?): TeaserU
             authorBadges.firstOrNull()?.let { "${it.icon} ${it.name}" }
         },
         tierLabel = authorTier?.let(Reputation::label),
+        authorLabel = if (source == DropSource.OPEN_DATA) null else AuthorNames.label(authorDisplayName, authorHandle),
+        authorHandle = if (source == DropSource.OPEN_DATA) null else authorHandle,
+        authorAvatarUrl = if (source == DropSource.OPEN_DATA) null else avatarUrl,
     )
 }
 

@@ -397,7 +397,11 @@ class MapViewModel(
                     Geo.distanceMeters(here, card.displayLocation)
                 }
                 _state.update {
-                    it.copy(teaserLoading = false, teaser = card.toTeaser(it.taxonomy, distance), notice = null)
+                    it.copy(
+                        teaserLoading = false,
+                        teaser = card.toTeaser(it.taxonomy, distance, services.media.avatarUrl(card.authorAvatarPath)),
+                        notice = null,
+                    )
                 }
             } catch (e: CancellationException) {
                 throw e

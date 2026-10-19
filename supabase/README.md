@@ -320,3 +320,27 @@ supabase db push
 ```
 
 `db push` applies `20261021050000_owner_drops.sql` and any earlier migration that is not on the project yet. Do not paste the file into the dashboard SQL editor.
+
+## User profiles (hosted)
+
+`20261021120000_user_profiles.sql` adds `profiles.bio` and `profiles.website`, `update_my_profile`, `handle_available`, a richer `public_profile`, `drop_card.author_avatar_path`, an optional `avatar_path` on campaign leaderboards, and the public Storage bucket `avatars`. It does not change Auth. Demo accounts keep working: the new columns are optional, and `is_demo` is still not a client-writable column.
+
+Not applied from this repo's agents, and not applied by CI. From a machine already linked, after the history repair in [Before `supabase db push`](#before-supabase-db-push) if that repair has not been done yet:
+
+```bash
+supabase link --project-ref jpeuldzegtbqfezijhuy
+supabase db push
+```
+
+`db push` applies `20261021120000_user_profiles.sql` and any earlier migration that is not on the project yet. Do not paste the file into the dashboard SQL editor.
+
+Storage policies created in that migration:
+
+| Policy | Command | Who |
+|---|---|---|
+| `avatars_select_public` | SELECT | `anon`, `authenticated` (the bucket is public, 512 KB, jpeg or webp) |
+| `avatars_insert_own` | INSERT | `authenticated`, folder = `auth.uid()` |
+| `avatars_update_own` | UPDATE | `authenticated`, folder = `auth.uid()` |
+| `avatars_delete_own` | DELETE | `authenticated`, folder = `auth.uid()` |
+
+Profile row edits stay on `profiles_update_own`: `id = auth.uid()` and the account is not deleted. `bio` and `website` are added to the column grant. `tier`, `role`, `points`, and `is_demo` stay server-managed.

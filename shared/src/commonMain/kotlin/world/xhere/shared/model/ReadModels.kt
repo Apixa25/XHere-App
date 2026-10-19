@@ -83,6 +83,8 @@ data class DropCard(
     @SerialName("oral_history") val oralHistory: Boolean = false,
     /** The story is still in private storage. [body] is null until this is false. */
     @SerialName("capsule_locked") val capsuleLocked: Boolean = false,
+    /** Storage path in the public avatars bucket. Null when the author has no picture. */
+    @SerialName("author_avatar_path") val authorAvatarPath: String? = null,
 ) {
     val displayLocation: LatLng get() = LatLng(latitude, longitude)
 
