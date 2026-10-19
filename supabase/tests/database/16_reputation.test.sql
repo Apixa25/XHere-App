@@ -40,7 +40,7 @@ select ok(
 set local role anon;
 select throws_ok(
   $$ select public.my_reputation() $$,
-  '42501', 'not_authenticated',
+  '42501', 'permission denied for function my_reputation',
   'signed-out visitors have no reputation'
 );
 

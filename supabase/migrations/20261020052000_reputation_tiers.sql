@@ -109,6 +109,7 @@ comment on table public.reputation_ledger is
   'One scored signal. profiles.points is the sum of rows whose left_out flag is not true. Clients cannot read it.';
 
 create index reputation_ledger_user_idx on public.reputation_ledger (user_id);
+create index reputation_ledger_actor_idx on public.reputation_ledger (actor_id);
 create index reputation_ledger_drop_idx on public.reputation_ledger (drop_id);
 
 create table public.quest_completions (
