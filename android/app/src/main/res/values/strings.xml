@@ -228,6 +228,7 @@
     <string name="profile_error_home">Home town needs 80 characters or fewer.</string>
     <string name="profile_error_website">Website needs to start with http:// or https://.</string>
     <string name="profile_error_avatar">That photo didn\'t work. Try a smaller one.</string>
+    <string name="profile_error_photo">Profile saved, but the photo didn\'t upload; try a smaller photo</string>
     <string name="profile_public_title">Profile</string>
     <string name="profile_public_missing">That profile isn\'t available.</string>
     <string name="reputation_points">%1$d points</string>

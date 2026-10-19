@@ -841,18 +841,18 @@ class SupabaseXHereClient(
             if (bytes.isEmpty() || bytes.size > ProfileFields.AVATAR_MAX_BYTES) {
                 throw XHereApiException("invalid_avatar", sqlState = XHereApiException.SQL_VALIDATION, detail = "avatar must be 1 byte..512 KB")
             }
+            // POST /object creates the new uuid path. PUT is update(), and Storage
+            // answers 400 not_found when that object does not exist yet.
+            val type = when (mime) {
+                "image/webp" -> ContentType("image", "webp")
+                else -> ContentType.Image.JPEG
+            }
             val userId = bearerUserId()
             val path = "$userId/${Uuid.random()}.$extension"
             try {
-                val response = edge.put(config.url.trimEnd('/') + "/storage/v1/object/${ProfileFields.AVATAR_BUCKET}/$path") {
-                    header(HttpHeaders.Authorization, "Bearer ${bearer() ?: ""}")
-                    header("apikey", config.anonKey)
-                    header("x-upsert", "false")
-                    contentType(ContentType.parse(mime))
-                    setBody(bytes)
-                }
-                if (!response.status.isSuccess()) {
-                    throw XHereApiException("upload_failed", detail = "avatar upload failed")
+                supabase.storage.from(ProfileFields.AVATAR_BUCKET).upload(path, bytes) {
+                    upsert = true
+                    contentType = type
                 }
                 return path
             } catch (e: CancellationException) {
@@ -860,7 +860,22 @@ class SupabaseXHereClient(
             } catch (e: XHereApiException) {
                 throw e
             } catch (e: Throwable) {
-                throw XHereApiException("upload_failed", detail = "avatar upload failed", cause = e)
+                val reason = e.message?.lineSequence()?.firstOrNull { it.isNotBlank() }?.take(180)
+                throw XHereApiException("upload_failed", detail = reason ?: "avatar upload failed", cause = e)
+            }
+        }
+
+        override suspend fun deleteAvatar(path: String) {
+            val stored = path.trim().trimStart('/')
+            if (stored.isEmpty()) return
+            val userId = bearerUserId()
+            if (!stored.startsWith("$userId/")) return
+            try {
+                supabase.storage.from(ProfileFields.AVATAR_BUCKET).delete(listOf(stored))
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Throwable) {
+                // The profile row is already saved. A leftover object can be replaced later.
             }
         }
 

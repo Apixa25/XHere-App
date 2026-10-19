@@ -413,9 +413,17 @@ interface MediaRepository {
 
     /**
      * A square picture, about 512 px, jpeg or webp, at most 512 KB.
-     * Stored at `avatars/<user id>/<id>.webp`. Returns the storage path.
+     * Stored at `avatars/<user id>/<id>.webp` with a new-object upload
+     * (`POST`, upsert). Returns the storage path.
      */
     suspend fun uploadAvatar(bytes: ByteArray, mimeType: String): String
+
+    /**
+     * Removes an avatar object after the profile row points somewhere else.
+     * A blank path, or a path outside the caller's folder, is ignored.
+     * A storage failure does not undo the saved profile.
+     */
+    suspend fun deleteAvatar(path: String)
 
     /** Public URL for an avatar path. Null when there is no picture. */
     fun avatarUrl(path: String?): String?

@@ -18,7 +18,7 @@ import world.xhere.shared.profile.ProfileFields
 
 enum class HandleStatus { IDLE, INVALID, CHECKING, AVAILABLE, TAKEN }
 
-enum class EditProfileError { NAME, HANDLE, TAKEN, BIO, HOME, WEBSITE, AVATAR, SAVE }
+enum class EditProfileError { NAME, HANDLE, TAKEN, BIO, HOME, WEBSITE, AVATAR, PHOTO, SAVE }
 
 data class EditProfileUi(
     val ready: Boolean = false,
@@ -42,7 +42,8 @@ class EditProfileViewModel(
 ) : ViewModel() {
     private val _state = MutableStateFlow(EditProfileUi())
     val state: StateFlow<EditProfileUi> = _state.asStateFlow()
-    private var savedPath: String = ""
+    /** Path currently stored on the profile row. Cleared only after a successful save. */
+    private var storedPath: String = ""
     private var removePicture: Boolean = false
     private var pending: AvatarCodec.Encoded? = null
     private var cropSource: Bitmap? = null
@@ -56,7 +57,7 @@ class EditProfileViewModel(
                 _state.update { it.copy(ready = true, error = EditProfileError.SAVE) }
                 return@launch
             }
-            savedPath = profile.avatarPath.orEmpty()
+            storedPath = profile.avatarPath.orEmpty()
             _state.value = EditProfileUi(
                 ready = true,
                 displayName = profile.displayName.orEmpty(),
@@ -152,8 +153,7 @@ class EditProfileViewModel(
         pending = null
         approved = null
         removePicture = true
-        savedPath = ""
-        _state.update { it.copy(avatarUrl = null, frame = it.frame + 1) }
+        _state.update { it.copy(avatarUrl = null, frame = it.frame + 1, error = null) }
     }
 
     fun save() {
@@ -162,10 +162,31 @@ class EditProfileViewModel(
         viewModelScope.launch {
             _state.update { it.copy(saving = true, error = null) }
             try {
+                val fieldError = validate(snapshot)
+                if (fieldError != null) {
+                    _state.update { it.copy(saving = false, error = fieldError) }
+                    return@launch
+                }
+                val photo = pending
+                var uploaded: String? = null
+                var photoFailed = false
+                if (photo != null) {
+                    try {
+                        uploaded = services.media.uploadAvatar(photo.bytes, photo.mimeType)
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: XHereApiException) {
+                        if (e.code == "not_authenticated") throw e
+                        photoFailed = true
+                    } catch (_: Exception) {
+                        photoFailed = true
+                    }
+                }
                 val path = when {
-                    pending != null -> services.media.uploadAvatar(pending!!.bytes, pending!!.mimeType)
+                    uploaded != null -> uploaded
+                    photoFailed -> storedPath
                     removePicture -> ""
-                    else -> savedPath
+                    else -> storedPath
                 }
                 val saved = services.profiles.updateProfile(
                     ProfileDraft(
@@ -177,10 +198,33 @@ class EditProfileViewModel(
                         avatarPath = path,
                     ),
                 )
-                savedPath = saved.avatarPath.orEmpty()
-                pending = null
-                removePicture = false
-                _state.update { it.copy(saving = false, saved = true, avatarUrl = services.media.avatarUrl(saved.avatarPath)) }
+                val previous = storedPath
+                storedPath = saved.avatarPath.orEmpty()
+                if (previous.isNotEmpty() && previous != storedPath) {
+                    services.media.deleteAvatar(previous)
+                }
+                if (photoFailed) {
+                    _state.update {
+                        it.copy(
+                            saving = false,
+                            saved = false,
+                            error = EditProfileError.PHOTO,
+                            avatarUrl = services.media.avatarUrl(storedPath),
+                        )
+                    }
+                } else {
+                    pending = null
+                    removePicture = false
+                    if (storedPath.isEmpty()) approved = null
+                    _state.update {
+                        it.copy(
+                            saving = false,
+                            saved = true,
+                            error = null,
+                            avatarUrl = services.media.avatarUrl(storedPath),
+                        )
+                    }
+                }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: XHereApiException) {
@@ -191,7 +235,20 @@ class EditProfileViewModel(
         }
     }
 
-    private fun errorFor(code: String): EditProfileError = when (code) {
+    /** The same checks as `update_my_profile`, so a bad field is named before the photo upload. */
+    private fun validate(snapshot: EditProfileUi): EditProfileError? {
+        if (ProfileFields.cleanName(snapshot.displayName) == null) return EditProfileError.NAME
+        if (ProfileFields.cleanHandle(snapshot.handle) == null) return EditProfileError.HANDLE
+        if (snapshot.handleStatus == HandleStatus.TAKEN) return EditProfileError.TAKEN
+        if (ProfileFields.cleanOptional(snapshot.bio.replace('\n', ' '), ProfileFields.BIO_MAX) == null) {
+            return EditProfileError.BIO
+        }
+        if (ProfileFields.cleanOptional(snapshot.homeArea, ProfileFields.HOME_MAX) == null) return EditProfileError.HOME
+        if (ProfileFields.cleanWebsite(snapshot.website) == null) return EditProfileError.WEBSITE
+        return null
+    }
+
+    private fun errorFor(code: String): EditProfileError = when (code.substringBefore('\n').substringBefore(':').trim()) {
         "invalid_display_name" -> EditProfileError.NAME
         "invalid_handle" -> EditProfileError.HANDLE
         "handle_taken" -> EditProfileError.TAKEN

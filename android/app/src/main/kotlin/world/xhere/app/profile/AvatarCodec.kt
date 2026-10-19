@@ -55,17 +55,51 @@ internal object AvatarCodec {
         return out
     }
 
+    /**
+     * WebP first, then JPEG, then a smaller square, until the bytes fit the
+     * avatars bucket. The bucket rejects anything over 512 KB.
+     */
     fun compress(bitmap: Bitmap): Encoded {
-        val webp = encode(bitmap, webp = true, quality = 80)
-        if (webp.size in 1..ProfileFields.AVATAR_MAX_BYTES) {
-            return Encoded(webp, "image/webp")
+        var working = bitmap
+        var owned: Bitmap? = null
+        while (true) {
+            encodeUnderLimit(working)?.let { encoded ->
+                recycleOwned(owned, bitmap)
+                return encoded
+            }
+            if (working.width <= 48) {
+                val last = encode(working, webp = false, quality = 5)
+                recycleOwned(owned, bitmap)
+                return Encoded(last, "image/jpeg")
+            }
+            val edge = (working.width * 3 / 4).coerceAtLeast(48)
+            val next = Bitmap.createScaledBitmap(working, edge, edge, true)
+            if (next.width >= working.width && next.height >= working.height) {
+                val last = encode(working, webp = false, quality = 5)
+                recycleOwned(owned, bitmap)
+                if (next !== working && next !== bitmap) next.recycle()
+                return Encoded(last, "image/jpeg")
+            }
+            recycleOwned(owned, bitmap)
+            owned = if (next !== bitmap) next else null
+            working = next
         }
-        val smaller = encode(bitmap, webp = true, quality = 50)
-        if (smaller.size in 1..ProfileFields.AVATAR_MAX_BYTES) {
-            return Encoded(smaller, "image/webp")
+    }
+
+    private fun recycleOwned(owned: Bitmap?, original: Bitmap) {
+        if (owned != null && owned !== original && !owned.isRecycled) owned.recycle()
+    }
+
+    private fun encodeUnderLimit(bitmap: Bitmap): Encoded? {
+        for (quality in intArrayOf(80, 60, 45, 30, 20, 10)) {
+            val bytes = encode(bitmap, webp = true, quality = quality)
+            if (bytes.size in 1..ProfileFields.AVATAR_MAX_BYTES) return Encoded(bytes, "image/webp")
         }
-        val jpeg = encode(bitmap, webp = false, quality = 70)
-        return Encoded(jpeg, "image/jpeg")
+        for (quality in intArrayOf(70, 50, 35, 20, 10)) {
+            val bytes = encode(bitmap, webp = false, quality = quality)
+            if (bytes.size in 1..ProfileFields.AVATAR_MAX_BYTES) return Encoded(bytes, "image/jpeg")
+        }
+        return null
     }
 
     private fun encode(bitmap: Bitmap, webp: Boolean, quality: Int): ByteArray {

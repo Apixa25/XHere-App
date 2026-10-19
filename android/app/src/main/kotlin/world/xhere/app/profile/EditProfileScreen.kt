@@ -238,5 +238,6 @@ private fun errorText(error: EditProfileError): String = when (error) {
     EditProfileError.HOME -> stringResource(R.string.profile_error_home)
     EditProfileError.WEBSITE -> stringResource(R.string.profile_error_website)
     EditProfileError.AVATAR -> stringResource(R.string.profile_error_avatar)
+    EditProfileError.PHOTO -> stringResource(R.string.profile_error_photo)
     EditProfileError.SAVE -> stringResource(R.string.profile_edit_failed)
 }
