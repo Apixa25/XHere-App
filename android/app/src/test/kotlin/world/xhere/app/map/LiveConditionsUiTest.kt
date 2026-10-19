@@ -51,6 +51,10 @@ class LiveConditionsUiTest {
         rule.openMap()
         rule.onNodeWithTag(TestTags.WEATHER_SEVERITY).assertTextContains("Severe")
         rule.onNodeWithTag(TestTags.WEATHER_EVENT).assertTextContains("Severe Thunderstorm Warning")
+        val collapsedPx = rule.onNodeWithTag(TestTags.MAP_STATUS).fetchSemanticsNode().size.height
+        val density = rule.activity.resources.displayMetrics.density
+        assertTrue(collapsedPx / density < 140f)
+        rule.onNodeWithTag(TestTags.MAP_STATUS_TOGGLE).performClick()
         rule.onNodeWithTag(TestTags.WEATHER_SOURCE).assertTextContains("National Weather Service", substring = true)
         rule.onNodeWithText("2026-10-18 18:30 UTC", substring = true).assertIsDisplayed()
         rule.onNodeWithTag(TestTags.WEATHER_MORE).assertTextContains("+ 1 more")

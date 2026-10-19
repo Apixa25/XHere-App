@@ -39,6 +39,7 @@ import androidx.compose.material3.TextButton
 import world.xhere.app.R
 import world.xhere.app.safety.SafetyFooter
 import world.xhere.app.ui.TestTags
+import world.xhere.app.ui.hapticClick
 import world.xhere.app.ui.openAppSettings
 import world.xhere.shared.live.RightNowDuration
 
@@ -211,7 +212,7 @@ fun DropScreen(
                 }
             }
             Button(
-                onClick = viewModel::post,
+                onClick = hapticClick(viewModel::post),
                 enabled = !state.busy && state.safety?.canPost != false,
                 modifier = Modifier.testTag(TestTags.DROP_POST),
             ) { Text(stringResource(R.string.drop_post)) }

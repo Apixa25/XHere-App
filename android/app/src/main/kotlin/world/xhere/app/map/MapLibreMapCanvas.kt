@@ -82,6 +82,7 @@ private class MapHolder {
     var location: LatLng? = null
     var taxonomy: Taxonomy? = null
     var view: MapView? = null
+    var scene: Int = Int.MIN_VALUE
 }
 
 @Composable
@@ -167,6 +168,7 @@ private fun NativeMap(
                         holder.style = style
                         holder.styleUrl = styleUrl
                         render(style, holder.features, holder.location, holder.taxonomy, emptyList(), emptyList())
+                        holder.scene = sceneKey(holder.features, holder.location, holder.taxonomy, emptyList(), emptyList())
                     }
                 }
             }
@@ -189,13 +191,18 @@ private fun NativeMap(
             val loaded = holder.style
             val route = state.walk?.let { world.xhere.shared.walks.WalkGuide.route(it) }.orEmpty()
             val guide = guideLine(state)
+            val scene = sceneKey(state.features, state.myLocation, state.taxonomy, route, guide)
             if (loaded != null && holder.styleUrl == styleUrl) {
-                render(loaded, state.features, state.myLocation, state.taxonomy, route, guide)
+                if (scene != holder.scene) {
+                    holder.scene = scene
+                    render(loaded, state.features, state.myLocation, state.taxonomy, route, guide)
+                }
             } else if (holder.styleUrl != null && holder.styleUrl != styleUrl) {
                 map.setStyle(styleUrl) { style ->
                     holder.style = style
                     holder.styleUrl = styleUrl
                     render(style, state.features, state.myLocation, state.taxonomy, route, guide)
+                    holder.scene = scene
                 }
             }
         },
@@ -208,6 +215,23 @@ private fun NativeMap(
             holder.style = null
         },
     )
+}
+
+/** Pins, the blue dot, and walk lines. Alerts and sheets do not change this, so they skip a redraw. */
+private fun sceneKey(
+    features: List<MapFeature>,
+    location: LatLng?,
+    taxonomy: Taxonomy?,
+    route: List<LatLng>,
+    guide: List<LatLng>,
+): Int {
+    var hash = 1
+    hash = 31 * hash + features.hashCode()
+    hash = 31 * hash + (location?.hashCode() ?: 0)
+    hash = 31 * hash + (taxonomy?.hashCode() ?: 0)
+    hash = 31 * hash + route.hashCode()
+    hash = 31 * hash + guide.hashCode()
+    return hash
 }
 
 private fun render(

@@ -5,6 +5,7 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -88,6 +89,7 @@ private fun MapChip(
 ) {
     Surface(
         modifier = Modifier
+            .defaultMinSize(minHeight = 48.dp)
             .testTag(tag)
             .semantics { contentDescription = description }
             .combinedClickable(onClick = onClick, onLongClick = onLongClick),

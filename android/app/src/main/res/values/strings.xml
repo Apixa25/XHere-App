@@ -40,7 +40,7 @@
     <string name="map_near_me">Near me</string>
     <string name="map_ar">AR</string>
     <string name="map_tap_here">What\'s here</string>
-    <string name="here_empty">Nothing is dropped within 300 m of this spot.</string>
+    <string name="here_empty">Nothing is dropped within 300 m yet. Be the first to attach something here.</string>
     <string name="here_failed">Couldn\'t load what\'s known about this spot.</string>
     <string name="here_close">Close</string>
     <string name="here_public">Public record</string>
@@ -54,7 +54,15 @@
     <string name="weather_more">+ %1$d more</string>
     <string name="map_near_title">Near me</string>
     <string name="map_near_body">Closest drops first, within 5 km. The same category filter as the map.</string>
-    <string name="map_near_empty">Nothing in this filter within 5 km.</string>
+    <string name="map_near_empty">Nothing in this filter within 5 km. Try All, or drop the first note.</string>
+    <string name="map_status_details">Details</string>
+    <string name="map_status_hide">Hide</string>
+    <string name="map_loading">Loading the map</string>
+    <string name="weather_severity_extreme">Extreme</string>
+    <string name="weather_severity_severe">Severe</string>
+    <string name="weather_severity_moderate">Moderate</string>
+    <string name="weather_severity_minor">Minor</string>
+    <string name="weather_severity_unknown">Alert</string>
     <string name="map_near_failed">Couldn\'t load what\'s nearby.</string>
     <string name="map_teaser_close">Close</string>
     <string name="map_teaser_open">Open</string>
@@ -158,6 +166,7 @@
     <string name="profile_signed_in">Signed in</string>
     <string name="reputation_how">How to level up</string>
     <string name="reputation_badges">Badges</string>
+    <string name="profile_badges_empty">Badges show up after a drop, a finished walk, or the starter quest.</string>
     <string name="reputation_points">%1$d points</string>
     <string name="reputation_next">Next is %1$s, at %2$d points.</string>
     <string name="reputation_top">Guide is the top. Keep the map honest.</string>

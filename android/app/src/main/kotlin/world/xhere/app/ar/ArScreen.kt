@@ -52,6 +52,7 @@ import org.koin.compose.koinInject
 import world.xhere.app.R
 import world.xhere.app.map.MarkerIcons
 import world.xhere.app.ui.TestTags
+import world.xhere.app.ui.hapticClick
 import world.xhere.app.ui.openAppSettings
 import world.xhere.shared.geo.LatLng
 import world.xhere.shared.integrity.LocationSignal
@@ -105,8 +106,8 @@ fun ArScreen(
             }
             if (ui.canDrop) {
                 Button(
-                    onClick = {
-                        val request = viewModel.dropRequest() ?: return@Button
+                    onClick = hapticClick {
+                        val request = viewModel.dropRequest() ?: return@hapticClick
                         onDropHere(request.spot, request.label, request.signal)
                     },
                     modifier = Modifier

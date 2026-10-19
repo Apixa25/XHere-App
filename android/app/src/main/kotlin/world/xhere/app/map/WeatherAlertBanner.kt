@@ -31,6 +31,7 @@ internal fun WeatherAlertBanner(
     alerts: List<WeatherAlert>,
     onDismiss: (String) -> Unit,
     modifier: Modifier = Modifier,
+    inset: Boolean = true,
 ) {
     val alert = alerts.firstOrNull() ?: return
     val tone = when (alert.severity) {
@@ -46,7 +47,7 @@ internal fun WeatherAlertBanner(
     Surface(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp)
+            .padding(horizontal = if (inset) 12.dp else 0.dp)
             .testTag(TestTags.WEATHER_BANNER)
             .semantics { set(WeatherSemantics, describeWeather(alerts)) },
         shape = MaterialTheme.shapes.large,
@@ -111,10 +112,11 @@ internal fun describeWeather(alerts: List<WeatherAlert>): String {
     return "${first.event}|${first.severity.name}|$expiry|${first.attribution}|${first.senderName}|+${alerts.size - 1}"
 }
 
-private fun severityLabel(severity: AlertSeverity): String = when (severity) {
-    AlertSeverity.EXTREME -> "Extreme"
-    AlertSeverity.SEVERE -> "Severe"
-    AlertSeverity.MODERATE -> "Moderate"
-    AlertSeverity.MINOR -> "Minor"
-    AlertSeverity.UNKNOWN -> "Alert"
+@Composable
+internal fun severityLabel(severity: AlertSeverity): String = when (severity) {
+    AlertSeverity.EXTREME -> stringResource(R.string.weather_severity_extreme)
+    AlertSeverity.SEVERE -> stringResource(R.string.weather_severity_severe)
+    AlertSeverity.MODERATE -> stringResource(R.string.weather_severity_moderate)
+    AlertSeverity.MINOR -> stringResource(R.string.weather_severity_minor)
+    AlertSeverity.UNKNOWN -> stringResource(R.string.weather_severity_unknown)
 }

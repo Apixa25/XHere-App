@@ -271,6 +271,15 @@ private fun ProfilePage(
                 style = MaterialTheme.typography.titleLarge,
                 modifier = Modifier.padding(top = 8.dp),
             )
+        } else if (state.impactLoaded) {
+            Text(
+                text = stringResource(R.string.profile_badges_empty),
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier
+                    .padding(top = 8.dp)
+                    .testTag(TestTags.PROFILE_BADGES_EMPTY),
+            )
         }
         state.badges.forEach { badge ->
             val where = badge.regionName?.takeIf { it.isNotBlank() }
