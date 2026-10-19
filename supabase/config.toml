@@ -379,6 +379,12 @@ verify_jwt = true
 [functions.strip-exif]
 verify_jwt = true
 
+# Public read API (research recommendation #8). No user JWT. The function
+# ignores Authorization and reads with the service role. anon cannot call
+# the SQL, so this HTTP function is the rate-limited door.
+[functions.public-api]
+verify_jwt = false
+
 [edge_runtime]
 enabled = true
 # Supported request policies: `oneshot`, `per_worker`.

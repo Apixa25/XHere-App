@@ -1,0 +1,54 @@
+# XHere public read API
+
+> Read-only "what's here?" for a latitude and longitude. Global. Public records include their license and attribution. User drops are the signed-out share-page teaser. ODbL and CC BY-SA items are share-alike.
+
+XHere attaches notes, history, hazards, and open records to places. This API is how another app or an assistant asks what is already public at a point. It does not reveal hidden text, and it does not take posts.
+
+The base URL after deploy is `https://{project_ref}.supabase.co/functions/v1/public-api`. The pilot ref is `jpeuldzegtbqfezijhuy`. Send the publishable key in the `apikey` header. A user token does not unlock more. CI does not deploy this; until someone runs the steps in docs/api/README.md the host returns 404.
+
+## Endpoints
+
+- GET /v1/here?lat={lat}&lon={lon}&radius={meters}
+  - lat -90..90, lon -180..180. `lng` is accepted when `lon` is omitted.
+  - radius is optional, whole meters, default 300, maximum 1000.
+  - Returns `items` (at most 40) and `live` (region id and weather-provider id, or null). No weather-alert text.
+- GET /v1/drops/{id}
+  - `{id}` is a 12-character short id (`[A-Za-z0-9_-]{12}`) or a uuid.
+  - 200 `{ item }` or 404 `{ error: "not_found" }`. Missing, pending, expired, removed, demo, and reduced-trust are all 404.
+- GET /v1/categories
+  - Active groups and categories: slug, label, description, sensitive, default_reveal_m, location_precision_m. No embeddings and no filter patterns.
+- GET /v1/walks?lat={lat}&lon={lon}
+  - Walks whose box contains the point. Stops are public records only. No per-user progress.
+- GET /v1
+  - The list above.
+
+## Item shape
+
+Every item, walk, stop, category, and live object has `attribution`, `license`, and `share_alike`.
+
+- `kind: "public_record"` — open data. `summary` is the stored one-line text. `source_url`, `source_name`, `source_slug`, and `external_id` cite the publisher. `share_alike` is true for ODbL and CC BY-SA.
+- `kind: "user_teaser"` — `summary` is null. `license` is `xhere-teaser`. `author_handle` is present only when the public share page would show it.
+
+`lat` and `lon` are the display point. `approximate: true` means the category is sensitive or the point is blurred. Do not treat a teaser as the full drop. There is no parameter that reveals the body.
+
+## Terms
+
+Every response includes `terms.note`:
+
+This is a read-only public API. Every item includes attribution and license. ODbL and CC BY-SA items are share-alike: if you adapt them, keep that license and the attribution. User drops are teasers only (license xhere-teaser). The response uses the signed-out view: display coordinates, no hidden text, and no pending, expired, removed, demo, or reduced-trust content.
+
+`terms.share_alike` is `["ODbL-1.0", "CC-BY-SA-4.0"]`.
+
+## Limits and caching
+
+30 requests per 60 seconds per client address. `429` with `Retry-After` and `error: "rate_limited"`. The address is hashed before it is counted. It is not stored.
+
+`Cache-Control: public, max-age=60` on `/v1/here` and `/v1/walks`, `max-age=120` on a drop, `max-age=3600` on categories. `Referrer-Policy: no-referrer`.
+
+## Docs
+
+- Human docs: docs/api/README.md
+- OpenAPI 3.1: docs/api/openapi.yaml
+- Privacy: docs/PLAN.md section 5
+- Provenance: docs/OPEN-DATA-PLAYBOOK.md
+- Why this exists: docs/research/LOCATION-APPS-RESEARCH.md recommendation 8
