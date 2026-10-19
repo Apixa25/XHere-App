@@ -376,7 +376,6 @@ declare
   v_drop public.drops;
   v_sensitive boolean;
   v_active boolean;
-  v_geog extensions.geography;
   v_lat double precision;
   v_lng double precision;
   v_media jsonb := coalesce(p_media, '[]'::jsonb);
@@ -420,13 +419,12 @@ begin
   if p_lat is null and p_lng is null then
     v_lat := null;
     v_lng := null;
-    v_geog := null;
   elsif p_lat is null or p_lng is null then
     raise exception 'invalid_location' using errcode = '22023';
   else
     v_lat := round(p_lat::numeric, 5);
     v_lng := round(p_lng::numeric, 5);
-    v_geog := private.make_point(v_lat, v_lng);
+    perform private.make_point(v_lat, v_lng);
   end if;
   return jsonb_build_object(
     'title', btrim(p_title),
