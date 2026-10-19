@@ -1,5 +1,6 @@
 package world.xhere.app.safety
 
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertTextContains
@@ -10,6 +11,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTextInput
 import androidx.test.ext.junit.rules.ActivityScenarioRule
 import kotlin.time.Clock
@@ -316,10 +318,13 @@ private fun ComposeRule.signIn() {
 
 private fun ComposeRule.openDetail(shortId: String) {
     signIn()
-    waitForTag(TestTags.marker(shortId))
-    onNodeWithTag(TestTags.marker(shortId)).performClick()
+    val marker = TestTags.marker(shortId)
+    waitForTag(marker)
+    // The walk and quest cards sit over the lower pins. A touch click lands on
+    // the card. The pin's own click action still opens the teaser.
+    onNodeWithTag(marker).performScrollTo().performSemanticsAction(SemanticsActions.OnClick)
     waitForTag(TestTags.TEASER_OPEN)
-    onNodeWithTag(TestTags.TEASER_OPEN).performClick()
+    onNodeWithTag(TestTags.TEASER_OPEN).performSemanticsAction(SemanticsActions.OnClick)
     waitForTag(TestTags.SCREEN_DETAIL)
     waitForTag(TestTags.DETAIL_TITLE)
 }

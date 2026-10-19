@@ -7,7 +7,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -77,6 +78,7 @@ internal val WalkRouteSemantics = SemanticsPropertyKey<String>("WalkRoute")
 /** `yes` when the AR button is shown. `no` when the phone or the spot cannot do Geospatial. */
 internal val ArReadySemantics = SemanticsPropertyKey<String>("ArReady")
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun MapScreen(
     onDrop: () -> Unit = {},
@@ -196,9 +198,10 @@ fun MapScreen(
                     onOpen = { onOpenDrop(teaser.shortId) },
                 )
             }
-            Row(
+            FlowRow(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 Surface(
                     onClick = { viewModel.openTimeMachine() },
@@ -215,12 +218,6 @@ fun MapScreen(
                         style = MaterialTheme.typography.labelLarge,
                     )
                 }
-            }
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
                 Surface(
                     onClick = hapticClick(onDrop),
                     shape = CircleShape,

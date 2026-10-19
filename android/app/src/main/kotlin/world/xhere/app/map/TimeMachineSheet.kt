@@ -130,6 +130,7 @@ internal fun TimeMachineSheet(
                         )
                         Text(
                             text = overlay.attribution,
+                            modifier = Modifier.testTag(TestTags.TIME_OVERLAY_NOTE),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )

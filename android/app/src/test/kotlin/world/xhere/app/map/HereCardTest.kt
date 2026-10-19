@@ -128,8 +128,11 @@ class HereCardTest {
         rule.onNodeWithText("Library of Congress", substring = true).assertIsDisplayed()
         rule.onNodeWithTag(TestTags.timeYear(1886)).performClick()
         rule.awaitTime("1886|1886,1905|${world.xhere.shared.demo.HistoryDemo.SHEET_ID}")
-        rule.onNodeWithTag(TestTags.TIME_OPACITY).assertIsDisplayed()
-        rule.onNodeWithText("Demo alignment", substring = true).assertIsDisplayed()
+        rule.onNodeWithTag(TestTags.TIME_OPACITY).performScrollTo().assertIsDisplayed()
+        rule.onNodeWithTag(TestTags.TIME_OVERLAY_NOTE, useUnmergedTree = true)
+            .performScrollTo()
+            .assertTextContains("Demo alignment", substring = true)
+        rule.onNodeWithTag(TestTags.TIME_MAP_CREDIT).assertTextContains("Demo alignment", substring = true)
         rule.onNodeWithTag(TestTags.TIME_CLOSE).performClick()
         rule.onNodeWithTag(TestTags.TIME_SHEET).assertDoesNotExist()
 

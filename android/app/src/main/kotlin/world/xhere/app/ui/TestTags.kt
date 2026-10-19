@@ -126,6 +126,7 @@ internal object TestTags {
     const val TIME_SHEET = "time_sheet"
     const val TIME_CLOSE = "time_close"
     const val TIME_OPACITY = "time_opacity"
+    const val TIME_OVERLAY_NOTE = "time_overlay_note"
     const val TIME_EMPTY = "time_empty"
     const val TIME_FAILED = "time_failed"
     const val TIME_VIEWER = "time_viewer"
