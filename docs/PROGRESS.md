@@ -384,3 +384,13 @@ Branch `cursor/founding-locals-campaign-8916`. This is recommendation #6 from `d
 - Founding Local goes to the first N people with a real drop in that region: source `user`, status active or confirmed, not expired, author still here, true point inside the box. `open_data` never counts. A personal hide still counts. The badge shows on the profile and on that person's drops, and stays off an anonymous drop so the pin does not reveal who posted it. Losing the only qualifying drop gives the place to the next person.
 - A campaign has a start, an end, and a goal (the pilot is Map Jamestown: 200 drops in 14 days). The map and the profile show community progress and the person's own count. The board is display names, skips a blank name, and an opt-out in Settings removes the name without changing the total. The clock starts when the seed is applied. Running the seed again keeps those dates.
 - Not applied on hosted Supabase from here. After `supabase db push` (which includes `supabase/migrations/20261019184521_founding_and_campaigns.sql`, after `20261019180000_here_card_rpc_hardening.sql` and before `20261019233041_live_conditions.sql`), load `supabase/seed/campaigns/jamestown-ny.sql`. `db push` does not load the seed. Steps are in `supabase/README.md`.
+
+## 2026-10-18 (Sun), ~10:10 PM ET: Demo accounts are not Founding Locals
+
+Branch `cursor/exclude-demo-founders-8577`. PLAN §5 is the profile and the badge shelf. The founding rules live in `supabase/migrations/20261019184521_founding_and_campaigns.sql`. Steven decided a seeded demo account is not a real contributor.
+
+- `profiles.is_demo` defaults to false. It is not a client-writable column. `service_role` may set it. An admin calls `set_account_demo`. The check is the same in every region.
+- `private.drop_counts_in_region` skips demo authors, so founding ranks, campaign totals, and leaderboards skip them. The drops stay on the map. There is no reputation-points scorer in the database yet. When M11 adds one, it should skip `is_demo` the same way.
+- The migration marks the seeded guide, trusted, and regular accounts (and `demo_new`) when those rows exist, including the id shape `d0000000-0000-0000-0000-000000000001` if that row is present, then calls `private.refresh_founders` for every region that already has a founding cap or a founding badge.
+- `supabase/seed.sql` sets `is_demo` on all four demo accounts before it posts drops.
+- Not applied on the hosted project from here. `supabase db push` applies `supabase/migrations/20261020023000_exclude_demo_from_standing.sql`. It does not load `seed.sql`. Do not paste the migration into the dashboard. It does not change Auth.
