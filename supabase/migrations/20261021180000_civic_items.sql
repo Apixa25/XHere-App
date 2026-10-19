@@ -225,13 +225,13 @@ create policy civic_items_select_active on public.civic_items
 create function private.civic_address_key(p_value text)
 returns text
 language plpgsql
-immutable
+stable
 set search_path = ''
 as $$
 declare
   v text;
   v_token text;
-  v_out text[] := '{}';
+  v_out text[] := array[]::text[];
 begin
   if p_value is null or btrim(p_value) = '' then
     return '';
@@ -282,7 +282,7 @@ $$;
 create function private.civic_address_match(p_follow text, p_item text)
 returns boolean
 language sql
-immutable
+stable
 set search_path = ''
 as $$
   select private.civic_address_key(p_follow) <> ''
