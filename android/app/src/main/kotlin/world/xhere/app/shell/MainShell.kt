@@ -27,6 +27,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
@@ -34,7 +35,11 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlin.time.Clock
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -49,6 +54,7 @@ import world.xhere.app.detail.DropDetailScreen
 import world.xhere.app.detail.IncomingLinks
 import world.xhere.app.drop.DropScreen
 import world.xhere.app.drop.PendingDropSpot
+import world.xhere.app.map.CampaignCard
 import world.xhere.app.map.MapScreen
 import world.xhere.app.profile.ProfileViewModel
 import world.xhere.shared.model.ImpactNotice
@@ -206,6 +212,15 @@ private fun ProfilePage(
     viewModel: ProfileViewModel = koinViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner, viewModel) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) viewModel.refresh()
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        viewModel.refresh()
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -223,6 +238,18 @@ private fun ProfilePage(
         }
         if (state.tierLabel.isNotBlank()) {
             Text(state.tierLabel, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        state.badges.forEach { badge ->
+            val where = badge.regionName?.takeIf { it.isNotBlank() }
+            Text(
+                text = if (where == null) "${badge.icon} ${badge.name}" else "${badge.icon} ${badge.name} · $where",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.tertiary,
+                modifier = Modifier.testTag(TestTags.PROFILE_BADGE),
+            )
+        }
+        state.campaigns.forEach { campaign ->
+            CampaignCard(campaign = campaign, now = Clock.System.now(), compact = false)
         }
         state.email?.let { email ->
             Text(email, style = MaterialTheme.typography.bodyLarge)

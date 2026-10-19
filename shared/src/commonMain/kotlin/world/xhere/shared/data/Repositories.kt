@@ -24,6 +24,8 @@ import world.xhere.shared.model.Profile
 import world.xhere.shared.model.ReportReason
 import world.xhere.shared.model.ReportStatus
 import world.xhere.shared.model.ReportTarget
+import world.xhere.shared.model.BadgeShelf
+import world.xhere.shared.model.CampaignProgress
 import world.xhere.shared.model.CheckInResult
 import world.xhere.shared.model.QuestProgress
 import world.xhere.shared.model.Taxonomy
@@ -241,6 +243,27 @@ interface WalkRepository {
     suspend fun dismissQuest(questId: Uuid)
 }
 
+/**
+ * Founding Locals and time-boxed map campaigns.
+ *
+ * A campaign is config for one region. The map asks for the viewport.
+ * The profile lists every live campaign, because a profile has no map position.
+ * Leaderboards return a display name only. Opting out removes the name and keeps the drop in the total.
+ * Imported public records never count.
+ */
+interface CampaignRepository {
+    /** Live campaigns whose region overlaps [box]. Signed-out callers get a community total and `myDrops` of 0. */
+    suspend fun campaignsFor(box: BoundingBox): List<CampaignProgress>
+
+    /** Every live campaign, with this caller's own count. */
+    suspend fun myCampaigns(): List<CampaignProgress>
+
+    suspend fun myBadges(): BadgeShelf
+
+    /** Hides or shows the caller's display name on every campaign board. */
+    suspend fun setShowOnLeaderboard(show: Boolean)
+}
+
 /** Photo bytes go to Storage only after Exif/XMP is removed. */
 interface MediaRepository {
     suspend fun uploadPhoto(bytes: ByteArray, mimeType: String): MediaUpload
@@ -261,6 +284,7 @@ interface XHereServices {
     val hidden: HiddenDropRepository
     val impact: ImpactRepository
     val walks: WalkRepository
+    val campaigns: CampaignRepository
     val account: AccountRepository
     val moderation: ModerationRepository
 }

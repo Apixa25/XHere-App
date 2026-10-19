@@ -343,12 +343,14 @@ class MapViewModel(
         try {
             val features = services.drops.dropsInView(frame.box, slugs, frame.zoom)
             val walks = runCatching { services.walks.walksFor(centerOf(frame)) }.getOrDefault(emptyList())
+            val campaigns = runCatching { services.campaigns.campaignsFor(frame.box) }.getOrDefault(emptyList())
             if (lastFrame != frame) return
             _state.update {
                 it.copy(
                     loading = false,
                     features = features,
                     walk = mergeWalk(it.walk, walks.firstOrNull()),
+                    campaigns = campaigns,
                     notice = null,
                 )
             }

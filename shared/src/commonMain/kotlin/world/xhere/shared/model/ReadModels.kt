@@ -54,6 +54,11 @@ data class DropCard(
     @SerialName("view_count") val viewCount: Long = 0,
     /** This caller's answer, when they have confirmed or denied. */
     @SerialName("my_verdict") val myVerdict: ConfirmationVerdict? = null,
+    /**
+     * Badges to show next to the author. Empty when the drop is anonymous or a public record.
+     * A regional badge is included only when this drop is inside that region.
+     */
+    @SerialName("author_badges") val authorBadges: List<BadgeAward> = emptyList(),
 ) {
     val displayLocation: LatLng get() = LatLng(latitude, longitude)
 

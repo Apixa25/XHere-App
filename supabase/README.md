@@ -4,7 +4,7 @@ Postgres / PostGIS schema, Row-Level Security, RPCs, Edge Functions, and pgTAP t
 
 - `config.toml`: local Supabase CLI config (`supabase init`, `project_id = "xhere"`). It holds no secrets; provider credentials are `env(...)` references.
 - `migrations/`: SQL migrations (**M1**), applied in filename order.
-- `seed.sql`: **local demo data** (4 demo users and 15 drops in Jamestown, New York). `supabase db reset` loads it, then `seed/open-data/jamestown-ny.sql` (the public-record places), then `seed/walks/jamestown-ny.sql` (the pilot walk), then `seed/live/us-ny-jamestown.sql` (which free weather provider covers that box). `supabase db push` does not load those files. The demo seed was applied by hand to the pilot project; see [Demo seed on the pilot](#demo-seed-on-the-pilot). The open-data file, the walk, and the live seed are applied with the steps in [Open-data seed (hosted)](#open-data-seed-hosted).
+- `seed.sql`: **local demo data** (4 demo users and 15 drops in Jamestown, New York). `supabase db reset` loads it, then `seed/open-data/jamestown-ny.sql` (the public-record places), then `seed/walks/jamestown-ny.sql` (the pilot walk), then `seed/live/us-ny-jamestown.sql` (which free weather provider covers that box), then `seed/campaigns/jamestown-ny.sql` (the pilot founding cap and Map Jamestown campaign). `supabase db push` does not load those files. The demo seed was applied by hand to the pilot project; see [Demo seed on the pilot](#demo-seed-on-the-pilot). The open-data file, the walk, the live seed, and the campaign are applied with the steps in [Open-data seed (hosted)](#open-data-seed-hosted).
 - `tests/database/`: pgTAP tests (**M1**), run by `supabase test db`.
 - `functions/`: Supabase Edge Functions. **M5** adds `suggest-category` and `strip-exif`. Later milestones add open-data proxies.
 
@@ -102,6 +102,7 @@ Postgres listens on `127.0.0.1:54322` (user `postgres`, password `postgres`, loc
 | `20261018235000_walks_and_quests.sql` | Walks (ordered stops that name existing places) and a global starter quest. Progress is `walk_progress`, `walk_stop_reaches`, `place_visits`, and `quest_dismissals`. Clients read through `walks_for_point`, `start_walk`, `check_in`, `my_quests`, and `dismiss_quest`. No location trail |
 | `20261019041827_here_card.sql` | Here Card: `here_card` (tap distance, viewer reveal, no view counted), `place_labels` cache, and the Nominatim slot. Not tied to a city |
 | `20261019180000_here_card_rpc_hardening.sql` | Per-user Nominatim pause (10 seconds) on top of the project 1.1 second slot, and place-label checks: 0.001° cell of the coordinates, length and character limits, first write wins for 90 days, one mutating write per user every 10 seconds and 30 per hour. `here_card` stays signed-in only |
+| `20261019184521_founding_and_campaigns.sql` | Founding Local (`badges` / `user_badges`, first N real drops per region) and time-boxed campaigns. Clients read `campaigns_for_map`, `my_campaigns`, and `my_badges`, and change board visibility with `set_leaderboard_visibility`. No city rows |
 | `20261019233041_live_conditions.sql` | Live conditions: `right_now` (1h / 4h / 24h), `civic_issue`, `region_live` plus `region_live_at`, and `expires_at` on open-data upserts. Not tied to a city |
 
 The taxonomy lives in a migration rather than `seed.sql` so a hosted project gets it too. Categories are rows, so adding one doesn't need a new migration type. Every change bumps `categories.version`, and each drop records the version it was validated against (`category_versions`).
@@ -147,6 +148,10 @@ The taxonomy lives in a migration rather than `seed.sql` so a hosted project get
 | `place_label(lat, lng)` | user | Cached OpenStreetMap name for the 0.001° cell, or no row. Attribution is the one the database stored |
 | `remember_place_label(lat, lng, name, address)` | user | Saves a Nominatim result on the 0.001° cell of the coordinates. The database stamps © OpenStreetMap contributors / ODbL. The name and address are length- and character-limited. First write wins for 90 days. One mutating write per user every 10 seconds and 30 per hour. No user id on the label |
 | `claim_nominatim_slot()` | user | True at most once every 1.1 seconds for the whole project, and the same user cannot take another slot for 10 seconds. A busy project slot does not start that pause. The client calls Nominatim only after this returns true |
+| `campaigns_for_map(min_lng, min_lat, max_lng, max_lat)` | anon, user | Live campaigns whose region box overlaps the viewport. `my_drops` is 0 when signed out. The board is display names only |
+| `my_campaigns()` | user | Every live campaign, with this caller's own count. The profile has no map position |
+| `my_badges()` | user | The caller's badge shelf and whether their name is on campaign boards |
+| `set_leaderboard_visibility(show)` | user | The only way to change `profiles.show_on_leaderboard`. Hiding the name does not change the community total |
 
 ## Edge Functions
 
@@ -159,11 +164,11 @@ Moderator/admin is `profiles.role`. There's no UI to grant it yet. On a hosted p
 
 ## Tests
 
-`tests/database/*.test.sql` (pgTAP): schema/privileges, RLS, nearby/reveal/blur/expiry/blocks, `create_drop` validation, crime (`incident_report`) rules, confirmations, moderation/cron, and the M5 suggestion log, hash embeddings, and fixture score (`07_suggestions.test.sql`, 19 assertions), the M6 reveal fixes, and M7 safety/compliance (`09_safety_compliance.test.sql`: Safety pre-moderation, auto-hide threshold, blocks both ways, hide-for-me, moderator-only access, append-only audit log, export) plus `10_tip_lines.test.sql` (incident reports only inside a tip-line area), `11_advisor_followups.test.sql` (the `(select auth.uid())` policies, one SELECT policy on the reference tables, the foreign-key indexes, tip-line RLS, and the same read/write access as before), `12_open_data.test.sql` (upsert/dedupe, attribution on a far-away card, confirmations rejected, the import is not the caller's drop or export), `13_here_card.test.sql` (32 assertions: reveal stays on the viewer point, public records stay readable, the place cache, and the Nominatim slot), `13_walks_quests.test.sql` (the global starter quest, the Jamestown walk's public-record stops, reveal-radius check-off, and progress that a client cannot insert), `14_here_card_abuse.test.sql` (36 assertions: one user cannot hold the Nominatim slot, place labels stay on the 0.001° grid with length and character limits, first write wins, and the per-user write cap), and `14_live_conditions.test.sql` (right-now windows, civic-issue expiry, and per-region weather config). Each file runs in a transaction and rolls back. `supabase/functions/**/*_test.ts` is the Deno suite for the two Edge Functions, including the same 32-phrase fixture set and a 401 for a signed-out suggestion.
+`tests/database/*.test.sql` (pgTAP): schema/privileges, RLS, nearby/reveal/blur/expiry/blocks, `create_drop` validation, crime (`incident_report`) rules, confirmations, moderation/cron, and the M5 suggestion log, hash embeddings, and fixture score (`07_suggestions.test.sql`, 19 assertions), the M6 reveal fixes, and M7 safety/compliance (`09_safety_compliance.test.sql`: Safety pre-moderation, auto-hide threshold, blocks both ways, hide-for-me, moderator-only access, append-only audit log, export) plus `10_tip_lines.test.sql` (incident reports only inside a tip-line area), `11_advisor_followups.test.sql` (the `(select auth.uid())` policies, one SELECT policy on the reference tables, the foreign-key indexes, tip-line RLS, and the same read/write access as before), `12_open_data.test.sql` (upsert/dedupe, attribution on a far-away card, confirmations rejected, the import is not the caller's drop or export), `13_here_card.test.sql` (32 assertions: reveal stays on the viewer point, public records stay readable, the place cache, and the Nominatim slot), `13_walks_quests.test.sql` (the global starter quest, the Jamestown walk's public-record stops, reveal-radius check-off, and progress that a client cannot insert), `14_here_card_abuse.test.sql` (36 assertions: one user cannot hold the Nominatim slot, place labels stay on the 0.001° grid with length and character limits, first write wins, and the per-user write cap), `14_live_conditions.test.sql` (right-now windows, civic-issue expiry, and per-region weather config), and `15_founding_campaigns.test.sql` (Founding Local for the first N people in a region, a time-boxed campaign, a display-name leaderboard with opt-out, and the Jamestown pilot config). Each file runs in a transaction and rolls back. `supabase/functions/**/*_test.ts` is the Deno suite for the two Edge Functions, including the same 32-phrase fixture set and a 401 for a signed-out suggestion.
 
 ## Open-data seed (hosted)
 
-Migration `20261018001600_open_data.sql` is applied with the other migrations. The Jamestown snapshot is not. `supabase db push` does not run `seed.sql`, `supabase/seed/open-data/jamestown-ny.sql`, `supabase/seed/walks/jamestown-ny.sql`, or `supabase/seed/live/us-ny-jamestown.sql`.
+Migration `20261018001600_open_data.sql` is applied with the other migrations. The Jamestown snapshot is not. `supabase db push` does not run `seed.sql`, `supabase/seed/open-data/jamestown-ny.sql`, `supabase/seed/walks/jamestown-ny.sql`, `supabase/seed/live/us-ny-jamestown.sql`, or `supabase/seed/campaigns/jamestown-ny.sql`.
 
 Do this from a machine that already has the Supabase CLI linked, after the history repair in [Before `supabase db push`](#before-supabase-db-push) if that repair has not been done yet. This does not change Auth, SMTP, or any other hosted setting.
 
@@ -172,13 +177,16 @@ supabase link --project-ref jpeuldzegtbqfezijhuy
 supabase db push
 ```
 
-`db push` applies every migration that is not on the project yet. That includes `20261018001600_open_data.sql`, `20261018194500_impact_feedback.sql` when impact feedback is not already there, `20261018210000_open_data_card.sql` (provenance on the card after impact feedback), `20261018235000_walks_and_quests.sql` (the walk and quest tables, the RPCs, and the global starter quest), `20261019041827_here_card.sql` (the Here Card read, the place-name cache, and the Nominatim slot), `20261019180000_here_card_rpc_hardening.sql` (per-user Nominatim and place-label limits), and `20261019233041_live_conditions.sql` (right now, civic issues, and per-region weather config). Do not paste those files into the SQL editor. They do not change Auth. Then load the snapshot, and after that the walk. The walk seed only names places, so the open-data file has to be applied first. The live seed can run in either order. `DATABASE_URL` is the Postgres connection string from the dashboard (Project Settings → Database). It is not in git. The SQL runs as the database owner and calls `private.upsert_open_data_items` and `private.upsert_region_live`. The anon key cannot run either. The live seed does not insert a Jamestown 311 feed. None was found (see `docs/OPEN-DATA-PLAYBOOK.md` §9.2).
+`db push` applies every migration that is not on the project yet. That includes `20261018001600_open_data.sql`, `20261018194500_impact_feedback.sql` when impact feedback is not already there, `20261018210000_open_data_card.sql` (provenance on the card after impact feedback), `20261018235000_walks_and_quests.sql` (the walk and quest tables, the RPCs, and the global starter quest), `20261019041827_here_card.sql` (the Here Card read, the place-name cache, and the Nominatim slot), `20261019180000_here_card_rpc_hardening.sql` (per-user Nominatim and place-label limits), `20261019184521_founding_and_campaigns.sql` (Founding Local and campaigns; no city rows), and `20261019233041_live_conditions.sql` (right now, civic issues, and per-region weather config). Do not paste those files into the SQL editor. They do not change Auth. Then load the snapshot, and after that the walk. The walk seed only names places, so the open-data file has to be applied first. The live seed can run in either order. The campaign seed is last. `DATABASE_URL` is the Postgres connection string from the dashboard (Project Settings → Database). It is not in git. The SQL runs as the database owner and calls `private.upsert_open_data_items` and `private.upsert_region_live`. The anon key cannot run either. The live seed does not insert a Jamestown 311 feed. None was found (see `docs/OPEN-DATA-PLAYBOOK.md` §9.2).
 
 ```bash
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/seed/open-data/jamestown-ny.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/seed/walks/jamestown-ny.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/seed/live/us-ny-jamestown.sql
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/seed/campaigns/jamestown-ny.sql
 ```
+
+The campaign seed is last. It inserts the Jamestown region row, the founding cap (25), and Map Jamestown (200 drops, 14 days). `starts_at` is `now()` the first time that file runs, and `ends_at` is 14 days later. Running it again refreshes the title, the goal, and the cap, and leaves those dates alone. Do not apply it from this repo's agent. See [Apply founding and campaigns](#apply-founding-and-campaigns).
 
 Refresh later (no paid service, no new migration unless the schema changes):
 
@@ -190,3 +198,17 @@ psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/seed/open-data/jamestown-ny.
 ```
 
 The second command updates the same external ids and hides rows that left the snapshot. A new city is a new YAML under `supabase/regions/` plus the same script. See `docs/OPEN-DATA-PLAYBOOK.md` §8.
+
+## Apply founding and campaigns
+
+`20261019184521_founding_and_campaigns.sql` is the Founding Local badge, the campaign tables, and the RPCs. It has no Jamestown rows. The pilot numbers live in `supabase/regions/us/jamestown-ny.yaml` (`programs:`) and are loaded by `supabase/seed/campaigns/jamestown-ny.sql`.
+
+From a machine that already has the CLI linked, after the repair commands in [Before `supabase db push`](#before-supabase-db-push) if that repair has not been done yet:
+
+```bash
+supabase link --project-ref jpeuldzegtbqfezijhuy
+supabase db push
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/seed/campaigns/jamestown-ny.sql
+```
+
+`db push` applies the migration. It does not load the seed. Do not paste the migration into the SQL editor. It does not change Auth. Re-running the seed keeps the start and end that were written the first time. Another city is another region file and another seed, not a change to the migration.

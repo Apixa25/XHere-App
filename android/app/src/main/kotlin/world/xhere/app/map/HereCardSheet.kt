@@ -203,6 +203,15 @@ private fun HereRow(card: DropCard) {
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+        if (!card.isPublicRecord()) {
+            card.authorBadges.firstOrNull()?.let { badge ->
+                Text(
+                    text = "${badge.icon} ${badge.name}",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.tertiary,
+                )
+            }
+        }
         if (card.isPublicRecord()) {
             Text(
                 text = stringResource(R.string.here_public),

@@ -53,6 +53,14 @@ internal fun TeaserCard(
                         style = MaterialTheme.typography.titleMedium,
                         modifier = Modifier.testTag(TestTags.TEASER_TITLE),
                     )
+                    teaser.foundingLabel?.let { founding ->
+                        Text(
+                            text = founding,
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.tertiary,
+                            modifier = Modifier.testTag(TestTags.TEASER_FOUNDING),
+                        )
+                    }
                     if (teaser.publicRecord) {
                         Text(
                             text = stringResource(R.string.detail_public_records),

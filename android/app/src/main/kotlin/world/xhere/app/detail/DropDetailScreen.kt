@@ -293,6 +293,14 @@ private fun DetailBody(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
+    state.authorBadges.forEach { badge ->
+        Text(
+            text = "${badge.icon} ${badge.name}",
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.tertiary,
+            modifier = Modifier.testTag(TestTags.DETAIL_FOUNDING),
+        )
+    }
     if (!state.publicRecord) {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
             if (state.isConfirmed) {

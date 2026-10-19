@@ -200,6 +200,19 @@ internal data class DropIdParams(
 )
 
 @Serializable
+internal data class CampaignsForMapParams(
+    @SerialName("p_min_lng") val minLng: Double,
+    @SerialName("p_min_lat") val minLat: Double,
+    @SerialName("p_max_lng") val maxLng: Double,
+    @SerialName("p_max_lat") val maxLat: Double,
+)
+
+@Serializable
+internal data class LeaderboardVisibilityParams(
+    @SerialName("p_visible") val visible: Boolean,
+)
+
+@Serializable
 internal data class HandleParams(
     @SerialName("p_handle") val handle: String,
 )
