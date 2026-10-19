@@ -161,6 +161,7 @@ fun testModule() = module {
             googleCancelled = context.getString(R.string.auth_google_cancelled),
             googleUnconfigured = context.getString(R.string.auth_google_unconfigured),
             failed = context.getString(R.string.auth_failed),
+            network = context.getString(R.string.auth_network),
             notConnected = context.getString(R.string.auth_not_connected),
         )
     }

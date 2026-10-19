@@ -290,6 +290,7 @@ class SupabaseXHereClient(
                     IdentityProvider.GOOGLE -> Google
                     IdentityProvider.APPLE -> Apple
                 }
+                // Raw nonce only. GoTrue SHA-256s it to lowercase hex and compares that to the ID token.
                 this.nonce = nonce
             }
             supabase.auth.currentSessionOrNull()?.toInfo()
