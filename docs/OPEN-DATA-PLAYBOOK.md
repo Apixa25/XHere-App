@@ -348,3 +348,51 @@ The committed snapshot is `supabase/seed/open-data/jamestown-ny.json` for region
 | **Total** | **117** |
 
 Before dedupe the fetch was 31 Wikipedia, 65 Wikidata, 11 NRHP, and 18 OSM. Refresh the file with the command in §8.4, then apply the `.sql` again. Do not hand-edit the JSON or the SQL.
+
+---
+
+## 9. Live conditions (weather alerts, optional 311, right now)
+
+This is recommendation #5 from `docs/research/LOCATION-APPS-RESEARCH.md` (PLAN §3 open-data layers, §4.1 source axis, §5 expiry). It is global. A region opts in by config. Jamestown is only the pilot file.
+
+### 9.1 Official weather alerts
+
+Active alerts are not copied into `drops`. The phone asks a `WeatherAlertProvider` for the center of the map the person is looking at. The US provider is the National Weather Service, `https://api.weather.gov/alerts/active?point={lat},{lng}`. No API key. The client sends `User-Agent: XHere/0.1 (https://xhere.world; weather-alerts)` and `Accept: application/geo+json`, and it caches using `Cache-Control` (at least 30 seconds, at most an hour; an empty answer or a 404 is kept for at least an hour).
+
+Which provider to call:
+
+1. `public.region_live_at(lat, lng)` — the smallest configured box, from `supabase/seed/live/<region-id>.sql`.
+2. If that call fails or returns no row, the bundled catalog in `LiveRegionCatalog.kt` (the importer self-test checks it against every region YAML).
+3. If there is still no row, the first provider whose coverage box contains the point. NWS coverage is the US (lower 48, Alaska, Hawaii, Puerto Rico, the US Virgin Islands, Guam, American Samoa). Paris and London are outside it. `weather_provider: none` returns no alerts even inside a coverage box.
+
+Another country adds a class that implements `WeatherAlertProvider` and a provider id in that region's `live.weather_alerts.provider`. The banner shows severity, the event, the expiry in UTC, and the publisher. Dismiss hides that alert until the next one in the list. The Here Card repeats the same visible alerts. Opening the card does not count a view.
+
+### 9.2 Optional Open311 / civic feeds
+
+`open311` is an adapter on the same importer. It runs only when a source block sets `adapter: open311` and an `https` `endpoint`. It calls `{endpoint}/requests.json?status=open`, keeps rows inside the bbox, and writes `civic_issue` drops with `expires_at` (`ttl_hours`, default 7 days, max 30). The title is the service name. The summary is the fixed line `Open civic request. Status: open.` The request description is not copied, because it can name a person.
+
+**Jamestown finding (checked 2026-10-18).** There is no free 311 feed to configure.
+
+- Jamestown is not on the Open311 GeoReport v2 server list (`https://wiki.open311.org/GeoReport_v2/Servers/`). No New York city is listed.
+- `jamestownny.gov` does not publish an open 311, SeeClickFix, or Socrata service-request API.
+- Police annual reports are PDFs of calls for service. Those are about people. They are not imported.
+- data.ny.gov "311 Service Requests" is New York City (`erm2-nwe9`), not Jamestown.
+- The SeeClickFix issues API returned 403. It is not a free open feed.
+
+The candidate is `jamestown-311` with `decision: reject` in `supabase/regions/us/jamestown-ny.yaml`. No source block was added. A later city that does publish GeoReport v2 adds a source block; this adapter is already there.
+
+### 9.3 Right now
+
+`right_now` is a user category in the safety group (no new group). The person picks 1 hour, 4 hours, or 24 hours. The default is 4 hours. `private.enforce_right_now_window` rejects anything else on insert. A confirmation may still extend the row inside the 24 hour cap. Any other category can also be shortened to those three lifetimes; "Usual" keeps that category's own default.
+
+`drops_in_view`, `drops_nearby`, `drop_detail`, and `here_card` already hide a row once `expires_at` has passed (`private.can_view_drop`). `private.expire_drops` is already scheduled on free pg_cron (`xhere-expire-drops`, every 5 minutes) and sets `status` to `expired`. There is no second job and no paid queue.
+
+### 9.4 What to apply on a database
+
+Migration `20261019233041_live_conditions.sql`, then the live seed. `supabase db push` does not load the seed.
+
+```bash
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/seed/live/us-ny-jamestown.sql
+```
+
+That calls `private.upsert_region_live` as the database owner. It does not insert a 311 snapshot, because Jamestown has no feed.

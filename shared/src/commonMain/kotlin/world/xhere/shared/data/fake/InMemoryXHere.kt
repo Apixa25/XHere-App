@@ -23,6 +23,7 @@ import world.xhere.shared.data.SuggestionRepository
 import world.xhere.shared.data.TaxonomyRepository
 import world.xhere.shared.data.WalkRepository
 import world.xhere.shared.data.XHereApiException
+import world.xhere.shared.data.LiveRepository
 import world.xhere.shared.data.PlaceRepository
 import world.xhere.shared.data.XHereServices
 import world.xhere.shared.geo.BoundingBox
@@ -106,6 +107,9 @@ class InMemoryXHere(
     }
     override val drops: DropRepository = DropRepo()
     override val places: PlaceRepository = PlaceRepo()
+    override val live: LiveRepository = object : LiveRepository {
+        override suspend fun regionAt(point: LatLng): world.xhere.shared.live.LiveRegion? = null
+    }
     override val suggestions: SuggestionRepository = SuggestionRepo()
     override val media: MediaRepository = MediaRepo()
     override val reports: ReportRepository = ReportRepo()

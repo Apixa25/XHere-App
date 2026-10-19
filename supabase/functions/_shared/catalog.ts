@@ -43,4 +43,6 @@ export const CATALOG: CatalogEntry[] = [
   { slug: "public_art", label: "Public art", description: "Sculptures, installations, and monuments.", hints: "monument sculpture statue installation bronze public art" },
   { slug: "music_spot", label: "Music spot", description: "Buskers, open mics, and great acoustics.", hints: "music busker guitar open mic acoustic singer" },
   { slug: "note", label: "Note", description: "Anything else worth knowing about this spot.", hints: "note miscellaneous other general" },
+  { slug: "right_now", label: "Right now", description: "A short-lived condition at this spot.", hints: "queue waittime momentary rightnow" },
+  { slug: "civic_issue", label: "Civic issue", description: "An open civic request published by a city.", hints: "municipal open311 service request civicissue" },
 ];

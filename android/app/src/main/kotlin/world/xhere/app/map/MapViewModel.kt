@@ -20,6 +20,8 @@ import world.xhere.shared.demo.JamestownDemo
 import world.xhere.shared.geo.Geo
 import world.xhere.shared.geo.LatLng
 import world.xhere.shared.here.Here
+import world.xhere.shared.live.LiveConditions
+import world.xhere.shared.live.QuietConditions
 import world.xhere.shared.model.MapFeature
 import world.xhere.shared.model.PlaceLabel
 import world.xhere.shared.model.QuestProgress
@@ -42,6 +44,7 @@ class MapViewModel(
     private val presetStore: FilterPresetStore,
     private val places: SpotNames,
     private val debounceMs: Long = 320,
+    private val conditions: LiveConditions = QuietConditions,
 ) : ViewModel() {
     private val _state = MutableStateFlow(MapUiState(presets = presetStore.all()))
     val state: StateFlow<MapUiState> = _state.asStateFlow()
@@ -271,6 +274,15 @@ class MapViewModel(
         _state.update { it.copy(celebrateWalk = false, celebrateQuest = false) }
     }
 
+    fun dismissAlert(id: String) {
+        _state.update {
+            it.copy(
+                dismissedAlertIds = it.dismissedAlertIds + id,
+                alerts = it.alerts.filter { alert -> alert.id != id },
+            )
+        }
+    }
+
     private fun openHere(spot: LatLng) {
         if (!Geo.isValid(spot)) return
         hereJob?.cancel()
@@ -345,6 +357,25 @@ class MapViewModel(
         } catch (_: Exception) {
             if (lastFrame != frame) return
             _state.update { it.copy(loading = false, features = emptyList(), notice = MapNotice.LOAD_FAILED) }
+        }
+        if (lastFrame == frame) refreshAlerts(frame)
+    }
+
+    private suspend fun refreshAlerts(frame: CameraFrame) {
+        val center = LatLng(
+            (frame.box.minLatitude + frame.box.maxLatitude) / 2.0,
+            (frame.box.minLongitude + frame.box.maxLongitude) / 2.0,
+        )
+        try {
+            val next = conditions.alertsAt(center)
+            if (lastFrame != frame) return
+            _state.update { current ->
+                current.copy(alerts = next.filter { it.id !in current.dismissedAlertIds })
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            // Keep the alerts already on screen.
         }
     }
 

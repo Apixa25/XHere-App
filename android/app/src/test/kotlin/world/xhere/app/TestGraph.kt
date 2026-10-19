@@ -39,6 +39,8 @@ import world.xhere.shared.data.fake.InMemoryXHere
 import world.xhere.shared.demo.JamestownDemo
 import world.xhere.shared.geo.LatLng
 import world.xhere.shared.here.Here
+import world.xhere.shared.live.LiveConditions
+import world.xhere.shared.live.WeatherAlert
 import world.xhere.shared.model.PlaceLabel
 import world.xhere.shared.model.Profile
 import kotlinx.coroutines.channels.awaitClose
@@ -65,6 +67,7 @@ object TestGraph {
     lateinit var sharer: RecordingDropSharer
     lateinit var exporter: RecordingDataExporter
     lateinit var links: IncomingLinks
+    lateinit var conditions: ScriptedConditions
 
     fun isReady(): Boolean = ::services.isInitialized
 }
@@ -135,7 +138,10 @@ fun testModule() = module {
     single<MapCanvas> { PreviewMapCanvas() }
     single<DropCapture> { FakeDropCapture() }
     single<ImageLabeler> { FakeImageLabeler() }
-    viewModel { MapViewModel(get(), get(), get(), get(), debounceMs = 0) }
+    val conditions = ScriptedConditions()
+    TestGraph.conditions = conditions
+    single<LiveConditions> { conditions }
+    viewModel { MapViewModel(get(), get(), get(), get(), debounceMs = 0, conditions = get()) }
     viewModel { DropViewModel(get(), get(), get(), get()) }
     viewModel { ProfileViewModel(get()) }
     viewModel {
@@ -201,6 +207,12 @@ class ScriptedDeviceLocation : DeviceLocation {
             collectors.decrementAndGet()
         }
     }
+}
+
+class ScriptedConditions : LiveConditions {
+    var alerts: List<WeatherAlert> = emptyList()
+
+    override suspend fun alertsAt(point: LatLng): List<WeatherAlert> = alerts
 }
 
 class RecordingDropSharer : DropSharer {

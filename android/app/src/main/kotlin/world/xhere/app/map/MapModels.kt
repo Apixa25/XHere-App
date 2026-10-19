@@ -5,6 +5,7 @@ import world.xhere.shared.geo.BoundingBox
 import world.xhere.shared.geo.LatLng
 import world.xhere.shared.here.Here
 import world.xhere.shared.here.isPublicRecord
+import world.xhere.shared.live.WeatherAlert
 import world.xhere.shared.model.CategoryGroup
 import world.xhere.shared.model.DropCard
 import world.xhere.shared.model.DropSource
@@ -145,6 +146,8 @@ data class MapUiState(
     val teaserLoading: Boolean = false,
     val nearMe: List<DropCard>? = null,
     val here: HereSheet? = null,
+    val alerts: List<WeatherAlert> = emptyList(),
+    val dismissedAlertIds: Set<String> = emptySet(),
     val subcategoryGroup: String? = null,
     val savingPreset: Boolean = false,
     val notice: MapNotice? = null,

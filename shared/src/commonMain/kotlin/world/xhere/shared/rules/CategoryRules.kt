@@ -7,6 +7,7 @@ import kotlin.uuid.Uuid
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import world.xhere.shared.geo.Geo
+import world.xhere.shared.live.RightNowDuration
 import world.xhere.shared.geo.LatLng
 import world.xhere.shared.json.parseTimestamp
 import world.xhere.shared.model.Category
@@ -408,6 +409,17 @@ object CategoryRules {
                     )
                 }
                 expires > capAt -> expires = capAt
+            }
+        }
+        val tooFar = violations.any { it.code == "expires_too_far" }
+        if (category.slug == "right_now" && !tooFar) {
+            val span = expires?.let { it - context.now }
+            if (span == null || !RightNowDuration.matches(span)) {
+                violations += RuleViolation(
+                    code = "invalid_right_now_ttl",
+                    detail = "right now drops last 1 hour, 4 hours, or 24 hours",
+                    field = "expires",
+                )
             }
         }
         return ExpiryDecision(expires, violations)

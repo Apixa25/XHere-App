@@ -54,6 +54,7 @@ import world.xhere.shared.data.ImpactRepository
 import world.xhere.shared.data.IdentityProvider
 import world.xhere.shared.data.MediaRepository
 import world.xhere.shared.data.ModerationRepository
+import world.xhere.shared.data.LiveRepository
 import world.xhere.shared.data.PlaceRepository
 import world.xhere.shared.data.ProfileRepository
 import world.xhere.shared.data.ReportRepository
@@ -74,6 +75,8 @@ import world.xhere.shared.data.remote.DropDetailParams
 import world.xhere.shared.data.remote.HereCardParams
 import world.xhere.shared.data.remote.ImpactNoticesParams
 import world.xhere.shared.data.remote.PlaceLabelParams
+import world.xhere.shared.data.remote.RegionAtParams
+import world.xhere.shared.data.remote.RegionLiveRow
 import world.xhere.shared.data.remote.RememberPlaceParams
 import world.xhere.shared.data.remote.MarkImpactReadParams
 import world.xhere.shared.data.remote.DropIdParams
@@ -92,6 +95,7 @@ import world.xhere.shared.data.remote.toParams
 import world.xhere.shared.geo.BoundingBox
 import world.xhere.shared.geo.Geo
 import world.xhere.shared.geo.LatLng
+import world.xhere.shared.live.LiveRegion
 import world.xhere.shared.here.Here
 import world.xhere.shared.http.platformHttpEngine
 import world.xhere.shared.json.ExportJson
@@ -159,6 +163,7 @@ class SupabaseXHereClient(
     override val taxonomy: TaxonomyRepository = TaxonomyRepo()
     override val drops: DropRepository = DropRepo()
     override val places: PlaceRepository = PlaceRepo()
+    override val live: LiveRepository = LiveRepo()
     override val suggestions: SuggestionRepository = SuggestionRepo()
     override val media: MediaRepository = MediaRepo()
     override val reports: ReportRepository = ReportRepo()
@@ -320,6 +325,23 @@ class SupabaseXHereClient(
                 "confirm_drop",
                 ConfirmDropParams(dropId, verdict, location.latitude, location.longitude, note).rpcJson(),
             ).decodeAs<ConfirmDropResult>()
+        }
+    }
+
+    private inner class LiveRepo : LiveRepository {
+        override suspend fun regionAt(point: LatLng): LiveRegion? = call {
+            if (!Geo.isValid(point)) return@call null
+            supabase.postgrest.rpc(
+                "region_live_at",
+                RegionAtParams(point.latitude, point.longitude).rpcJson(),
+            ).decodeList<RegionLiveRow>().firstOrNull()?.let { row ->
+                LiveRegion(
+                    id = row.regionId,
+                    country = row.country,
+                    weatherProvider = row.weatherProvider,
+                    name = row.name,
+                )
+            }
         }
     }
 

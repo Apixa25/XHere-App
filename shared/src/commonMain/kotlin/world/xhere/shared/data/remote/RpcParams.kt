@@ -49,6 +49,20 @@ internal data class HereCardParams(
 )
 
 @Serializable
+internal data class RegionAtParams(
+    @SerialName("p_lat") val lat: Double,
+    @SerialName("p_lng") val lng: Double,
+)
+
+@Serializable
+internal data class RegionLiveRow(
+    @SerialName("region_id") val regionId: String,
+    val name: String = "",
+    val country: String = "",
+    @SerialName("weather_provider") val weatherProvider: String? = null,
+)
+
+@Serializable
 internal data class PlaceLabelParams(
     @SerialName("p_lat") val lat: Double,
     @SerialName("p_lng") val lng: Double,

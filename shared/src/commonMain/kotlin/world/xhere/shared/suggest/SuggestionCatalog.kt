@@ -52,6 +52,8 @@ internal object SuggestionCatalog {
         CatalogEntry("public_art", "Public art", "Sculptures, installations, and monuments.", "monument sculpture statue installation bronze public art"),
         CatalogEntry("music_spot", "Music spot", "Buskers, open mics, and great acoustics.", "music busker guitar open mic acoustic singer"),
         CatalogEntry("note", "Note", "Anything else worth knowing about this spot.", "note miscellaneous other general"),
+        CatalogEntry("right_now", "Right now", "A short-lived condition at this spot.", "queue waittime momentary rightnow"),
+        CatalogEntry("civic_issue", "Civic issue", "An open civic request published by a city.", "municipal open311 service request civicissue"),
     )
 
     fun entry(slug: String): CatalogEntry? = entries.firstOrNull { it.slug == slug }
