@@ -48,6 +48,12 @@ private val LightColors = lightColorScheme(
     outline = Color(0xFF6E7F78),
     error = Error,
     onError = Color.White,
+    errorContainer = Color(0xFFF9DEDC),
+    onErrorContainer = Color(0xFF410E0B),
+    tertiary = Color(0xFF6B4E16),
+    onTertiary = Color.White,
+    tertiaryContainer = Color(0xFFF3E6D0),
+    onTertiaryContainer = Color(0xFF2B2110),
 )
 
 private val DarkColors = darkColorScheme(
@@ -68,6 +74,12 @@ private val DarkColors = darkColorScheme(
     outline = Color(0xFF7E9188),
     error = Color(0xFFFFB4AB),
     onError = Color(0xFF690005),
+    errorContainer = Color(0xFF93000A),
+    onErrorContainer = Color(0xFFFFDAD6),
+    tertiary = Color(0xFFE7C89A),
+    onTertiary = Color(0xFF3D2E12),
+    tertiaryContainer = Color(0xFF4A3B22),
+    onTertiaryContainer = Color(0xFFF6E7D0),
 )
 
 private val XHereType = Typography(

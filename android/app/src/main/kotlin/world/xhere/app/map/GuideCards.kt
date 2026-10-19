@@ -3,6 +3,7 @@ package world.xhere.app.map
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.LinearProgressIndicator
@@ -81,11 +82,13 @@ internal fun WalkCard(
                         onClick = onStart,
                         shape = MaterialTheme.shapes.large,
                         color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.testTag(TestTags.WALK_START),
+                        modifier = Modifier
+                            .defaultMinSize(minWidth = 48.dp, minHeight = 48.dp)
+                            .testTag(TestTags.WALK_START),
                     ) {
                         Text(
                             text = stringResource(R.string.walk_start),
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 14.dp),
                             color = MaterialTheme.colorScheme.onPrimary,
                             style = MaterialTheme.typography.labelLarge,
                         )

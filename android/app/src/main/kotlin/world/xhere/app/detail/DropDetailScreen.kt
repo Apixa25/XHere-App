@@ -52,6 +52,7 @@ import world.xhere.app.safety.BlockDialog
 import world.xhere.app.safety.ReportForm
 import world.xhere.app.safety.SafetyFooter
 import world.xhere.app.ui.TestTags
+import world.xhere.app.ui.hapticClick
 import world.xhere.shared.geo.Geo
 import world.xhere.shared.model.ConfirmationVerdict
 import world.xhere.shared.model.ReportReason
@@ -138,8 +139,8 @@ fun DropDetailScreen(
             }
             else -> DetailBody(
                 state = state,
-                onStillTrue = { viewModel.confirm(ConfirmationVerdict.STILL_TRUE) },
-                onNotTrue = { viewModel.confirm(ConfirmationVerdict.NOT_TRUE) },
+                onStillTrue = hapticClick { viewModel.confirm(ConfirmationVerdict.STILL_TRUE) },
+                onNotTrue = hapticClick { viewModel.confirm(ConfirmationVerdict.NOT_TRUE) },
                 onShare = { sharer.share(state.shareUrl) },
                 onUseLocation = { permission.launch(ForegroundLocation.permissions) },
             )

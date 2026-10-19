@@ -30,20 +30,22 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.SemanticsPropertyKey
-import androidx.compose.ui.semantics.semantics
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import kotlin.time.Clock
 import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
 import world.xhere.app.R
 import world.xhere.app.location.ForegroundLocation
 import world.xhere.app.ui.TestTags
+import world.xhere.app.ui.hapticClick
 import world.xhere.app.ui.openAppSettings
 import world.xhere.shared.model.Taxonomy
 import world.xhere.shared.walks.WalkGuide
@@ -99,6 +101,8 @@ fun MapScreen(
     }
     val walk = state.walk?.takeIf { walk -> walk.stops.any { it.available } }
     val quest = state.quests.firstOrNull()
+    val loadingLabel = stringResource(R.string.map_loading)
+    val myLocationLabel = stringResource(R.string.map_my_location)
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -137,17 +141,10 @@ fun MapScreen(
                 onLongPressGroup = viewModel::showSubcategories,
                 onSave = viewModel::showSavePreset,
             )
-            state.campaigns.firstOrNull()?.let { campaign ->
-                CampaignCard(
-                    campaign = campaign,
-                    now = Clock.System.now(),
-                    compact = true,
-                    modifier = Modifier.padding(horizontal = 12.dp),
-                )
-            }
-            WeatherAlertBanner(
+            MapStatusStack(
+                campaign = state.campaigns.firstOrNull(),
                 alerts = state.alerts,
-                onDismiss = viewModel::dismissAlert,
+                onDismissAlert = viewModel::dismissAlert,
             )
         }
         Column(
@@ -161,7 +158,11 @@ fun MapScreen(
             }
             walk?.let { card ->
                 val distance = state.myLocation?.let { here -> WalkGuide.distanceToNext(here, card) }
-                WalkCard(walk = card, distanceToNextM = distance, onStart = viewModel::startWalk)
+                WalkCard(
+                    walk = card,
+                    distanceToNextM = distance,
+                    onStart = hapticClick(viewModel::startWalk),
+                )
             }
             state.notice?.let { notice ->
                 Surface(
@@ -201,11 +202,13 @@ fun MapScreen(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Surface(
-                    onClick = onDrop,
+                    onClick = hapticClick(onDrop),
                     shape = CircleShape,
                     color = MaterialTheme.colorScheme.primary,
                     shadowElevation = 4.dp,
-                    modifier = Modifier.testTag(TestTags.MAP_DROP_FAB),
+                    modifier = Modifier
+                        .defaultMinSize(minWidth = 48.dp, minHeight = 48.dp)
+                        .testTag(TestTags.MAP_DROP_FAB),
                 ) {
                     Icon(
                         Icons.Filled.Add,
@@ -216,7 +219,9 @@ fun MapScreen(
                 }
                 if (state.loading) {
                     CircularProgressIndicator(
-                        modifier = Modifier.padding(end = 8.dp),
+                        modifier = Modifier
+                            .padding(end = 8.dp)
+                            .semantics { contentDescription = loadingLabel },
                         strokeWidth = 2.dp,
                     )
                 }
@@ -225,7 +230,9 @@ fun MapScreen(
                         onClick = onOpenAr,
                         shape = MaterialTheme.shapes.large,
                         color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.testTag(TestTags.MAP_AR),
+                        modifier = Modifier
+                            .defaultMinSize(minHeight = 48.dp)
+                            .testTag(TestTags.MAP_AR),
                     ) {
                         Text(
                             text = stringResource(R.string.map_ar),
@@ -239,7 +246,9 @@ fun MapScreen(
                     onClick = viewModel::openNearMe,
                     shape = MaterialTheme.shapes.large,
                     color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.testTag(TestTags.NEAR_ME),
+                    modifier = Modifier
+                        .defaultMinSize(minHeight = 48.dp)
+                        .testTag(TestTags.NEAR_ME),
                 ) {
                     Text(
                         text = stringResource(R.string.map_near_me),
@@ -259,7 +268,10 @@ fun MapScreen(
                     shape = CircleShape,
                     color = MaterialTheme.colorScheme.surface,
                     shadowElevation = 4.dp,
-                    modifier = Modifier.testTag(TestTags.MY_LOCATION),
+                    modifier = Modifier
+                        .defaultMinSize(minWidth = 48.dp, minHeight = 48.dp)
+                        .semantics { contentDescription = myLocationLabel }
+                        .testTag(TestTags.MY_LOCATION),
                 ) {
                     Text(
                         text = "◎",
