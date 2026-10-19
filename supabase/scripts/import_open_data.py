@@ -12,8 +12,11 @@ Sources:
   arcgis_feature  A public ArcGIS FeatureServer. The National Register of
                   Historic Places is the built-in field map (public domain).
   osm_overpass    OpenStreetMap historic / heritage / tourism points (ODbL).
+  open311         Open311 GeoReport v2 requests.json. Only where a region
+                  YAML lists an https endpoint. Request text is not copied.
 
 HMdb and Atlas Obscura are refused. They are link-only.
+A city 311 feed is imported only when that region's YAML lists one.
 
 Examples:
   python3 supabase/scripts/import_open_data.py --self-test
@@ -40,6 +43,7 @@ import xml.etree.ElementTree as ET
 import urllib.error
 import urllib.parse
 import urllib.request
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 USER_AGENT = (
@@ -60,6 +64,7 @@ ALLOWED_CATEGORIES = {
     "public_art",
     "street_art",
     "infrastructure",
+    "civic_issue",
 }
 HISTORY_CATEGORIES = {"historical_fact", "story", "memorial"}
 FORBIDDEN_MARKERS = ("hmdb", "atlasobscura", "atlas-obscura")
@@ -113,6 +118,7 @@ def main(argv: list[str]) -> int:
     if not region_path:
         raise ImportError("pass --region path/to/region.yaml")
     region = load_region(Path(region_path))
+    write_live_seed(region)
     items = fetch_region(region)
     counts = validate_snapshot(items, region)
     out = Path(_option(args, "--out") or default_out(region))
@@ -164,6 +170,7 @@ def load_region(path: Path) -> dict:
     if not region["region"].get("id"):
         raise ImportError("region.id is required")
     assert_sources_allowed(region)
+    assert_live_block(region)
     return region
 
 
@@ -186,6 +193,15 @@ def assert_sources_allowed(region: dict) -> None:
             raise ImportError(
                 f"candidate {candidate.get('id')} needs decision link-only or reject"
             )
+
+
+def assert_live_block(region: dict) -> None:
+    live = region.get("live")
+    if not live:
+        return
+    alerts = live.get("weather_alerts") or {}
+    if alerts.get("provider") not in {"nws", "none"}:
+        raise ImportError("live.weather_alerts.provider must be nws or none")
 
 
 def parse_yaml(text: str):
@@ -342,6 +358,8 @@ def fetch_region(region: dict) -> list[dict]:
             batch = fetch_arcgis(source, bbox, region_id)
         elif adapter == "osm_overpass":
             batch = fetch_osm(source, bbox, region_id, skip_qids=seen_qids)
+        elif adapter == "open311":
+            batch = fetch_open311(source, bbox, region_id)
         else:
             raise ImportError(f"unknown adapter {adapter}. Add it once, then reuse it from region YAML.")
         print(f"{source['id']}: {len(batch)}", file=sys.stderr)
@@ -766,6 +784,8 @@ def item(
     category: str,
     citation: str,
     qid: str | None = None,
+    attributes: dict | None = None,
+    expires_at: str | None = None,
 ) -> dict:
     record = {
         "source_slug": source["id"],
@@ -781,8 +801,10 @@ def item(
         "license": source["license"],
         "attribution": source["attribution"],
         "region_id": region_id,
-        "attributes": attributes_for(category, source_url, citation),
+        "attributes": attributes if attributes is not None else attributes_for(category, source_url, citation),
     }
+    if expires_at:
+        record["expires_at"] = expires_at
     if qid:
         record["qid"] = qid
     return record
@@ -944,6 +966,179 @@ def http_json(url: str, data: bytes | None = None, headers: dict | None = None, 
             last_error = error
             time.sleep(2 * (attempt + 1))
     raise last_error if last_error else ImportError(url)
+
+
+# ---------------------------------------------------------------------------
+# Open311 GeoReport v2. Optional. A region with no endpoint imports nothing.
+# Request descriptions are not copied: they can name people.
+# ---------------------------------------------------------------------------
+
+def fetch_open311(source: dict, bbox: list[float], region_id: str) -> list[dict]:
+    endpoint = str(source.get("endpoint") or "").rstrip("/")
+    if not endpoint.startswith("https://"):
+        raise ImportError(f"source {source.get('id')} open311 endpoint must be https")
+    ttl = _ttl_hours(source)
+    now = datetime.now(timezone.utc)
+    start = (now - timedelta(hours=ttl)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    query = urllib.parse.urlencode({"status": "open", "start_date": start})
+    payload = http_json_value(f"{endpoint}/requests.json?{query}")
+    return map_open311(payload, source, bbox, region_id, now)
+
+
+def map_open311(payload, source: dict, bbox: list[float], region_id: str, now: datetime) -> list[dict]:
+    if isinstance(payload, dict):
+        rows = payload.get("service_requests") or payload.get("requests") or []
+    elif isinstance(payload, list):
+        rows = payload
+    else:
+        raise ImportError("open311 response is not a list")
+    if not isinstance(rows, list):
+        raise ImportError("open311 response is not a list")
+    ttl = _ttl_hours(source)
+    endpoint = str(source.get("endpoint") or "").rstrip("/")
+    category = source.get("category") or "civic_issue"
+    found = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        if str(row.get("status") or "").lower() != "open":
+            continue
+        lat = _float_or_none(row.get("lat"))
+        lng = _float_or_none(row.get("long") if row.get("long") is not None else row.get("lng"))
+        if lat is None or lng is None or not inside_bbox(lat, lng, bbox):
+            continue
+        request_id = str(row.get("service_request_id") or "").strip()
+        if not request_id or len(request_id) > 160:
+            continue
+        requested = _parse_open311_time(row.get("requested_datetime"))
+        expires = (requested or now) + timedelta(hours=ttl)
+        if expires <= now:
+            continue
+        service = str(row.get("service_name") or "Civic request").strip() or "Civic request"
+        title = clip_title(service)
+        quoted = urllib.parse.quote(request_id, safe="")
+        source_url = f"{endpoint}/requests/{quoted}.json"
+        if len(source_url) > 500 or not source_url.startswith("https://"):
+            continue
+        found.append(item(
+            source,
+            region_id,
+            external_id=f"open311:{request_id}",
+            title=title,
+            summary="Open civic request. Status: open.",
+            lat=lat,
+            lng=lng,
+            source_url=source_url,
+            category=category,
+            citation=source.get("publisher") or "Open311",
+            attributes={"service": service[:80], "status": "open"},
+            expires_at=expires.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        ))
+    return found
+
+
+def _ttl_hours(source: dict) -> int:
+    raw = source.get("ttl_hours")
+    try:
+        hours = int(raw) if raw is not None else 168
+    except (TypeError, ValueError):
+        hours = 168
+    return max(1, min(hours, 720))
+
+
+def _float_or_none(value) -> float | None:
+    if value is None or value == "":
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _parse_open311_time(value) -> datetime | None:
+    if not value or not isinstance(value, str):
+        return None
+    text = value.strip().replace("Z", "+00:00")
+    try:
+        parsed = datetime.fromisoformat(text)
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
+
+
+def http_json_value(url: str):
+    request = urllib.request.Request(
+        url,
+        headers={"User-Agent": USER_AGENT, "Accept": "application/json"},
+    )
+    with urllib.request.urlopen(request, timeout=60) as response:
+        return json.loads(response.read().decode("utf-8"))
+
+
+def render_live_sql(region: dict) -> str:
+    meta = region["region"]
+    alerts = (region.get("live") or {}).get("weather_alerts") or {}
+    provider = alerts.get("provider")
+    if provider not in {"nws", "none"}:
+        raise ImportError("live seed needs weather_alerts.provider nws or none")
+    west, south, east, north = meta["bbox"]
+    payload = {
+        "region_id": meta["id"],
+        "name": meta["name"],
+        "country": meta["country"],
+        "west": west,
+        "south": south,
+        "east": east,
+        "north": north,
+        "weather_provider": provider,
+    }
+    body = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
+    return (
+        "-- Generated by supabase/scripts/import_open_data.py. Do not edit by hand.\n"
+        "-- Per-region live config. Safe to re-run.\n"
+        "select private.upsert_region_live(\n$xhere_live$\n"
+        + body
+        + "\n$xhere_live$::jsonb);\n"
+    )
+
+
+def write_live_seed(region: dict) -> Path | None:
+    if not (region.get("live") or {}).get("weather_alerts"):
+        return None
+    path = ROOT / "supabase" / "seed" / "live" / f"{region['region']['id']}.sql"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(render_live_sql(region), encoding="utf-8")
+    return path
+
+
+def expected_live_catalog() -> list:
+    rows = []
+    for path in sorted((ROOT / "supabase" / "regions").rglob("*.yaml")):
+        region = load_region(path)
+        alerts = (region.get("live") or {}).get("weather_alerts")
+        if not alerts:
+            continue
+        meta = region["region"]
+        rows.append({
+            "id": meta["id"],
+            "country": meta["country"],
+            "bbox": meta["bbox"],
+            "weather_provider": alerts["provider"],
+        })
+    return rows
+
+
+def kotlin_live_catalog() -> list:
+    path = ROOT / "shared" / "src" / "commonMain" / "kotlin" / "world" / "xhere" / "shared" / "live" / "LiveRegionCatalog.kt"
+    text = path.read_text(encoding="utf-8")
+    start = text.index("LIVE_REGIONS_JSON_START")
+    end = text.index("LIVE_REGIONS_JSON_END")
+    match = re.search(r"\[.*\]", text[start:end], re.S)
+    if not match:
+        raise ImportError("LIVE_REGIONS_JSON markers have no JSON array")
+    return json.loads(match.group(0))
 
 
 # ---------------------------------------------------------------------------
@@ -1117,6 +1312,83 @@ def self_test() -> None:
         assert "outside" in str(error)
     else:
         raise AssertionError("out-of-bbox item was accepted")
+
+    decisions = {candidate["id"]: candidate["decision"] for candidate in region["candidates"]}
+    assert decisions["jamestown-311"] == "reject"
+    reason = next(candidate["reason"] for candidate in region["candidates"] if candidate["id"] == "jamestown-311")
+    assert "Open311" in reason
+    assert "open311" not in [source["adapter"] for source in region["sources"]]
+    assert region["live"]["weather_alerts"]["provider"] == "nws"
+    seed = ROOT / "supabase" / "seed" / "live" / "us-ny-jamestown.sql"
+    assert seed.read_text(encoding="utf-8") == render_live_sql(region)
+    assert kotlin_live_catalog() == expected_live_catalog()
+
+    now = datetime(2026, 10, 18, 16, 0, tzinfo=timezone.utc)
+    feed = {
+        "id": "open311-example",
+        "adapter": "open311",
+        "publisher": "Example city",
+        "url": "https://example.com/open311",
+        "endpoint": "https://example.com/open311",
+        "license": "CC0 1.0",
+        "attribution": "Example city open data",
+        "category": "civic_issue",
+        "ttl_hours": 168,
+    }
+    mapped = map_open311(
+        [
+            {
+                "service_request_id": "9",
+                "status": "open",
+                "service_name": "Sidewalk",
+                "description": "Alice lives at 1 Main",
+                "lat": 42.09,
+                "long": -79.24,
+                "requested_datetime": "2026-10-18T12:00:00Z",
+            },
+            {
+                "service_request_id": "closed",
+                "status": "closed",
+                "service_name": "Closed",
+                "lat": 42.09,
+                "long": -79.24,
+                "requested_datetime": "2026-10-18T12:00:00Z",
+            },
+            {
+                "service_request_id": "out",
+                "status": "open",
+                "service_name": "Far away",
+                "lat": 0,
+                "long": 0,
+                "requested_datetime": "2026-10-18T12:00:00Z",
+            },
+            {
+                "service_request_id": "old",
+                "status": "open",
+                "service_name": "Old",
+                "lat": 42.09,
+                "long": -79.24,
+                "requested_datetime": "2020-01-01T00:00:00Z",
+            },
+            {
+                "service_request_id": "nocoord",
+                "status": "open",
+                "service_name": "Missing",
+                "requested_datetime": "2026-10-18T12:00:00Z",
+            },
+        ],
+        feed,
+        region["region"]["bbox"],
+        "us-ny-jamestown",
+        now,
+    )
+    assert [row["external_id"] for row in mapped] == ["open311:9"]
+    blob = json.dumps(mapped)
+    assert "Alice" not in blob
+    assert mapped[0]["summary"] == "Open civic request. Status: open."
+    assert mapped[0]["attributes"] == {"service": "Sidewalk", "status": "open"}
+    assert mapped[0]["expires_at"] == "2026-10-25T12:00:00Z"
+    assert mapped[0]["category_slug"] == "civic_issue"
 
 
 def _osm_sample(region: dict) -> dict:

@@ -71,6 +71,13 @@ internal object TestTags {
     const val CELEBRATION_OK = "celebration_ok"
     const val MAP_PAN_AWAY = "map_pan_away"
     const val MAP_ZOOM_OUT = "map_zoom_out"
+    const val WEATHER_BANNER = "weather_banner"
+    const val WEATHER_SEVERITY = "weather_severity"
+    const val WEATHER_EVENT = "weather_event"
+    const val WEATHER_SOURCE = "weather_source"
+    const val WEATHER_DISMISS = "weather_dismiss"
+    const val WEATHER_MORE = "weather_more"
+    const val HERE_CONDITIONS = "here_conditions"
     const val MAP_TAP_SPOT = "map_tap_spot"
     const val MAP_LONG_PRESS = "map_long_press"
     const val HERE_SHEET = "here_sheet"
@@ -118,6 +125,9 @@ internal object TestTags {
     const val DROP_FUZZ = "drop_fuzz"
     const val DROP_ANOTHER = "drop_another"
     const val DROP_PINNED = "drop_pinned"
+    const val DROP_TTL_USUAL = "drop_ttl_usual"
+
+    fun dropTtl(id: String): String = "drop_ttl_$id"
 
     fun suggestion(slug: String): String = "suggestion_$slug"
 

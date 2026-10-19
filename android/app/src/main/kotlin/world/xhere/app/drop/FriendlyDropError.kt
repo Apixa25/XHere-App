@@ -23,6 +23,7 @@ fun friendlyDropError(error: XHereApiException, categorySlug: String?): String =
         "Incident reports are only available where a local police tip line is set up. In an emergency call 911."
     "guidelines_not_acknowledged" -> "Please acknowledge the notice before posting."
     "invalid_attributes" -> "Fill in the required details for this category."
+    "invalid_right_now_ttl" -> "Right now stays up for 1 hour, 4 hours, or 24 hours."
     "photo_required" -> "This category needs a photo."
     "upload_failed", "invalid_image", "unsupported_type" -> "That photo couldn't be saved. Try another one."
     "not_authenticated" -> "Sign in again, then post."

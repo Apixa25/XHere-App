@@ -25,6 +25,9 @@ import world.xhere.app.map.FilterPresetStore
 import world.xhere.app.map.MapCanvas
 import world.xhere.app.map.MapLibreMapCanvas
 import world.xhere.app.map.MapViewModel
+import world.xhere.shared.live.CachingLiveConditions
+import world.xhere.shared.live.LiveConditions
+import world.xhere.shared.live.NwsWeatherAlertProvider
 import world.xhere.app.map.SpotNames
 import world.xhere.app.onboarding.OnboardingStore
 import world.xhere.app.profile.ProfileViewModel
@@ -78,7 +81,13 @@ val appModule = module {
     single<ImageLabeler> { MlKitImageLabeler() }
     viewModel { SessionViewModel(get(), get(), get()) }
     viewModel { DropViewModel(get(), get(), get(), get()) }
-    viewModel { MapViewModel(get(), get(), get(), get()) }
+    single<LiveConditions> {
+        CachingLiveConditions(
+            live = get<world.xhere.shared.data.XHereServices>().live,
+            providers = listOf(NwsWeatherAlertProvider()),
+        )
+    }
+    viewModel { MapViewModel(get(), get(), get(), get(), conditions = get()) }
     viewModel { (shortId: String) -> DropDetailViewModel(shortId, get(), get()) }
     viewModel { AuthViewModel(get(), get(), get(), get(), get()) }
     viewModel { ProfileViewModel(get()) }

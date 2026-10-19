@@ -44,6 +44,13 @@
     <string name="here_close">Close</string>
     <string name="here_public">Public record</string>
     <string name="here_locked">Walk closer to read this.</string>
+    <string name="here_conditions">Right now</string>
+    <string name="here_condition_line">%1$s · until %2$s · %3$s</string>
+    <string name="weather_dismiss">Dismiss</string>
+    <string name="weather_until">Until %1$s</string>
+    <string name="weather_no_expiry">No expiry published</string>
+    <string name="weather_source">%1$s · %2$s</string>
+    <string name="weather_more">+ %1$d more</string>
     <string name="map_near_title">Near me</string>
     <string name="map_near_body">Closest drops first, within 5 km. The same category filter as the map.</string>
     <string name="map_near_empty">Nothing in this filter within 5 km.</string>
@@ -88,6 +95,11 @@
     <string name="drop_suggestions">Looks like</string>
     <string name="drop_more">More categories</string>
     <string name="drop_guidelines">I read the notice</string>
+    <string name="drop_ttl_label">How long</string>
+    <string name="drop_ttl_usual">Usual</string>
+    <string name="drop_ttl_1h">1 hour</string>
+    <string name="drop_ttl_4h">4 hours</string>
+    <string name="drop_ttl_24h">24 hours</string>
     <string name="drop_post">Post</string>
     <string name="drop_another">Post another</string>
 

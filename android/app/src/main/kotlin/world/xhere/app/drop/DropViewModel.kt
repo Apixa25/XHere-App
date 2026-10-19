@@ -21,6 +21,7 @@ import world.xhere.shared.form.AttributeFields
 import world.xhere.shared.form.FieldKind
 import world.xhere.shared.geo.LatLng
 import world.xhere.shared.here.Here
+import world.xhere.shared.live.RightNowDuration
 import world.xhere.shared.model.Category
 import world.xhere.shared.model.ContentFilter
 import world.xhere.shared.model.DropStatus
@@ -124,11 +125,13 @@ class DropViewModel(
         val values = prefill(fields)
         val ready = !category.sensitive && requiredSatisfied(fields, values)
         _state.update {
+            val ttl = if (slug == "right_now") it.ttl ?: RightNowDuration.FOUR_HOURS else it.ttl
             it.copy(
                 phase = if (ready) it.phase else DropPhase.FORM,
                 selectedSlug = slug,
                 fields = fields,
                 values = values,
+                ttl = ttl,
                 sensitive = category.sensitive,
                 postingNotice = category.postingNotice,
                 guidelinesChecked = false,
@@ -165,6 +168,12 @@ class DropViewModel(
         _state.update { it.copy(guidelinesChecked = checked, error = null) }
     }
 
+    /** Null is the category's usual lifetime. Right now always keeps a preset. */
+    fun onDuration(id: String?) {
+        if (_state.value.selectedSlug == "right_now" && id == null) return
+        _state.update { it.copy(ttl = id?.let(RightNowDuration::fromId)) }
+    }
+
     fun post() {
         val snapshot = _state.value
         val slug = snapshot.selectedSlug ?: return
@@ -184,7 +193,7 @@ class DropViewModel(
                         attributes = AttributeFields.toAttributes(snapshot.fields, snapshot.values),
                         tags = emptyList(),
                         revealRadiusM = null,
-                        expiresAt = null,
+                        expiresAt = expiresFor(slug, snapshot.ttl),
                         displayAnonymous = false,
                         media = listOfNotNull(photo),
                         acknowledgeGuidelines = snapshot.guidelinesChecked,
@@ -269,6 +278,11 @@ class DropViewModel(
         return withTimeoutOrNull(250) { location.fixes().first() } ?: JamestownDemo.center
     }
 
+    private fun expiresFor(slug: String, ttl: RightNowDuration?): kotlin.time.Instant? {
+        val preset = if (slug == "right_now") ttl ?: RightNowDuration.FOUR_HOURS else ttl
+        return preset?.let { Clock.System.now() + it.duration }
+    }
+
     private fun titleFor(snapshot: DropUiState): String {
         val typed = snapshot.text.trim()
         if (typed.isNotEmpty()) return typed
@@ -319,6 +333,8 @@ data class DropUiState(
     val suggestions: List<CategorySuggestion> = emptyList(),
     val categories: List<Category> = emptyList(),
     val selectedSlug: String? = null,
+    /** Null means the category's usual lifetime. */
+    val ttl: RightNowDuration? = null,
     val fields: List<world.xhere.shared.form.AttributeField> = emptyList(),
     val values: Map<String, String> = emptyMap(),
     val guidelinesChecked: Boolean = false,

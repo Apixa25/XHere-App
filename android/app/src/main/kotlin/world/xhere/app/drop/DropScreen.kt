@@ -38,6 +38,7 @@ import org.koin.compose.koinInject
 import world.xhere.app.R
 import world.xhere.app.safety.SafetyFooter
 import world.xhere.app.ui.TestTags
+import world.xhere.shared.live.RightNowDuration
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -113,6 +114,22 @@ fun DropScreen(
                     enabled = !state.busy,
                     modifier = Modifier.testTag(TestTags.DROP_TEXT_CONTINUE),
                 ) { Text(stringResource(R.string.drop_continue)) }
+            }
+        }
+        if (state.phase == DropPhase.CHOOSE || state.phase == DropPhase.FORM) {
+            Text(stringResource(R.string.drop_ttl_label), style = MaterialTheme.typography.titleMedium)
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (state.selectedSlug != "right_now") {
+                    FilterChip(
+                        selected = state.ttl == null,
+                        onClick = { viewModel.onDuration(null) },
+                        label = { Text(stringResource(R.string.drop_ttl_usual)) },
+                        modifier = Modifier.testTag(TestTags.DROP_TTL_USUAL),
+                    )
+                }
+                DurationChip(RightNowDuration.ONE_HOUR, R.string.drop_ttl_1h, state.ttl, viewModel::onDuration)
+                DurationChip(RightNowDuration.FOUR_HOURS, R.string.drop_ttl_4h, state.ttl, viewModel::onDuration)
+                DurationChip(RightNowDuration.ONE_DAY, R.string.drop_ttl_24h, state.ttl, viewModel::onDuration)
             }
         }
         if (state.suggestions.isNotEmpty()) {
@@ -221,6 +238,21 @@ fun DropScreen(
             }
         }
     }
+}
+
+@Composable
+private fun DurationChip(
+    preset: RightNowDuration,
+    label: Int,
+    selected: RightNowDuration?,
+    onDuration: (String) -> Unit,
+) {
+    FilterChip(
+        selected = selected == preset,
+        onClick = { onDuration(preset.id) },
+        label = { Text(stringResource(label)) },
+        modifier = Modifier.testTag(TestTags.dropTtl(preset.id)),
+    )
 }
 
 @Composable

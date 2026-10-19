@@ -21,11 +21,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTag
 import androidx.compose.ui.unit.dp
 import world.xhere.app.R
 import world.xhere.app.ui.TestTags
 import world.xhere.shared.here.Here
 import world.xhere.shared.here.isPublicRecord
+import world.xhere.shared.live.NwsAlerts
+import world.xhere.shared.live.WeatherAlert
 import world.xhere.shared.model.DropCard
 import world.xhere.shared.model.Taxonomy
 
@@ -38,6 +42,7 @@ import world.xhere.shared.model.Taxonomy
 internal fun HereCardSheet(
     sheet: HereSheet,
     taxonomy: Taxonomy?,
+    alerts: List<WeatherAlert> = emptyList(),
     onDropHere: () -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -96,6 +101,34 @@ internal fun HereCardSheet(
                     .testTag(TestTags.HERE_DROP),
             ) {
                 Text(stringResource(R.string.drop_fab))
+            }
+            if (alerts.isNotEmpty()) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .semantics(mergeDescendants = true) {
+                            testTag = TestTags.HERE_CONDITIONS
+                        },
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    Text(
+                        text = stringResource(R.string.here_conditions),
+                        style = MaterialTheme.typography.titleMedium,
+                    )
+                    alerts.forEach { alert ->
+                        val until = alert.expiresAt?.let(NwsAlerts::formatExpiry)
+                            ?: stringResource(R.string.weather_no_expiry)
+                        Text(
+                            text = stringResource(
+                                R.string.here_condition_line,
+                                alert.event,
+                                until,
+                                alert.attribution,
+                            ),
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                    }
+                }
             }
             when {
                 sheet.loading -> {

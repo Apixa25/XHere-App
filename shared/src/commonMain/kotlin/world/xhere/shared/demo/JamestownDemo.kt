@@ -319,6 +319,18 @@ object JamestownDemo {
                 reports = 2,
             ),
             category(
+                51, safety, "right_now", "Right now", "⏱️", 1000, 4,
+                attributes = RIGHT_NOW_SCHEMA,
+                postingNotice = "This stays on the map for 1, 4, or 24 hours, then it disappears.",
+                filters = listOf("contact_info"),
+                defaultTtl = 4.hours,
+                maxTtl = 24.hours,
+                confirmations = 2,
+                denials = 2,
+                reports = 2,
+                confirmExtendsTtl = 4.hours,
+            ),
+            category(
                 39, safety, "incident_report", "Incident report", "🚓", 2000, 3,
                 attributes = INCIDENT_SCHEMA,
                 minTier = UserTier.REGULAR,
@@ -340,6 +352,14 @@ object JamestownDemo {
             category(43, works, "infrastructure", "Infrastructure", "🌉", 200, 1),
             category(44, works, "construction", "Construction", "🚧", 200, 2),
             category(45, works, "underground", "Underground", "🚇", 200, 3),
+            category(
+                52, works, "civic_issue", "Civic issue", "🛠️", 500, 4,
+                attributes = CIVIC_SCHEMA,
+                postingNotice = "City feeds are copied as published. They leave the map when they expire.",
+                filters = listOf("contact_info"),
+                defaultTtl = 7.days,
+                maxTtl = 30.days,
+            ),
             category(46, secrets, "hidden_gem", "Hidden gem", "💎", 50, 1, confirmations = 2),
             category(47, secrets, "tip", "Local tip", "💡", 50, 2, confirmations = 2),
             category(48, art, "street_art", "Street art", "🎨", 150, 1),
@@ -467,6 +487,16 @@ object JamestownDemo {
         "occurred_at":{"type":"string","format":"date-time"},
         "severity":{"enum":["low","med","high"]},
         "ongoing":{"type":"boolean"}}}""",
+    )
+    private val RIGHT_NOW_SCHEMA = schema(
+        """{"type":"object","additionalProperties":false,"required":["kind"],"properties":{
+        "kind":{"enum":["closed","flooded","line","truck","hazard","other"]}}}""",
+    )
+    private val CIVIC_SCHEMA = schema(
+        """{"type":"object","additionalProperties":false,"properties":{
+        "service":{"type":"string","maxLength":80},
+        "status":{"enum":["open","closed"]},
+        "agency":{"type":"string","maxLength":120}}}""",
     )
     private val INCIDENT_SCHEMA = schema(
         """{"type":"object","additionalProperties":false,"required":["occurred_at"],"properties":{

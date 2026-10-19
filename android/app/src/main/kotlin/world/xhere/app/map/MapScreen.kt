@@ -126,6 +126,13 @@ fun MapScreen(
             onSave = viewModel::showSavePreset,
             modifier = Modifier.align(Alignment.TopCenter),
         )
+        WeatherAlertBanner(
+            alerts = state.alerts,
+            onDismiss = viewModel::dismissAlert,
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .padding(top = 72.dp),
+        )
         Column(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
@@ -244,6 +251,7 @@ fun MapScreen(
             HereCardSheet(
                 sheet = sheet,
                 taxonomy = state.taxonomy,
+                alerts = state.alerts,
                 onDropHere = { onDropHere(sheet.spot, sheet.place?.name) },
                 onDismiss = viewModel::dismissHere,
             )

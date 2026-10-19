@@ -191,6 +191,14 @@ interface SuggestionRepository {
 }
 
 /**
+ * Which free live-layer config covers a point, if a region file has been loaded.
+ * Null means no row. The client then uses the bundled catalog and coverage boxes.
+ */
+interface LiveRepository {
+    suspend fun regionAt(point: LatLng): world.xhere.shared.live.LiveRegion?
+}
+
+/**
  * Cached OpenStreetMap place names. The database stamps attribution.
  * [claimNominatimSlot] is the project gate: one lookup every 1.1 seconds,
  * and the same account cannot take another for 10 seconds. A cache write is
@@ -245,6 +253,7 @@ interface XHereServices {
     val taxonomy: TaxonomyRepository
     val drops: DropRepository
     val places: PlaceRepository
+    val live: LiveRepository
     val suggestions: SuggestionRepository
     val media: MediaRepository
     val reports: ReportRepository
