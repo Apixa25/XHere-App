@@ -190,6 +190,31 @@ alter table public.drops
 create index drops_place_idx on public.drops (place_id) where place_id is not null;
 create index drops_capsule_due_idx on public.drops (capsule_unlock_at)
   where capsule_mode in ('date', 'both') and capsule_opened_at is null;
+create index drops_capsule_opened_by_idx on public.drops (capsule_opened_by);
+
+-- Every foreign key needs a covering index. Partial unique indexes already
+-- cover place_id on teams, claims, and disputes.
+create index places_created_by_idx on public.places (created_by);
+create index place_teams_plan_idx on public.place_teams (plan_slug);
+create index place_team_members_user_idx on public.place_team_members (user_id);
+create index place_team_members_invited_by_idx on public.place_team_members (invited_by);
+create index place_claims_team_idx on public.place_claims (team_id);
+create index place_claims_claimant_idx on public.place_claims (claimant_id);
+create index place_claims_reviewed_by_idx on public.place_claims (reviewed_by);
+create index place_official_updated_by_idx on public.place_official (updated_by);
+create index claim_disputes_claim_idx on public.claim_disputes (claim_id);
+create index claim_disputes_reporter_idx on public.claim_disputes (reporter_id);
+create index claim_disputes_resolved_by_idx on public.claim_disputes (resolved_by);
+create index owner_replies_place_idx on public.owner_replies (place_id);
+create index owner_replies_author_idx on public.owner_replies (author_id);
+
+alter table public.location_integrity_flags
+  drop constraint location_integrity_flags_action_check;
+alter table public.location_integrity_flags
+  add constraint location_integrity_flags_action_check
+  check (action in (
+    'create_drop', 'confirm_drop', 'reveal', 'walk_check_in', 'claim_place', 'open_capsule'
+  ));
 
 -- Authors can update body. This puts it back to null while the capsule is locked.
 -- The release update sets opened_at and body in the same statement, so the body stays.
