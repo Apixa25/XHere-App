@@ -5,6 +5,7 @@ import kotlin.math.floor
 import world.xhere.shared.geo.LatLng
 import world.xhere.shared.model.DropCard
 import world.xhere.shared.model.DropSource
+import world.xhere.shared.reputation.Reputation
 
 /**
  * Here Card (research recommendation #3, PLAN §2 and §3).
@@ -52,8 +53,10 @@ object Here {
         "${formatDegrees(point.latitude)}, ${formatDegrees(point.longitude)}"
 
     /**
-     * One group per category. The group with the nearest drop comes first.
-     * Rows inside a group stay nearest-first.
+     * One group per category. The group with the nearest trust-adjusted drop
+     * comes first. Rows inside a group use the same order. Distance on the
+     * card stays the real meters. A trusted author a short walk farther can
+     * lead. Public records and anonymous drops pass a null tier.
      */
     fun groups(drops: List<DropCard>): List<HereGroup> = drops
         .groupBy { it.categorySlug }
@@ -61,15 +64,19 @@ object Here {
             HereGroup(
                 categorySlug = slug,
                 groupSlug = rows.first().groupSlug,
-                drops = rows.sortedWith(compareBy({ it.distanceM ?: Double.MAX_VALUE }, { it.title })),
+                drops = rows.sortedWith(compareBy({ adjusted(it) }, { it.title })),
             )
         }
         .sortedWith(
             compareBy(
-                { group -> group.drops.minOf { it.distanceM ?: Double.MAX_VALUE } },
+                { group -> group.drops.minOf { adjusted(it) } },
                 { it.categorySlug },
             ),
         )
+
+    /** Meters used only for order. [DropCard.distanceM] is unchanged. */
+    fun adjusted(card: DropCard): Double =
+        Reputation.adjustedMeters(card.distanceM ?: Double.MAX_VALUE, card.authorTier)
 
     fun pinLabel(name: String?, point: LatLng): String {
         val coords = formatSpot(point)

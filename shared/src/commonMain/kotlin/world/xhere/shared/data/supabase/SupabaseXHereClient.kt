@@ -114,6 +114,7 @@ import world.xhere.shared.model.CategoryGroup
 import world.xhere.shared.model.HiddenDrop
 import world.xhere.shared.model.ModerationQueueItem
 import world.xhere.shared.model.PublicProfile
+import world.xhere.shared.reputation.ReputationStanding
 import world.xhere.shared.model.ConfirmDropResult
 import world.xhere.shared.model.ConfirmationVerdict
 import world.xhere.shared.model.ContentFilter
@@ -237,6 +238,10 @@ class SupabaseXHereClient(
             supabase.postgrest.from("profiles").select {
                 filter { eq("id", userId) }
             }.decodeSingle()
+        }
+
+        override suspend fun reputation(): ReputationStanding = call {
+            decode(supabase.postgrest.rpc("my_reputation").data)
         }
 
         override suspend fun publicProfile(handle: String): PublicProfile? = call {

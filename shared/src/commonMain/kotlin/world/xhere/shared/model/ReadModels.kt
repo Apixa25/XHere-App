@@ -63,6 +63,11 @@ data class DropCard(
     @SerialName("location_trust") val locationTrust: String = "standard",
     /** True when this caller was close enough, but the location check withheld the body. */
     @SerialName("location_withheld") val locationWithheld: Boolean = false,
+    /**
+     * Author tier for the chip and for trust-weighted order.
+     * Null on a public record or an anonymous drop, so those stay on raw distance.
+     */
+    @SerialName("author_tier") val authorTier: UserTier? = null,
 ) {
     val displayLocation: LatLng get() = LatLng(latitude, longitude)
 

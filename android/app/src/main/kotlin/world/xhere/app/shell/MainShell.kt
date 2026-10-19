@@ -30,6 +30,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
@@ -57,6 +60,8 @@ import world.xhere.app.drop.PendingDropSpot
 import world.xhere.app.map.CampaignCard
 import world.xhere.app.map.MapScreen
 import world.xhere.app.profile.ProfileViewModel
+import world.xhere.app.reputation.LevelUpSheet
+import world.xhere.app.reputation.TierChip
 import world.xhere.shared.model.ImpactNotice
 import world.xhere.app.safety.GuidelinesScreen
 import world.xhere.app.safety.ModerationScreen
@@ -212,6 +217,7 @@ private fun ProfilePage(
     viewModel: ProfileViewModel = koinViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    var showLevelUp by rememberSaveable { mutableStateOf(false) }
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner, viewModel) {
         val observer = LifecycleEventObserver { _, event ->
@@ -237,7 +243,17 @@ private fun ProfilePage(
             Text("@${state.handle}", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
         }
         if (state.tierLabel.isNotBlank()) {
-            Text(state.tierLabel, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            TierChip(
+                label = state.tierLabel,
+                onClick = { showLevelUp = true },
+            )
+        }
+        if (state.badges.isNotEmpty()) {
+            Text(
+                text = stringResource(R.string.reputation_badges),
+                style = MaterialTheme.typography.titleLarge,
+                modifier = Modifier.padding(top = 8.dp),
+            )
         }
         state.badges.forEach { badge ->
             val where = badge.regionName?.takeIf { it.isNotBlank() }
@@ -269,6 +285,10 @@ private fun ProfilePage(
             showEmpty = state.impactLoaded && state.notices.isEmpty(),
             onOpen = { notice -> viewModel.openNotice(notice, onOpenDrop) },
         )
+    }
+    val standing = state.standing
+    if (showLevelUp && standing != null) {
+        LevelUpSheet(standing = standing, onDismiss = { showLevelUp = false })
     }
 }
 

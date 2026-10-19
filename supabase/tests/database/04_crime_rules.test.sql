@@ -4,7 +4,7 @@
 -- unconfirmed until 2 nearby confirmations.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(38);
+select plan(42);
 
 -- Incident reports need a tip-line area (20261018001100_tip_lines.sql). These fixtures sit near 40, -100.
 insert into private.tip_lines (region_slug, name, phone, area) values
@@ -227,7 +227,7 @@ select is(
   'two nearby confirmations confirm it'
 );
 
--- Two reports send a live incident report back to review
+-- Trusted authors need two extra reports. An incident report hides at 4, not 2.
 set local request.jwt.claims to '{"sub": "22222222-2222-4222-8222-222222222222", "role": "authenticated"}';
 select lives_ok($$ select public.report('drop', current_setting('t.trusted_report2')::uuid, 'misinformation') $$, 'first report');
 set local request.jwt.claims to '{"sub": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", "role": "authenticated"}';
@@ -235,8 +235,26 @@ select lives_ok($$ select public.report('drop', current_setting('t.trusted_repor
 reset role;
 select is(
   (select status::text from public.drops where id = current_setting('t.trusted_report2')::uuid),
+  'active',
+  'two reports do not hide a Trusted author''s incident report'
+);
+set local role authenticated;
+set local request.jwt.claims to '{"sub": "33333333-3333-4333-8333-333333333333", "role": "authenticated"}';
+select lives_ok($$ select public.report('drop', current_setting('t.trusted_report2')::uuid, 'spam') $$, 'third report');
+reset role;
+select is(
+  (select status::text from public.drops where id = current_setting('t.trusted_report2')::uuid),
+  'active',
+  'three reports still leave a Trusted incident report up'
+);
+set local role authenticated;
+set local request.jwt.claims to '{"sub": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb", "role": "authenticated"}';
+select lives_ok($$ select public.report('drop', current_setting('t.trusted_report2')::uuid, 'other') $$, 'fourth report');
+reset role;
+select is(
+  (select status::text from public.drops where id = current_setting('t.trusted_report2')::uuid),
   'pending_review',
-  'incident reports are hidden after 2 reports (other categories need 3)'
+  'a Trusted incident report is hidden after 4 reports (2 plus 2)'
 );
 select ok(
   exists (select 1 from public.moderation_actions a

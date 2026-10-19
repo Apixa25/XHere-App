@@ -2,7 +2,7 @@
 -- deletion, and the scheduled purge and tier jobs.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(41);
+select plan(45);
 
 insert into auth.users (id, email) values
   ('11111111-1111-4111-8111-111111111111', 'alice@example.test'),
@@ -61,7 +61,25 @@ set local role authenticated;
 set local request.jwt.claims to '{"sub": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", "role": "authenticated"}';
 select lives_ok(format($$ select public.report('drop', %L, 'spam') $$, current_setting('t.hist')), 'third reporter');
 reset role;
-select is((select status::text from public.drops where id = current_setting('t.hist')::uuid), 'pending_review', 'three distinct reporters send it to review');
+select is(
+  (select status::text from public.drops where id = current_setting('t.hist')::uuid),
+  'active',
+  'three reports do not hide a Trusted author''s history drop'
+);
+set local role authenticated;
+set local request.jwt.claims to '{"sub": "cccccccc-cccc-4ccc-8ccc-cccccccccccc", "role": "authenticated"}';
+select lives_ok(format($$ select public.report('drop', %L, 'spam') $$, current_setting('t.hist')), 'fourth reporter');
+reset role;
+select is(
+  (select status::text from public.drops where id = current_setting('t.hist')::uuid),
+  'active',
+  'four reports still leave a Trusted history drop up'
+);
+set local role authenticated;
+set local request.jwt.claims to '{"sub": "dddddddd-dddd-4ddd-8ddd-dddddddddddd", "role": "authenticated"}';
+select lives_ok(format($$ select public.report('drop', %L, 'spam') $$, current_setting('t.hist')), 'fifth reporter');
+reset role;
+select is((select status::text from public.drops where id = current_setting('t.hist')::uuid), 'pending_review', 'five reports hold a Trusted history drop (3 plus 2)');
 select is(
   (select count(*)::integer from public.moderation_actions where target_id = current_setting('t.hist')::uuid and action = 'auto_hide'),
   1,
@@ -181,7 +199,7 @@ select ok(
   'the purge removes the auth user and their drops'
 );
 
--- Nightly tier recompute: New -> Regular after 7 days and 3 drops, unless they have a strike
+-- Nightly tier recompute follows points. Local starts at 24. A removal in the last 90 days blocks a promotion.
 update public.tier_limits set drops_per_hour = 10 where tier = 'new';
 set local role authenticated;
 set local request.jwt.claims to '{"sub": "cccccccc-cccc-4ccc-8ccc-cccccccccccc", "role": "authenticated"}';
@@ -202,7 +220,7 @@ $$;
 set local request.jwt.claims to '{"sub": "44444444-4444-4444-8444-444444444444", "role": "authenticated"}';
 select lives_ok(format($$ select public.moderate_drop(%L, 'remove', 'Spam') $$, current_setting('t.hal_bad')), 'one of hal''s drops is removed');
 reset role;
-update public.profiles set created_at = now() - interval '8 days'
+update public.profiles set created_at = now() - interval '8 days', points = 24
   where id in ('cccccccc-cccc-4ccc-8ccc-cccccccccccc', 'dddddddd-dddd-4ddd-8ddd-dddddddddddd');
 select ok(private.recompute_tiers() >= 1, 'the tier job promotes eligible users');
 select is(

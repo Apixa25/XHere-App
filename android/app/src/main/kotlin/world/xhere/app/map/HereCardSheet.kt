@@ -25,7 +25,9 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTag
 import androidx.compose.ui.unit.dp
 import world.xhere.app.R
+import world.xhere.app.reputation.TierChip
 import world.xhere.app.ui.TestTags
+import world.xhere.shared.reputation.Reputation
 import world.xhere.shared.here.Here
 import world.xhere.shared.here.isPublicRecord
 import world.xhere.shared.live.NwsAlerts
@@ -204,6 +206,9 @@ private fun HereRow(card: DropCard) {
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         if (!card.isPublicRecord()) {
+            card.authorTier?.let { tier ->
+                TierChip(label = Reputation.label(tier), tag = TestTags.TIER_CHIP + "_" + card.shortId)
+            }
             card.authorBadges.firstOrNull()?.let { badge ->
                 Text(
                     text = "${badge.icon} ${badge.name}",
