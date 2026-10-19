@@ -248,7 +248,7 @@ class DropViewModel(
             filters = taxonomy.filters
             runCatching { services.profiles.currentProfile().tier }.onSuccess { tier = it }
             val here = here()
-            lastHere = here
+            lastHere = here.point
             val query = SuggestionQuery(
                 text = _state.value.text,
                 labels = labels,
