@@ -822,7 +822,9 @@ begin
 
   if p_drop.author_id is not null
      and not (p_drop.display_anonymous and v_category.allow_anonymous_display) then
-    v_card.author_handle := (select p.handle from public.profiles p where p.id = p_drop.author_id);
+    select p.handle, nullif(btrim(p.display_name), '')
+      into v_card.author_handle, v_card.author_display_name
+    from public.profiles p where p.id = p_drop.author_id;
     v_card.author_badges := private.author_badges_json(p_drop.author_id, p_drop.geog);
     v_card.author_tier := (select p.tier from public.profiles p where p.id = p_drop.author_id);
   end if;
@@ -959,6 +961,9 @@ begin
     v_card.attributes := null;
     v_card.tags := null;
     v_card.media := null;
+  end if;
+  if v_uid is not null and v_card.revealed and v_card.media is not null then
+    perform private.grant_drop_media(v_drop.id, v_uid);
   end if;
   return v_card;
 end;
