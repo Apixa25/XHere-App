@@ -1439,6 +1439,7 @@ begin
            extensions.st_distance(d.display_geog, v_point) as dist,
            case
              when d.source <> 'user' or d.author_id is null then 0
+             when not d.counts_for_credit then 0
              when d.display_anonymous and c.allow_anonymous_display then 0
              else private.tier_rank_bonus_m(p.tier)
            end as bonus,
@@ -1511,6 +1512,7 @@ begin
         - coalesce((
             select case
               when d.source <> 'user' or d.author_id is null then 0
+              when not d.counts_for_credit then 0
               when d.display_anonymous and c.allow_anonymous_display then 0
               else private.tier_rank_bonus_m(p.tier)
             end
