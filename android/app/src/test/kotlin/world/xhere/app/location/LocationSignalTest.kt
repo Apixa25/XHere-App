@@ -3,10 +3,10 @@ package world.xhere.app.location
 import android.location.Location
 import android.provider.Settings
 import androidx.test.core.app.ApplicationProvider
-import kotlin.test.assertEquals
-import kotlin.test.assertFalse
-import kotlin.test.assertTrue
 import kotlin.time.Instant
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -32,7 +32,7 @@ class LocationSignalTest {
             isMock = true
         }
         val reading = location.toReading(developerOptions = true, now = now)
-        assertEquals(40.0, reading.point.latitude)
+        assertEquals(40.0, reading.point.latitude, 0.0001)
         assertTrue(reading.signal.mock)
         assertTrue(reading.signal.developerOptions)
         assertTrue(reading.signal.deviceFix)
