@@ -21,6 +21,7 @@ import world.xhere.shared.data.ReportRepository
 import world.xhere.shared.data.SessionInfo
 import world.xhere.shared.data.SuggestionRepository
 import world.xhere.shared.data.TaxonomyRepository
+import world.xhere.shared.data.WalkRepository
 import world.xhere.shared.data.XHereApiException
 import world.xhere.shared.data.PlaceRepository
 import world.xhere.shared.data.XHereServices
@@ -29,6 +30,7 @@ import world.xhere.shared.geo.Geo
 import world.xhere.shared.geo.LatLng
 import world.xhere.shared.here.Here
 import world.xhere.shared.json.ExportJson
+import world.xhere.shared.model.CheckInResult
 import world.xhere.shared.model.AppRole
 import world.xhere.shared.model.BlockedUser
 import world.xhere.shared.model.ConfirmDropResult
@@ -51,12 +53,16 @@ import world.xhere.shared.media.ExifStrip
 import world.xhere.shared.model.MediaKind
 import world.xhere.shared.model.MediaUpload
 import world.xhere.shared.model.ModerateDropAction
+import world.xhere.shared.model.QuestProgress
+import world.xhere.shared.model.QuestStepProgress
 import world.xhere.shared.model.Profile
 import world.xhere.shared.model.Report
 import world.xhere.shared.model.ReportReason
 import world.xhere.shared.model.ReportStatus
 import world.xhere.shared.model.ReportTarget
 import world.xhere.shared.model.Taxonomy
+import world.xhere.shared.model.Walk
+import world.xhere.shared.model.WalkStop
 import world.xhere.shared.rules.CategoryRules
 import world.xhere.shared.rules.CreateDropRequest
 import world.xhere.shared.rules.PostingContext
@@ -65,6 +71,7 @@ import world.xhere.shared.safety.SafetyFlow
 import world.xhere.shared.suggest.CategoryRanker
 import world.xhere.shared.suggest.CategorySuggestion
 import world.xhere.shared.suggest.SuggestionQuery
+import world.xhere.shared.walks.StarterQuest
 import kotlin.math.floor
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
@@ -105,6 +112,7 @@ class InMemoryXHere(
     override val blocks: BlockRepository = BlockRepo()
     override val hidden: HiddenDropRepository = HiddenRepo()
     override val impact: ImpactRepository = ImpactRepo()
+    override val walks: WalkRepository = WalkRepo()
     override val account: AccountRepository = AccountRepo()
     override val moderation: ModerationRepository = ModerationRepo()
 
@@ -687,6 +695,154 @@ class InMemoryXHere(
         }
     }
 
+    private inner class WalkRepo : WalkRepository {
+        override suspend fun walksFor(point: LatLng): List<Walk> {
+            if (!Geo.isValid(point)) throw invalidLocation(point)
+            val uid = viewer?.id
+            return store.walks
+                .filter { walk -> walk.contains(point) || store.walkOpen(uid, walk.id) }
+                .sortedWith(compareByDescending<StoredWalk> { store.walkOpen(uid, it.id) }.thenBy { it.slug })
+                .map { snapshot(it, point) }
+                .filter { it.stops.isNotEmpty() }
+        }
+
+        override suspend fun start(walkId: Uuid): Walk {
+            val uid = requireViewer().id
+            val walk = store.walks.firstOrNull { it.id == walkId && it.active }
+                ?: throw XHereApiException("walk_not_found", sqlState = XHereApiException.SQL_NOT_FOUND)
+            store.walkStarts.add(uid to walkId)
+            return snapshot(walk, null)
+        }
+
+        override suspend fun checkIn(point: LatLng, walkId: Uuid?): CheckInResult {
+            val uid = requireViewer().id
+            if (!Geo.isValid(point)) throw invalidLocation(point)
+            val added = recordVisits(uid, point)
+            var walk: Walk? = null
+            var just = false
+            if (walkId != null) {
+                val stored = store.walks.firstOrNull { it.id == walkId && it.active }
+                    ?: throw XHereApiException("walk_not_found", sqlState = XHereApiException.SQL_NOT_FOUND)
+                if (store.walkStarts.contains(uid to walkId)) {
+                    val before = snapshot(stored, point).completed
+                    markStops(uid, stored, point)
+                    walk = snapshot(stored, point)
+                    just = !before && walk.completed
+                } else {
+                    walk = snapshot(stored, point)
+                }
+            }
+            return CheckInResult(
+                visitCount = store.visits.count { it.first == uid },
+                visitsAdded = added,
+                quests = questSnapshots(uid),
+                walk = walk,
+                walkJustCompleted = just,
+            )
+        }
+
+        override suspend fun quests(): List<QuestProgress> = questSnapshots(requireViewer().id)
+
+        override suspend fun dismissQuest(questId: Uuid) {
+            val uid = requireViewer().id
+            if (store.quests.none { it.id == questId && it.active }) {
+                throw XHereApiException("quest_not_found", sqlState = XHereApiException.SQL_NOT_FOUND)
+            }
+            store.questDismissals.add(uid to questId)
+        }
+
+        private fun recordVisits(uid: Uuid, point: LatLng): Int {
+            var added = 0
+            for (drop in store.visible(uid, clock())) {
+                if (drop.authorId == uid) continue
+                val distance = Geo.distanceMeters(point, drop.displayLocation)
+                if (!Geo.isRevealed(distance, drop.revealRadiusM)) continue
+                if (store.visits.add(uid to drop.id)) added += 1
+            }
+            return added
+        }
+
+        private fun markStops(uid: Uuid, walk: StoredWalk, point: LatLng) {
+            for (stop in walk.stops) {
+                val drop = stop.dropId?.let { store.drops[it] }
+                if (drop != null && !store.canView(drop, uid, clock())) continue
+                val location = drop?.displayLocation ?: LatLng(stop.latitude, stop.longitude)
+                val radius = drop?.revealRadiusM ?: stop.revealRadiusM
+                val distance = Geo.distanceMeters(point, location)
+                if (Geo.isRevealed(distance, radius)) {
+                    store.walkReaches.add(Triple(uid, walk.id, stop.position))
+                }
+            }
+        }
+
+        private fun snapshot(walk: StoredWalk, point: LatLng?): Walk {
+            val uid = viewer?.id
+            val reached = store.walkReaches
+                .filter { it.first == uid && it.second == walk.id }
+                .map { it.third }
+                .toSet()
+            val stops = walk.stops.mapNotNull { stop ->
+                val drop = stop.dropId?.let { store.drops[it] }
+                if (drop != null && !store.canView(drop, uid, clock())) return@mapNotNull null
+                val location = drop?.displayLocation ?: LatLng(stop.latitude, stop.longitude)
+                val radius = drop?.revealRadiusM ?: stop.revealRadiusM
+                WalkStop(
+                    position = stop.position,
+                    title = drop?.title ?: stop.title,
+                    summary = drop?.body ?: stop.summary,
+                    lat = location.latitude,
+                    lng = location.longitude,
+                    revealRadiusM = radius,
+                    shortId = drop?.shortId,
+                    dropId = drop?.id ?: stop.dropId,
+                    reached = stop.position in reached,
+                    distanceM = point?.let { Geo.distanceMeters(it, location) },
+                    available = true,
+                )
+            }
+            val started = uid != null && store.walkStarts.contains(uid to walk.id)
+            return Walk(
+                id = walk.id,
+                regionId = walk.regionId,
+                slug = walk.slug,
+                title = walk.title,
+                description = walk.description,
+                distanceM = walk.distanceM,
+                durationMin = walk.durationMin,
+                started = started,
+                completed = started && stops.isNotEmpty() && stops.all { it.reached },
+                stops = stops,
+            )
+        }
+
+        private fun questSnapshots(uid: Uuid): List<QuestProgress> =
+            store.quests.filter { it.active && (uid to it.id) !in store.questDismissals }.map { quest ->
+                val steps = quest.steps.map { step ->
+                    QuestStepProgress(
+                        position = step.position,
+                        kind = step.kind,
+                        title = step.title,
+                        targetCount = step.targetCount,
+                        progress = store.questProgress(uid, step.kind),
+                    )
+                }
+                QuestProgress(
+                    id = quest.id,
+                    slug = quest.slug,
+                    title = quest.title,
+                    description = quest.description,
+                    completed = steps.isNotEmpty() && steps.all { it.progress >= it.targetCount },
+                    steps = steps,
+                )
+            }
+
+        private fun invalidLocation(point: LatLng) = XHereApiException(
+            "invalid_location",
+            sqlState = XHereApiException.SQL_VALIDATION,
+            detail = "lat=${point.latitude} lng=${point.longitude}",
+        )
+    }
+
     private inner class AccountRepo : AccountRepository {
         override suspend fun deleteMyAccount() {
             val profile = requireViewer()
@@ -930,6 +1086,15 @@ class MemoryStore(
     val suggestionLogs: MutableList<StoredSuggestion> = mutableListOf()
     /** (drop, viewer) pairs that already counted toward "seen by". */
     val views: MutableSet<Pair<Uuid, Uuid>> = linkedSetOf()
+    val walks: MutableList<StoredWalk> = mutableListOf()
+    /** Caller has started this walk. */
+    val walkStarts: MutableSet<Pair<Uuid, Uuid>> = linkedSetOf()
+    /** user, walk, stop position. No coordinates. */
+    val walkReaches: MutableSet<Triple<Uuid, Uuid, Int>> = linkedSetOf()
+    /** user, drop. One visit, for the starter quest. */
+    val visits: MutableSet<Pair<Uuid, Uuid>> = linkedSetOf()
+    val quests: MutableList<StoredQuest> = mutableListOf()
+    val questDismissals: MutableSet<Pair<Uuid, Uuid>> = linkedSetOf()
     val impactNotices: MutableList<ImpactNotice> = mutableListOf()
     val mediaBytes: MutableMap<String, ByteArray> = linkedMapOf()
     /** OpenStreetMap place names, keyed by the 0.001° cell. Not a user trail. */
@@ -938,6 +1103,36 @@ class MemoryStore(
     var nominatimOpen: Boolean = true
     var pendingEmail: String? = null
     private var shortIds: Int = 0
+
+    init {
+        quests += StoredQuest(
+            id = StarterQuest.ID,
+            slug = StarterQuest.SLUG,
+            title = StarterQuest.TITLE,
+            description = StarterQuest.DESCRIPTION,
+            steps = listOf(
+                StoredQuestStep(1, "visit_places", 3, "Visit 3 places"),
+                StoredQuestStep(2, "confirm_drop", 1, "Confirm 1 drop"),
+                StoredQuestStep(3, "create_drop", 1, "Make your first drop"),
+            ),
+        )
+    }
+
+    fun walkOpen(userId: Uuid?, walkId: Uuid): Boolean {
+        if (userId == null || (userId to walkId) !in walkStarts) return false
+        val walk = walks.firstOrNull { it.id == walkId } ?: return false
+        val reached = walkReaches.filter { it.first == userId && it.second == walkId }.map { it.third }.toSet()
+        return walk.stops.any { it.position !in reached }
+    }
+
+    fun questProgress(userId: Uuid, kind: String): Int = when (kind) {
+        "visit_places" -> visits.count { it.first == userId }
+        "confirm_drop" -> confirmations.values.count { it.userId == userId && it.verdict == ConfirmationVerdict.STILL_TRUE }
+        "create_drop" -> drops.values.count {
+            it.authorId == userId && it.source == world.xhere.shared.model.DropSource.USER && it.status != DropStatus.REMOVED
+        }
+        else -> 0
+    }
 
     fun verdict(dropId: Uuid, viewerId: Uuid?): ConfirmationVerdict? =
         viewerId?.let { confirmations[dropId to it]?.verdict }
@@ -1010,6 +1205,51 @@ data class StoredPlaceLabel(
     val name: String,
     val address: String?,
     val fetchedAt: Instant,
+)
+
+class StoredWalk(
+    val id: Uuid,
+    val regionId: String,
+    val slug: String,
+    val title: String,
+    val description: String,
+    val distanceM: Int,
+    val durationMin: Int,
+    val minLng: Double,
+    val minLat: Double,
+    val maxLng: Double,
+    val maxLat: Double,
+    val stops: List<StoredWalkStop>,
+    val active: Boolean = true,
+) {
+    fun contains(point: LatLng): Boolean =
+        point.longitude in minLng..maxLng && point.latitude in minLat..maxLat
+}
+
+class StoredWalkStop(
+    val position: Int,
+    val title: String,
+    val summary: String?,
+    val latitude: Double,
+    val longitude: Double,
+    val revealRadiusM: Int,
+    val dropId: Uuid? = null,
+)
+
+class StoredQuest(
+    val id: Uuid,
+    val slug: String,
+    val title: String,
+    val description: String,
+    val steps: List<StoredQuestStep>,
+    val active: Boolean = true,
+)
+
+class StoredQuestStep(
+    val position: Int,
+    val kind: String,
+    val targetCount: Int,
+    val title: String,
 )
 
 class StoredSuggestion(

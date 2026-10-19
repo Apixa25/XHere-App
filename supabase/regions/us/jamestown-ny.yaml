@@ -61,6 +61,47 @@ sources:
     heritage: true
     tourism: [artwork, attraction, museum, viewpoint, gallery]
 
+# A walk is ordered stops that name places already in the snapshot.
+# source + external_id match seed/open-data/jamestown-ny.json.
+# The applied row is seed/walks/jamestown-ny.sql. Another region adds its own.
+walks:
+  - slug: downtown-history
+    title: Downtown Jamestown history walk
+    description: "A walk past public records in downtown Jamestown, New York. Each stop is a place already on the map. National Register stops are a building or a district in Jamestown, New York. Wikipedia stops are articles about the named place. The distance is the straight line between those published points."
+    stops:
+      - position: 1
+        source: nrhp
+        external_id: "nrhp:03000045"
+        title: Erie Railroad Station
+      - position: 2
+        source: wikipedia-geo
+        external_id: "enwiki:58462917"
+        title: National Comedy Center
+      - position: 3
+        source: wikipedia-geo
+        external_id: "enwiki:27747830"
+        title: The Wellman Building
+      - position: 4
+        source: wikipedia-geo
+        external_id: "enwiki:10959769"
+        title: Lucille Ball Desi Arnaz Museum & Center for Comedy
+      - position: 5
+        source: wikipedia-geo
+        external_id: "enwiki:64045862"
+        title: Reg Lenna Center for the Arts
+      - position: 6
+        source: nrhp
+        external_id: "nrhp:14000935"
+        title: Jamestown Downtown Historic District
+      - position: 7
+        source: wikipedia-geo
+        external_id: "enwiki:47375466"
+        title: Robert H. Jackson Center
+      - position: 8
+        source: nrhp
+        external_id: "nrhp:100011762"
+        title: First Presbyterian Church, Jamestown, New York
+
 candidates:
   - id: hmdb
     decision: link-only

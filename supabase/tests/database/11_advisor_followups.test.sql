@@ -23,8 +23,8 @@ select is(
    from pg_catalog.pg_policies
    where schemaname = 'public'
      and (coalesce(qual, '') like '%auth.uid()%' or coalesce(with_check, '') like '%auth.uid()%')),
-  18,
-  'the eighteen auth.uid() policies are still there'
+  22,
+  'the auth.uid() policies are still there, including walk and quest progress'
 );
 
 -- Lint 0006. SELECT is only the public-read policy. Writes are split.

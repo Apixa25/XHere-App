@@ -93,6 +93,32 @@ internal data class CreateDropParams(
 )
 
 @Serializable
+internal data class WalksForPointParams(
+    @SerialName("p_lat") val lat: Double,
+    @SerialName("p_lng") val lng: Double,
+)
+
+@Serializable
+internal data class StartWalkParams(
+    @Serializable(with = UuidSerializer::class)
+    @SerialName("p_walk_id") val walkId: Uuid,
+)
+
+@Serializable
+internal data class CheckInParams(
+    @SerialName("p_lat") val lat: Double,
+    @SerialName("p_lng") val lng: Double,
+    @Serializable(with = UuidSerializer::class)
+    @SerialName("p_walk_id") val walkId: Uuid? = null,
+)
+
+@Serializable
+internal data class DismissQuestParams(
+    @Serializable(with = UuidSerializer::class)
+    @SerialName("p_quest_id") val questId: Uuid,
+)
+
+@Serializable
 internal data class ImpactNoticesParams(
     @SerialName("p_limit") val limit: Int = 30,
 )

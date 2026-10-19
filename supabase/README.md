@@ -4,7 +4,7 @@ Postgres / PostGIS schema, Row-Level Security, RPCs, Edge Functions, and pgTAP t
 
 - `config.toml`: local Supabase CLI config (`supabase init`, `project_id = "xhere"`). It holds no secrets; provider credentials are `env(...)` references.
 - `migrations/`: SQL migrations (**M1**), applied in filename order.
-- `seed.sql`: **local demo data** (4 demo users and 15 drops in Jamestown, New York). `supabase db reset` loads it, then `seed/open-data/jamestown-ny.sql` (the public-record places). `supabase db push` does not load either file. The demo seed was applied by hand to the pilot project; see [Demo seed on the pilot](#demo-seed-on-the-pilot). The open-data file is applied with the steps in [Open-data seed (hosted)](#open-data-seed-hosted).
+- `seed.sql`: **local demo data** (4 demo users and 15 drops in Jamestown, New York). `supabase db reset` loads it, then `seed/open-data/jamestown-ny.sql` (the public-record places), then `seed/walks/jamestown-ny.sql` (the pilot walk). `supabase db push` does not load those files. The demo seed was applied by hand to the pilot project; see [Demo seed on the pilot](#demo-seed-on-the-pilot). The open-data file and the walk are applied with the steps in [Open-data seed (hosted)](#open-data-seed-hosted).
 - `tests/database/`: pgTAP tests (**M1**), run by `supabase test db`.
 - `functions/`: Supabase Edge Functions. **M5** adds `suggest-category` and `strip-exif`. Later milestones add open-data proxies.
 
@@ -99,6 +99,7 @@ Postgres listens on `127.0.0.1:54322` (user `postgres`, password `postgres`, loc
 | `20261018001600_open_data.sql` | Open-data base layer: `open_data_sources`, `open_data_items`, provenance on `drop_card`, `drops_in_view.source`, `private.upsert_open_data_items`, and a trigger that rejects confirmations of `open_data` drops |
 | `20261018194500_impact_feedback.sql` | Unique signed-in views (`drop_views`, `drops.view_count`), `view_count` and `my_verdict` on `drop_card`, and a batched in-app inbox (`impact_notices`, at most one row per drop per UTC day). Anonymous opens are not counted. A public record can be viewed. Confirming one is rejected, so it is not a contribution |
 | `20261018210000_open_data_card.sql` | Puts provenance back on `to_drop_card` after impact feedback replaced that function. Public records stay revealed. `is_mine` is false when the author is null |
+| `20261018235000_walks_and_quests.sql` | Walks (ordered stops that name existing places) and a global starter quest. Progress is `walk_progress`, `walk_stop_reaches`, `place_visits`, and `quest_dismissals`. Clients read through `walks_for_point`, `start_walk`, `check_in`, `my_quests`, and `dismiss_quest`. No location trail |
 | `20261019041827_here_card.sql` | Here Card: `here_card` (tap distance, viewer reveal, no view counted), `place_labels` cache, and the Nominatim slot. Not tied to a city |
 
 The taxonomy lives in a migration rather than `seed.sql` so a hosted project gets it too. Categories are rows, so adding one doesn't need a new migration type. Every change bumps `categories.version`, and each drop records the version it was validated against (`category_versions`).
@@ -155,11 +156,11 @@ Moderator/admin is `profiles.role`. There's no UI to grant it yet. On a hosted p
 
 ## Tests
 
-`tests/database/*.test.sql` (pgTAP): schema/privileges, RLS, nearby/reveal/blur/expiry/blocks, `create_drop` validation, crime (`incident_report`) rules, confirmations, moderation/cron, and the M5 suggestion log, hash embeddings, and fixture score (`07_suggestions.test.sql`, 19 assertions), the M6 reveal fixes, and M7 safety/compliance (`09_safety_compliance.test.sql`: Safety pre-moderation, auto-hide threshold, blocks both ways, hide-for-me, moderator-only access, append-only audit log, export) plus `10_tip_lines.test.sql` (incident reports only inside a tip-line area), `11_advisor_followups.test.sql` (the `(select auth.uid())` policies, one SELECT policy on the reference tables, the foreign-key indexes, tip-line RLS, and the same read/write access as before), `12_open_data.test.sql` (upsert/dedupe, attribution on a far-away card, confirmations rejected, the import is not the caller's drop or export), and `13_here_card.test.sql` (32 assertions: reveal stays on the viewer point, public records stay readable, the place cache, and the Nominatim slot). Each file runs in a transaction and rolls back. `supabase/functions/**/*_test.ts` is the Deno suite for the two Edge Functions, including the same 32-phrase fixture set and a 401 for a signed-out suggestion.
+`tests/database/*.test.sql` (pgTAP): schema/privileges, RLS, nearby/reveal/blur/expiry/blocks, `create_drop` validation, crime (`incident_report`) rules, confirmations, moderation/cron, and the M5 suggestion log, hash embeddings, and fixture score (`07_suggestions.test.sql`, 19 assertions), the M6 reveal fixes, and M7 safety/compliance (`09_safety_compliance.test.sql`: Safety pre-moderation, auto-hide threshold, blocks both ways, hide-for-me, moderator-only access, append-only audit log, export) plus `10_tip_lines.test.sql` (incident reports only inside a tip-line area), `11_advisor_followups.test.sql` (the `(select auth.uid())` policies, one SELECT policy on the reference tables, the foreign-key indexes, tip-line RLS, and the same read/write access as before), `12_open_data.test.sql` (upsert/dedupe, attribution on a far-away card, confirmations rejected, the import is not the caller's drop or export), `13_here_card.test.sql` (32 assertions: reveal stays on the viewer point, public records stay readable, the place cache, and the Nominatim slot), and `13_walks_quests.test.sql` (the global starter quest, the Jamestown walk's public-record stops, reveal-radius check-off, and progress that a client cannot insert). Each file runs in a transaction and rolls back. `supabase/functions/**/*_test.ts` is the Deno suite for the two Edge Functions, including the same 32-phrase fixture set and a 401 for a signed-out suggestion.
 
 ## Open-data seed (hosted)
 
-Migration `20261018001600_open_data.sql` is applied with the other migrations. The Jamestown snapshot is not. `supabase db push` does not run `seed.sql` or `supabase/seed/open-data/jamestown-ny.sql`.
+Migration `20261018001600_open_data.sql` is applied with the other migrations. The Jamestown snapshot is not. `supabase db push` does not run `seed.sql`, `supabase/seed/open-data/jamestown-ny.sql`, or `supabase/seed/walks/jamestown-ny.sql`.
 
 Do this from a machine that already has the Supabase CLI linked, after the history repair in [Before `supabase db push`](#before-supabase-db-push) if that repair has not been done yet. This does not change Auth, SMTP, or any other hosted setting.
 
@@ -168,10 +169,11 @@ supabase link --project-ref jpeuldzegtbqfezijhuy
 supabase db push
 ```
 
-`db push` applies every migration that is not on the project yet. That includes `20261018001600_open_data.sql`, `20261018194500_impact_feedback.sql` when impact feedback is not already there, `20261018210000_open_data_card.sql` (provenance on the card after impact feedback), and `20261019041827_here_card.sql` (the Here Card read, the place-name cache, and the Nominatim slot). Do not paste that file into the SQL editor. It does not change Auth. Then load the snapshot. `DATABASE_URL` is the Postgres connection string from the dashboard (Project Settings → Database). It is not in git. The SQL runs as the database owner and calls `private.upsert_open_data_items`. The anon key cannot run it.
+`db push` applies every migration that is not on the project yet. That includes `20261018001600_open_data.sql`, `20261018194500_impact_feedback.sql` when impact feedback is not already there, `20261018210000_open_data_card.sql` (provenance on the card after impact feedback), `20261018235000_walks_and_quests.sql` (the walk and quest tables, the RPCs, and the global starter quest), and `20261019041827_here_card.sql` (the Here Card read, the place-name cache, and the Nominatim slot). Do not paste those files into the SQL editor. They do not change Auth. Then load the snapshot, and after that the walk. The walk seed only names places, so the open-data file has to be applied first. `DATABASE_URL` is the Postgres connection string from the dashboard (Project Settings → Database). It is not in git. The SQL runs as the database owner and calls `private.upsert_open_data_items`. The anon key cannot run it.
 
 ```bash
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/seed/open-data/jamestown-ny.sql
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/seed/walks/jamestown-ny.sql
 ```
 
 Refresh later (no paid service, no new migration unless the schema changes):

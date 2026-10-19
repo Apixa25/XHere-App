@@ -14,12 +14,15 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -28,6 +31,9 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.SemanticsPropertyKey
 import androidx.compose.ui.semantics.semantics
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -38,6 +44,7 @@ import world.xhere.app.R
 import world.xhere.app.location.ForegroundLocation
 import world.xhere.app.ui.TestTags
 import world.xhere.shared.model.Taxonomy
+import world.xhere.shared.walks.WalkGuide
 
 /** Carries the last `drops_in_view` arguments so a UI test can read them without a second filter. */
 internal val ViewportQuerySemantics = SemanticsPropertyKey<String>("ViewportQuery")
@@ -60,6 +67,9 @@ internal val SubcategorySemantics = SemanticsPropertyKey<String>("Subcategory")
 /** Here Card contents once the place read has finished. `loading` until then. */
 internal val HereSemantics = SemanticsPropertyKey<String>("HereCard")
 
+/** Straight-line walk route, and the guide to the next stop when one is underway. */
+internal val WalkRouteSemantics = SemanticsPropertyKey<String>("WalkRoute")
+
 @Composable
 fun MapScreen(
     onDrop: () -> Unit = {},
@@ -70,9 +80,19 @@ fun MapScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    DisposableEffect(lifecycle, viewModel) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) viewModel.refreshGuide()
+        }
+        lifecycle.addObserver(observer)
+        onDispose { lifecycle.removeObserver(observer) }
+    }
     val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { granted ->
         if (granted.values.any { it }) viewModel.goToMyLocation()
     }
+    val walk = state.walk?.takeIf { walk -> walk.stops.any { it.available } }
+    val quest = state.quests.firstOrNull()
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -83,6 +103,7 @@ fun MapScreen(
                 set(FilterSemantics, state.selection.slugs?.joinToString(",") ?: "*")
                 set(NearCountSemantics, state.nearMe?.size?.toString() ?: "none")
                 set(SubcategorySemantics, state.subcategoryGroup ?: "none")
+                set(WalkRouteSemantics, describeRoute(state))
             },
     ) {
         canvas.Content(
@@ -111,6 +132,13 @@ fun MapScreen(
                 .padding(horizontal = 12.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
+            quest?.let { card ->
+                QuestCard(quest = card, onDismiss = { viewModel.dismissQuest(card.id) })
+            }
+            walk?.let { card ->
+                val distance = state.myLocation?.let { here -> WalkGuide.distanceToNext(here, card) }
+                WalkCard(walk = card, distanceToNextM = distance, onStart = viewModel::startWalk)
+            }
             state.notice?.let { notice ->
                 Surface(
                     shape = MaterialTheme.shapes.medium,
@@ -227,6 +255,39 @@ fun MapScreen(
                 modifier = Modifier.align(Alignment.Center),
             )
         }
+        if (state.celebrateWalk || state.celebrateQuest) {
+            val title = when {
+                state.celebrateWalk && walk != null -> stringResource(R.string.walk_celebrate_title, walk.title)
+                quest != null -> stringResource(R.string.quest_celebrate_title, quest.title)
+                else -> stringResource(R.string.walk_celebrate_body)
+            }
+            val body = when {
+                state.celebrateWalk && state.celebrateQuest ->
+                    stringResource(R.string.walk_celebrate_body) + " " + stringResource(R.string.quest_celebrate_body)
+                state.celebrateWalk -> stringResource(R.string.walk_celebrate_body)
+                else -> stringResource(R.string.quest_celebrate_body)
+            }
+            AlertDialog(
+                onDismissRequest = viewModel::dismissCelebration,
+                confirmButton = {
+                    TextButton(
+                        onClick = viewModel::dismissCelebration,
+                        modifier = Modifier.testTag(TestTags.CELEBRATION_OK),
+                    ) {
+                        Text(stringResource(R.string.guide_celebration_ok))
+                    }
+                },
+                title = {
+                    Text(
+                        text = title,
+                        modifier = Modifier.testTag(
+                            if (state.celebrateWalk) TestTags.WALK_CELEBRATION else TestTags.QUEST_CELEBRATION,
+                        ),
+                    )
+                },
+                text = { Text(body) },
+            )
+        }
     }
 }
 
@@ -237,6 +298,7 @@ private fun noticeText(notice: MapNotice): String = when (notice) {
     MapNotice.NEAR_FAILED -> stringResource(R.string.map_near_failed)
     MapNotice.LOCATION_OFF -> stringResource(R.string.map_location_off)
     MapNotice.PRESET_NAME -> stringResource(R.string.map_preset_rejected)
+    MapNotice.WALK_FAILED -> stringResource(R.string.walk_failed)
 }
 
 @Composable

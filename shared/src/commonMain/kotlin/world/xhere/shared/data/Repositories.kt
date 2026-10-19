@@ -24,7 +24,10 @@ import world.xhere.shared.model.Profile
 import world.xhere.shared.model.ReportReason
 import world.xhere.shared.model.ReportStatus
 import world.xhere.shared.model.ReportTarget
+import world.xhere.shared.model.CheckInResult
+import world.xhere.shared.model.QuestProgress
 import world.xhere.shared.model.Taxonomy
+import world.xhere.shared.model.Walk
 import world.xhere.shared.model.MediaUpload
 import world.xhere.shared.rules.CreateDropRequest
 import world.xhere.shared.suggest.CategorySuggestion
@@ -199,6 +202,33 @@ interface PlaceRepository {
     suspend fun remember(location: LatLng, name: String, address: String?)
 }
 
+/**
+ * Walks and the starter quest.
+ *
+ * A walk is an ordered route of places that already exist, configured per region.
+ * The starter quest (visit places, confirm a drop, make a drop) is the same in every region.
+ * [checkIn] uses the caller's point the way a reveal does, then the server drops the point.
+ */
+interface WalkRepository {
+    /** Active walks whose region box contains [point], plus one the caller has started. */
+    suspend fun walksFor(point: LatLng): List<Walk>
+
+    /** Marks the walk as started. Calling it again keeps the same progress. */
+    suspend fun start(walkId: Uuid): Walk
+
+    /**
+     * Records places inside the reveal radius, and checks off stops on [walkId]
+     * when that walk is already started. Does not keep [point].
+     */
+    suspend fun checkIn(point: LatLng, walkId: Uuid? = null): CheckInResult
+
+    /** Quests the caller has not dismissed. The global starter quest is in this list. */
+    suspend fun quests(): List<QuestProgress>
+
+    /** Hides a quest for this caller. Progress stays on the server. */
+    suspend fun dismissQuest(questId: Uuid)
+}
+
 /** Photo bytes go to Storage only after Exif/XMP is removed. */
 interface MediaRepository {
     suspend fun uploadPhoto(bytes: ByteArray, mimeType: String): MediaUpload
@@ -217,6 +247,7 @@ interface XHereServices {
     val blocks: BlockRepository
     val hidden: HiddenDropRepository
     val impact: ImpactRepository
+    val walks: WalkRepository
     val account: AccountRepository
     val moderation: ModerationRepository
 }

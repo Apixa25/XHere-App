@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlin.uuid.Uuid
 import world.xhere.app.location.DeviceLocation
 import world.xhere.shared.data.XHereServices
 import world.xhere.shared.demo.JamestownDemo
@@ -21,6 +22,8 @@ import world.xhere.shared.geo.LatLng
 import world.xhere.shared.here.Here
 import world.xhere.shared.model.MapFeature
 import world.xhere.shared.model.PlaceLabel
+import world.xhere.shared.model.QuestProgress
+import world.xhere.shared.model.Walk
 
 /** Reverse-geocodes one spot. Production uses the Nominatim cache. Tests return a fixed name. */
 fun interface SpotNames {
@@ -46,7 +49,11 @@ class MapViewModel(
     private val locationKick = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     private var cameraJob: Job? = null
     private var hereJob: Job? = null
+    private var checkJob: Job? = null
     private var lastFrame: CameraFrame? = null
+    private var lastCheckIn: LatLng? = null
+    /** True after the first quest list arrives, so a later completion can celebrate. */
+    private var questsLoaded = false
 
     init {
         viewModelScope.launch {
@@ -58,6 +65,7 @@ class MapViewModel(
                 )
             }
         }
+        viewModelScope.launch { reloadQuests(celebrate = false) }
         viewModelScope.launch {
             locationKick.onStart { emit(Unit) }.collectLatest {
                 if (!location.hasPermission()) return@collectLatest
@@ -225,6 +233,44 @@ class MapViewModel(
         _state.update { it.copy(notice = null) }
     }
 
+    /** Reloads quest progress when the map comes back, so a confirm or a new drop shows up. */
+    fun refreshGuide() {
+        viewModelScope.launch { reloadQuests(celebrate = true) }
+    }
+
+    fun startWalk() {
+        val id = _state.value.walk?.id ?: return
+        viewModelScope.launch {
+            try {
+                val started = services.walks.start(id)
+                _state.update { it.copy(walk = mergeWalk(it.walk, started) ?: started, notice = null) }
+                val here = _state.value.myLocation
+                if (here != null) checkIn(here, force = true)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                _state.update { it.copy(notice = MapNotice.WALK_FAILED) }
+            }
+        }
+    }
+
+    fun dismissQuest(id: Uuid) {
+        viewModelScope.launch {
+            try {
+                services.walks.dismissQuest(id)
+                _state.update { it.copy(quests = it.quests.filter { quest -> quest.id != id }) }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                // The card stays so they can try again.
+            }
+        }
+    }
+
+    fun dismissCelebration() {
+        _state.update { it.copy(celebrateWalk = false, celebrateQuest = false) }
+    }
+
     private fun openHere(spot: LatLng) {
         if (!Geo.isValid(spot)) return
         hereJob?.cancel()
@@ -284,8 +330,16 @@ class MapViewModel(
         }
         try {
             val features = services.drops.dropsInView(frame.box, slugs, frame.zoom)
+            val walks = runCatching { services.walks.walksFor(centerOf(frame)) }.getOrDefault(emptyList())
             if (lastFrame != frame) return
-            _state.update { it.copy(loading = false, features = features, notice = null) }
+            _state.update {
+                it.copy(
+                    loading = false,
+                    features = features,
+                    walk = mergeWalk(it.walk, walks.firstOrNull()),
+                    notice = null,
+                )
+            }
         } catch (e: CancellationException) {
             throw e
         } catch (_: Exception) {
@@ -302,6 +356,60 @@ class MapViewModel(
             val zoom = if (snapshot.followNextFix) 16.0 else snapshot.camera.zoom
             moveCamera(fix, zoom, fromUser = false)
         }
+        checkIn(fix, force = false)
+    }
+
+    /**
+     * A check-in uses the point the way a reveal does, then the server drops it.
+     * Repeats closer than [CHECK_MOVE_M] are skipped unless the walk just started.
+     */
+    private fun checkIn(fix: LatLng, force: Boolean) {
+        if (!force) {
+            val last = lastCheckIn
+            if (last != null && Geo.distanceMeters(last, fix) < CHECK_MOVE_M) return
+        }
+        checkJob?.cancel()
+        checkJob = viewModelScope.launch {
+            val walk = _state.value.walk
+            val walkId = walk?.takeIf { it.started && !it.completed }?.id
+            try {
+                val result = services.walks.checkIn(fix, walkId)
+                lastCheckIn = fix
+                val previous = _state.value.quests
+                val flipped = questJustCompleted(previous, result.quests)
+                questsLoaded = true
+                _state.update {
+                    it.copy(
+                        quests = result.quests,
+                        walk = result.walk?.let { fresh -> mergeWalk(it.walk, fresh) } ?: it.walk,
+                        celebrateWalk = it.celebrateWalk || result.walkJustCompleted,
+                        celebrateQuest = it.celebrateQuest || flipped,
+                    )
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                // A missed check-in retries after the next 20 m.
+            }
+        }
+    }
+
+    private suspend fun reloadQuests(celebrate: Boolean) {
+        try {
+            val next = services.walks.quests()
+            val flipped = celebrate && questJustCompleted(_state.value.quests, next)
+            questsLoaded = true
+            _state.update { it.copy(quests = next, celebrateQuest = it.celebrateQuest || flipped) }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            // The card keeps the last progress it showed.
+        }
+    }
+
+    private fun questJustCompleted(previous: List<QuestProgress>, next: List<QuestProgress>): Boolean {
+        if (!questsLoaded) return false
+        return next.any { quest -> quest.completed && previous.none { it.id == quest.id && it.completed } }
     }
 
     private fun moveCamera(point: LatLng, zoom: Double, fromUser: Boolean) {
@@ -315,5 +423,27 @@ class MapViewModel(
 
     private companion object {
         const val NEAR_RADIUS_M = 5_000
+        const val CHECK_MOVE_M = 20.0
+
+        fun centerOf(frame: CameraFrame): LatLng = LatLng(
+            latitude = (frame.box.minLatitude + frame.box.maxLatitude) / 2.0,
+            longitude = (frame.box.minLongitude + frame.box.maxLongitude) / 2.0,
+        )
+
+        /**
+         * Keeps a check-off that already happened when a viewport refresh is still
+         * in flight. A finished walk stays on the card while the camera is in its region.
+         */
+        fun mergeWalk(current: Walk?, incoming: Walk?): Walk? {
+            if (incoming == null) {
+                return if (current != null && current.started && !current.completed) current else null
+            }
+            if (current == null || current.id != incoming.id) return incoming
+            val currentReached = current.stops.count { it.reached }
+            val incomingReached = incoming.stops.count { it.reached }
+            if (currentReached > incomingReached) return current
+            if (currentReached == incomingReached && current.completed && !incoming.completed) return current
+            return incoming
+        }
     }
 }

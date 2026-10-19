@@ -10,7 +10,10 @@ import world.xhere.shared.model.DropCard
 import world.xhere.shared.model.DropSource
 import world.xhere.shared.model.MapFeature
 import world.xhere.shared.model.PlaceLabel
+import world.xhere.shared.model.QuestProgress
 import world.xhere.shared.model.Taxonomy
+import world.xhere.shared.model.Walk
+import world.xhere.shared.walks.WalkGuide
 
 /** What the map last asked the repository for. Tests read this to prove the RPC arguments. */
 data class ViewportQuery(
@@ -124,6 +127,7 @@ enum class MapNotice {
     NEAR_FAILED,
     LOCATION_OFF,
     PRESET_NAME,
+    WALK_FAILED,
 }
 
 data class MapUiState(
@@ -145,7 +149,36 @@ data class MapUiState(
     val savingPreset: Boolean = false,
     val notice: MapNotice? = null,
     val lastQuery: ViewportQuery? = null,
+    /** The walk for this map, when the camera is inside its region or it is already underway. */
+    val walk: Walk? = null,
+    /** Quests the signed-in person has not dismissed. Empty until `my_quests` returns. */
+    val quests: List<QuestProgress> = emptyList(),
+    val celebrateWalk: Boolean = false,
+    val celebrateQuest: Boolean = false,
 )
+
+/** Straight line through the stops, plus a guide from the person to the next one. */
+internal fun describeRoute(state: MapUiState): String {
+    val walk = state.walk ?: return "none"
+    val points = WalkGuide.route(walk)
+    if (points.size < 2) return "none"
+    val route = points.joinToString(";") { "${it.longitude},${it.latitude}" }
+    val here = state.myLocation
+    val next = WalkGuide.nextStop(walk)
+    if (walk.started && !walk.completed && here != null && next != null) {
+        return "route:$route|guide:${here.longitude},${here.latitude};${next.lng},${next.lat}"
+    }
+    return "route:$route"
+}
+
+/** The guide line drawn while a walk is underway. Empty once the walk is finished. */
+internal fun guideLine(state: MapUiState): List<LatLng> {
+    val walk = state.walk ?: return emptyList()
+    val here = state.myLocation ?: return emptyList()
+    if (!walk.started || walk.completed) return emptyList()
+    val next = WalkGuide.nextStop(walk) ?: return emptyList()
+    return listOf(here, next.location)
+}
 
 internal fun markerLabel(feature: MapFeature, taxonomy: Taxonomy?): String {
     if (!feature.isCluster) {
