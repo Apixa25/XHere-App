@@ -15,6 +15,10 @@ The base URL after deploy is `https://{project_ref}.supabase.co/functions/v1/pub
 - GET /v1/drops/{id}
   - `{id}` is a 12-character short id (`[A-Za-z0-9_-]{12}`) or a uuid.
   - 200 `{ item }` or 404 `{ error: "not_found" }`. Missing, pending, expired, removed, demo, and reduced-trust are all 404.
+- GET /v1/things/{id}
+  - `{id}` is a 12-hex voice id or a uuid. Not an iBeacon or Eddystone key.
+  - 200 `{ item }` with title, story, https media, seen_count, attribution, and license `xhere-thing`.
+  - No owner. No list of listeners. Unlisted and removed are 404.
 - GET /v1/categories
   - Active groups and categories: slug, label, description, sensitive, default_reveal_m, location_precision_m. No embeddings and no filter patterns.
 - GET /v1/walks?lat={lat}&lon={lon}
@@ -43,7 +47,7 @@ This is a read-only public API. Every item includes attribution and license. ODb
 
 30 requests per 60 seconds per client address. `429` with `Retry-After` and `error: "rate_limited"`. The address is hashed before it is counted. It is not stored.
 
-`Cache-Control: public, max-age=60` on `/v1/here` and `/v1/walks`, `max-age=120` on a drop, `max-age=3600` on categories. `Referrer-Policy: no-referrer`.
+`Cache-Control: public, max-age=60` on `/v1/here` and `/v1/walks`, `max-age=120` on a drop or a thing, `max-age=3600` on categories. `Referrer-Policy: no-referrer`.
 
 ## Docs
 

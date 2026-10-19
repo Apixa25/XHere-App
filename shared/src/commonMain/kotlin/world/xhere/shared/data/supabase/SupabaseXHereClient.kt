@@ -64,6 +64,7 @@ import world.xhere.shared.data.SessionInfo
 import world.xhere.shared.data.SuggestionRepository
 import world.xhere.shared.data.TaxonomyCache
 import world.xhere.shared.data.TaxonomyRepository
+import world.xhere.shared.data.ThingRepository
 import world.xhere.shared.data.WalkRepository
 import world.xhere.shared.data.XHereApiException
 import world.xhere.shared.data.XHereServices
@@ -92,7 +93,15 @@ import world.xhere.shared.data.remote.DropTeaserParams
 import world.xhere.shared.data.remote.DropsInViewParams
 import world.xhere.shared.data.remote.DropsNearbyParams
 import world.xhere.shared.data.remote.ModerateDropParams
+import world.xhere.shared.data.remote.BindBeaconParams
+import world.xhere.shared.data.remote.CreateThingParams
 import world.xhere.shared.data.remote.ReportParams
+import world.xhere.shared.data.remote.ReportThingParams
+import world.xhere.shared.data.remote.ThingIdParams
+import world.xhere.shared.data.remote.ThingKeysParams
+import world.xhere.shared.data.remote.UpdateThingParams
+import world.xhere.shared.data.remote.toThingParams
+import world.xhere.shared.data.remote.toUpdateParams
 import world.xhere.shared.data.remote.ResolveReportParams
 import world.xhere.shared.data.remote.SuspendUserParams
 import world.xhere.shared.data.remote.UserIdParams
@@ -133,7 +142,13 @@ import world.xhere.shared.model.MediaKind
 import world.xhere.shared.model.MediaUpload
 import world.xhere.shared.model.ModerateDropAction
 import world.xhere.shared.model.Profile
+import world.xhere.shared.model.CreateThingRequest
+import world.xhere.shared.model.HearResult
+import world.xhere.shared.model.OwnedThings
 import world.xhere.shared.model.ReportReason
+import world.xhere.shared.model.ResolvedThing
+import world.xhere.shared.model.ThingCard
+import world.xhere.shared.model.ThingList
 import world.xhere.shared.model.ReportStatus
 import world.xhere.shared.model.ReportTarget
 import world.xhere.shared.model.QuestProgress
@@ -187,6 +202,7 @@ class SupabaseXHereClient(
     override val walks: WalkRepository = WalkRepo()
     override val campaigns: CampaignRepository = CampaignRepo()
     override val history: HistoryRepository = HistoryRepo()
+    override val things: ThingRepository = ThingRepo()
     override val account: AccountRepository = AccountRepo()
     override val moderation: ModerationRepository = ModerationRepo()
 
@@ -661,6 +677,46 @@ class SupabaseXHereClient(
             } catch (e: Throwable) {
                 throw XHereApiException("upload_failed", detail = "photo upload failed", cause = e)
             }
+        }
+    }
+
+    private inner class ThingRepo : ThingRepository {
+        override suspend fun create(request: CreateThingRequest): ThingCard = call {
+            supabase.postgrest.rpc("create_thing", request.toThingParams().rpcJson()).decodeAs<ThingCard>()
+        }
+
+        override suspend fun update(thingId: Uuid, request: CreateThingRequest): ThingCard = call {
+            supabase.postgrest.rpc("update_thing", request.toUpdateParams(thingId).rpcJson()).decodeAs<ThingCard>()
+        }
+
+        override suspend fun mine(): List<ThingCard> = call {
+            supabase.postgrest.rpc("my_things").decodeAs<OwnedThings>().things
+        }
+
+        override suspend fun resolve(keys: List<String>): List<ResolvedThing> = call {
+            supabase.postgrest.rpc("resolve_things", ThingKeysParams(keys).rpcJson()).decodeAs<ThingList>().things
+        }
+
+        override suspend fun hear(keys: List<String>): Int = call {
+            supabase.postgrest.rpc("hear_things", ThingKeysParams(keys).rpcJson()).decodeAs<HearResult>().counted
+        }
+
+        override suspend fun bindBeacon(thingId: Uuid, key: String) = call {
+            supabase.postgrest.rpc("bind_ble_tag", BindBeaconParams(thingId, key).rpcJson())
+            Unit
+        }
+
+        override suspend fun bindNfc(thingId: Uuid): String = call {
+            val body = supabase.postgrest.rpc("bind_nfc", ThingIdParams(thingId).rpcJson()).data
+            XHereJson.decodeFromString(serializer<String>(), body)
+        }
+
+        override suspend fun report(thingId: Uuid, reason: ReportReason, details: String?): Uuid = call {
+            val body = supabase.postgrest.rpc(
+                "report_thing",
+                ReportThingParams(thingId, reason, details).rpcJson(),
+            ).data
+            Uuid.parse(XHereJson.decodeFromString(serializer<String>(), body))
         }
     }
 

@@ -161,6 +161,47 @@ paths:
           $ref: "#/components/responses/NotFound"
         "429":
           $ref: "#/components/responses/RateLimited"
+  /v1/things/{id}:
+    get:
+      tags: [read]
+      operationId: thingById
+      summary: The public story of one object
+      description: >
+        id is the 12-hex voice id or the thing uuid. Advertising keys are not
+        accepted. Unlisted and removed objects are not_found. The body does not
+        say who heard the object.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: The public story.
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/CacheControl"
+            X-RateLimit-Limit:
+              $ref: "#/components/headers/RateLimit"
+            X-RateLimit-Remaining:
+              $ref: "#/components/headers/RateRemaining"
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/TermsEnvelope"
+                  - type: object
+                    required: [item]
+                    properties:
+                      item:
+                        $ref: "#/components/schemas/Thing"
+        "400":
+          $ref: "#/components/responses/BadQuery"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
   /v1/categories:
     get:
       tags: [read]
@@ -489,3 +530,58 @@ components:
                     properties:
                       position:
                         type: integer
+    Thing:
+      type: object
+      required: [voice_id, title, story, media, seen_count, url, attribution, license, share_alike]
+      properties:
+        id:
+          type: string
+          format: uuid
+        voice_id:
+          type: string
+          pattern: "^[0-9a-f]{12}$"
+        title:
+          type: string
+        story:
+          type: string
+        category_slug:
+          type: string
+          nullable: true
+        category_label:
+          type: string
+          nullable: true
+        place_name:
+          type: string
+          nullable: true
+        lat:
+          type: number
+          nullable: true
+        lon:
+          type: number
+          nullable: true
+        media:
+          type: array
+          maxItems: 8
+          items:
+            type: object
+            required: [url]
+            properties:
+              url:
+                type: string
+                format: uri
+              alt:
+                type: string
+                nullable: true
+        seen_count:
+          type: integer
+          description: Aggregate hearings. Not a list of people.
+        url:
+          type: string
+        attribution:
+          type: string
+        license:
+          type: string
+          const: xhere-thing
+        share_alike:
+          type: boolean
+          const: false

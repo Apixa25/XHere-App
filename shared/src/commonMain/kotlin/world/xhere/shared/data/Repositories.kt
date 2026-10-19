@@ -33,7 +33,10 @@ import world.xhere.shared.model.CheckInResult
 import world.xhere.shared.model.QuestProgress
 import world.xhere.shared.model.Taxonomy
 import world.xhere.shared.model.Walk
+import world.xhere.shared.model.CreateThingRequest
 import world.xhere.shared.model.MediaUpload
+import world.xhere.shared.model.ResolvedThing
+import world.xhere.shared.model.ThingCard
 import world.xhere.shared.rules.CreateDropRequest
 import world.xhere.shared.suggest.CategorySuggestion
 import world.xhere.shared.suggest.SuggestionQuery
@@ -299,6 +302,31 @@ interface HistoryRepository {
     suspend fun clippingsAt(point: LatLng, terms: List<String>): List<world.xhere.shared.history.Clipping>
 }
 
+/**
+ * Objects that speak over BLE. [resolve] and [hear] are rate-limited.
+ * [hear] adds to an aggregate count and does not record the caller with the tag.
+ */
+interface ThingRepository {
+    suspend fun create(request: CreateThingRequest): ThingCard
+
+    suspend fun update(thingId: Uuid, request: CreateThingRequest): ThingCard
+
+    suspend fun mine(): List<ThingCard>
+
+    /** Public things only. Unknown keys are omitted. */
+    suspend fun resolve(keys: List<String>): List<ResolvedThing>
+
+    /** How many public things had their aggregate count increased. */
+    suspend fun hear(keys: List<String>): Int
+
+    suspend fun bindBeacon(thingId: Uuid, key: String)
+
+    /** The https URL written on the optional sticker. */
+    suspend fun bindNfc(thingId: Uuid): String
+
+    suspend fun report(thingId: Uuid, reason: ReportReason, details: String? = null): Uuid
+}
+
 /** The surface the app injects. Both the Supabase client and the in-memory fake implement it. */
 interface XHereServices {
     val auth: AuthRepository
@@ -316,6 +344,7 @@ interface XHereServices {
     val walks: WalkRepository
     val campaigns: CampaignRepository
     val history: HistoryRepository
+    val things: ThingRepository
     val account: AccountRepository
     val moderation: ModerationRepository
 }

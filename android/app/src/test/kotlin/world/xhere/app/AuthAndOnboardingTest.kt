@@ -112,7 +112,7 @@ class AuthAndOnboardingTest {
         rule.onNodeWithText("Background location is never requested.", substring = true)
             .performScrollTo()
             .assertIsDisplayed()
-        rule.onNodeWithTag(TestTags.SETTINGS_DELETE).performClick()
+        rule.onNodeWithTag(TestTags.SETTINGS_DELETE).performScrollTo().performClick()
         rule.onNodeWithTag(TestTags.SETTINGS_DELETE_CONFIRM).performClick()
         rule.waitForTag(TestTags.SIGNED_OUT_NOTICE)
         rule.onNodeWithText("scheduled for deletion", substring = true).assertIsDisplayed()

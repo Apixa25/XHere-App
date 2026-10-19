@@ -6,6 +6,7 @@ import {
   hashClient,
   matchRoute,
   presentItem,
+  presentThing,
   QueryError,
   readPoint,
   readRadius,
@@ -28,6 +29,8 @@ Deno.test("paths survive the functions prefix and a trailing slash", () => {
     id: "11111111-1111-4111-8111-111111111111",
   });
   assertEquals(matchRoute("/v1/secret"), { kind: "unknown" });
+  assertEquals(matchRoute("/v1/things/0123456789ab"), { kind: "thing", id: "0123456789ab" });
+  assertEquals(matchRoute("/v1/things/not-a-voice"), { kind: "bad_thing" });
 });
 
 Deno.test("share-alike follows ODbL and CC BY-SA only", () => {
@@ -317,6 +320,41 @@ function get(path: string): Request {
   return new Request(`http://local${path}`);
 }
 
+Deno.test("a thing lookup keeps the story and drops the owner", async () => {
+  const response = await handlePublicApi(get("/v1/things/0123456789ab"), deps({
+    thing: async () => ({
+      id: "11111111-1111-4111-8111-111111111111",
+      voice_id: "0123456789ab",
+      title: "Bench",
+      story: "It remembers the mural.",
+      owner_id: "22222222-2222-4222-8222-222222222222",
+      email: "owner@example.test",
+      media: [{ url: "https://cdn.example/a.jpg", alt: "bench", storage_path: "secret/path" }],
+      seen_count: 3,
+      url: "https://xhere.world/t/0123456789ab",
+    }),
+  }));
+  assertEquals(response.status, 200);
+  const body = await response.json();
+  const item = body.item;
+  assertEquals(item.title, "Bench");
+  assertEquals(item.story, "It remembers the mural.");
+  assertEquals(item.license, "xhere-thing");
+  assertEquals(item.media, [{ url: "https://cdn.example/a.jpg", alt: "bench" }]);
+  assertEquals(item.owner_id, undefined);
+  const text = JSON.stringify(body);
+  assertEquals(text.includes("22222222-2222-4222-8222-222222222222"), false);
+  assertEquals(text.includes("storage_path"), false);
+  assertEquals(text.includes("owner@example.test"), false);
+  assertEquals(presentThing({ owner_id: "22222222-2222-4222-8222-222222222222" }), null);
+});
+
+Deno.test("a missing thing is not found", async () => {
+  const response = await handlePublicApi(get("/v1/things/0123456789ab"), deps({ thing: async () => null }));
+  assertEquals(response.status, 404);
+  assertEquals((await response.json()).error, "not_found");
+});
+
 function deps(over: Partial<PublicApiDeps> = {}): PublicApiDeps {
   return {
     take: async () => ALLOWED,
@@ -324,6 +362,7 @@ function deps(over: Partial<PublicApiDeps> = {}): PublicApiDeps {
     drop: async () => null,
     categories: async () => ({ groups: [], categories: [] }),
     walks: async () => ({ walks: [] }),
+    thing: async () => null,
     ...over,
   };
 }

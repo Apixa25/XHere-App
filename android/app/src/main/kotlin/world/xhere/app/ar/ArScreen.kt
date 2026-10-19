@@ -51,6 +51,8 @@ import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
 import world.xhere.app.R
 import world.xhere.app.map.MarkerIcons
+import world.xhere.app.voice.VoiceSession
+import world.xhere.app.voice.VoiceSurface
 import world.xhere.app.ui.TestTags
 import world.xhere.app.ui.hapticClick
 import world.xhere.app.ui.openAppSettings
@@ -68,6 +70,7 @@ fun ArScreen(
     onDropHere: (LatLng, String, LocationSignal) -> Unit,
     viewModel: ArViewModel = koinViewModel(),
     runtime: ArRuntime = koinInject(),
+    voice: VoiceSession = koinInject(),
 ) {
     val ui by viewModel.ui.collectAsStateWithLifecycle()
     var accepted by rememberSaveable { mutableStateOf(false) }
@@ -95,6 +98,11 @@ fun ArScreen(
     DisposableEffect(Unit) {
         onDispose { viewModel.end() }
     }
+    DisposableEffect(accepted, voice) {
+        if (accepted) voice.watch(VoiceSurface.AR)
+        onDispose { voice.unwatch(VoiceSurface.AR) }
+    }
+    val heard by voice.nearby.collectAsStateWithLifecycle()
     Box(modifier = Modifier.fillMaxSize().testTag(TestTags.AR_SCREEN)) {
         if (granted) {
             runtime.Camera()
@@ -119,6 +127,27 @@ fun ArScreen(
                 }
             }
             StatusLine(ui.status, Modifier.align(Alignment.TopCenter).padding(top = 56.dp, start = 16.dp, end = 16.dp))
+            if (heard.isNotEmpty()) {
+                Column(
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .padding(top = 96.dp, start = 16.dp, end = 16.dp)
+                        .testTag(TestTags.THINGS_AR),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    heard.take(3).forEach { item ->
+                        Surface(shape = RoundedCornerShape(12.dp), color = Color.Black.copy(alpha = 0.55f)) {
+                            Text(
+                                text = item.thing.title,
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                color = Color.White,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
+                    }
+                }
+            }
         } else if (asked) {
             Column(
                 modifier = Modifier.align(Alignment.Center).padding(24.dp),

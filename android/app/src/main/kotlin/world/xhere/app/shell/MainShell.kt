@@ -95,6 +95,7 @@ fun MainShell() {
     val links: IncomingLinks = koinInject()
     val pendingDrop: PendingDropSpot = koinInject()
     val pending by links.pending.collectAsStateWithLifecycle()
+    val pendingThing by links.pendingThing.collectAsStateWithLifecycle()
     val backStack by nav.currentBackStackEntryAsState()
     val route = backStack?.destination?.route
     val showBar = route !in Routes.fullScreen
@@ -103,6 +104,14 @@ fun MainShell() {
         val id = pending ?: return@LaunchedEffect
         nav.navigate(Routes.detail(id)) { launchSingleTop = true }
         links.consume()
+    }
+    LaunchedEffect(pendingThing) {
+        val id = pendingThing ?: return@LaunchedEffect
+        nav.navigate(Routes.MAP) {
+            popUpTo(nav.graph.findStartDestination().id) { saveState = true }
+            launchSingleTop = true
+            restoreState = true
+        }
     }
     Scaffold(
         topBar = {

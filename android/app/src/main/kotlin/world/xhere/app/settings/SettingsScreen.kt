@@ -36,9 +36,12 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.koin.androidx.compose.koinViewModel
+import org.koin.compose.koinInject
 import world.xhere.app.R
 import world.xhere.app.location.ForegroundLocation
 import world.xhere.app.ui.TestTags
+import world.xhere.app.voice.VoicePreferences
+import world.xhere.app.voice.VoiceSession
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -48,8 +51,11 @@ fun SettingsScreen(
     onBlocked: () -> Unit = {},
     onModeration: () -> Unit = {},
     viewModel: SettingsViewModel = koinViewModel(),
+    voicePrefs: VoicePreferences = koinInject(),
+    voice: VoiceSession = koinInject(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val hearInBackground by voicePrefs.background.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
@@ -143,6 +149,23 @@ fun SettingsScreen(
                         modifier = Modifier.testTag(TestTags.SETTINGS_LEADERBOARD),
                     )
                 }
+            }
+            Text(stringResource(R.string.settings_voice_title), style = MaterialTheme.typography.titleMedium)
+            Text(stringResource(R.string.settings_voice_body), style = MaterialTheme.typography.bodyMedium)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Text(stringResource(R.string.settings_voice_switch), style = MaterialTheme.typography.bodyLarge)
+                Switch(
+                    checked = hearInBackground,
+                    onCheckedChange = { enabled ->
+                        voicePrefs.setBackground(enabled)
+                        voice.setBackgroundOptIn(enabled)
+                    },
+                    modifier = Modifier.testTag(TestTags.SETTINGS_VOICE),
+                )
             }
             Text(stringResource(R.string.settings_location_title), style = MaterialTheme.typography.titleMedium)
             Text(stringResource(R.string.settings_location_body), style = MaterialTheme.typography.bodyLarge)
