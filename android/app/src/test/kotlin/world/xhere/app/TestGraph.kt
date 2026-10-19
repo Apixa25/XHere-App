@@ -34,7 +34,12 @@ import world.xhere.app.ar.ResolvedAnchor
 import world.xhere.app.drop.LabelSnapSuggester
 import world.xhere.app.drop.SnapSuggester
 import world.xhere.app.location.DeviceLocation
+import world.xhere.app.explore.DataStoreExperienceMemory
+import world.xhere.app.explore.ExperienceFocus
+import world.xhere.app.explore.ExperienceMemory
+import world.xhere.app.explore.ExploreViewModel
 import world.xhere.app.map.FilterPresetStore
+import world.xhere.app.map.MapAnchor
 import world.xhere.app.map.MapCanvas
 import world.xhere.app.map.MapViewModel
 import world.xhere.app.map.PreviewMapCanvas
@@ -151,6 +156,9 @@ fun testModule() = module {
     viewModel { AuthViewModel(get(), get(), get(), get(), get()) }
     single<DeviceLocation> { location }
     single { FilterPresetStore(androidContext()) }
+    single { MapAnchor() }
+    single { ExperienceFocus() }
+    single<ExperienceMemory> { DataStoreExperienceMemory(androidContext()) }
     single { PendingDropSpot() }
     single<SpotNames> {
         SpotNames {
@@ -179,7 +187,20 @@ fun testModule() = module {
     single<VoiceRadio> { radio }
     single { VoiceSession(get(), get()) }
     viewModel { ThingsViewModel(get(), get()) }
-    viewModel { MapViewModel(get(), get(), get(), get(), get(), debounceMs = 0, conditions = get()) }
+    viewModel { ExploreViewModel(get(), get(), get(), get(), get(), conditions = get()) }
+    viewModel {
+        MapViewModel(
+            get(),
+            get(),
+            get(),
+            get(),
+            get(),
+            debounceMs = 0,
+            conditions = get(),
+            experiences = get(),
+            anchor = get(),
+        )
+    }
     viewModel { ArViewModel(get(), get(), get()) }
     viewModel { DropViewModel(get(), get(), get(), get(), get()) }
     viewModel { ProfileViewModel(get()) }
@@ -192,6 +213,7 @@ fun testModule() = module {
             deleteFailed = context.getString(R.string.settings_delete_failed),
             signOutFailed = context.getString(R.string.settings_sign_out_failed),
             exporter = get(),
+            experiences = get(),
         )
     }
 }

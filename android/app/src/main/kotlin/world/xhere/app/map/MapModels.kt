@@ -1,5 +1,6 @@
 package world.xhere.app.map
 
+import world.xhere.app.explore.ExperienceLocal
 import world.xhere.shared.demo.JamestownDemo
 import world.xhere.shared.geo.BoundingBox
 import world.xhere.shared.geo.LatLng
@@ -251,6 +252,10 @@ data class MapUiState(
     val campaigns: List<CampaignProgress> = emptyList(),
     /** True only when this phone can run Geospatial and VPS covers the latest fix. */
     val arReady: Boolean = false,
+    /** Local dismissals and the Explore hint switch. */
+    val experienceLocal: ExperienceLocal = ExperienceLocal(),
+    /** Set when Explore asks the map to show one card. */
+    val focusedExperienceId: String? = null,
 )
 
 /** Straight line through the stops, plus a guide from the person to the next one. */

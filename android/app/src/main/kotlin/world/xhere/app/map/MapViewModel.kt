@@ -18,8 +18,13 @@ import java.time.LocalDate
 import kotlin.uuid.Uuid
 import world.xhere.app.ar.ArRuntime
 import world.xhere.app.ar.ArSupport
+import world.xhere.app.explore.ExperienceAction
+import world.xhere.app.explore.ExperienceMemory
+import world.xhere.app.explore.MemoryExperienceStore
 import world.xhere.app.location.DeviceLocation
 import world.xhere.app.location.LocationReading
+import world.xhere.shared.explore.Experience
+import world.xhere.shared.explore.ExperienceKind
 import world.xhere.shared.integrity.LocationReasons
 import world.xhere.shared.data.XHereServices
 import world.xhere.shared.demo.JamestownDemo
@@ -53,6 +58,8 @@ class MapViewModel(
     private val ar: ArRuntime,
     private val debounceMs: Long = 320,
     private val conditions: LiveConditions = QuietConditions,
+    private val experiences: ExperienceMemory = MemoryExperienceStore(),
+    private val anchor: MapAnchor = MapAnchor(),
 ) : ViewModel() {
     private val _state = MutableStateFlow(
         MapUiState(
@@ -80,6 +87,11 @@ class MapViewModel(
     private var questsLoaded = false
 
     init {
+        viewModelScope.launch {
+            experiences.state.collect { local ->
+                _state.update { it.copy(experienceLocal = local) }
+            }
+        }
         viewModelScope.launch {
             val taxonomy = runCatching { services.taxonomy.load() }.getOrNull()
             _state.update {
@@ -385,13 +397,24 @@ class MapViewModel(
     /** Reloads quest progress when the map comes back, so a confirm or a new drop shows up. */
     fun refreshGuide() {
         viewModelScope.launch { reloadQuests(celebrate = true) }
+        val frame = lastFrame
+        viewModelScope.launch {
+            val ids = presetStore.dismissedAlerts()
+            _state.update { current ->
+                current.copy(
+                    dismissedAlertIds = ids,
+                    alerts = current.alerts.filter { alert -> alert.id !in ids },
+                )
+            }
+            if (frame != null) refreshAlerts(frame)
+        }
     }
 
-    fun startWalk() {
-        val id = _state.value.walk?.id ?: return
+    fun startWalk(id: Uuid? = null) {
+        val target = id ?: _state.value.walk?.id ?: return
         viewModelScope.launch {
             try {
-                val started = services.walks.start(id)
+                val started = services.walks.start(target)
                 _state.update { it.copy(walk = mergeWalk(it.walk, started) ?: started, notice = null) }
                 val here = lastReading
                 if (here != null) checkIn(here, force = true)
@@ -403,7 +426,40 @@ class MapViewModel(
         }
     }
 
+    /** Opens one experience from Explore: move the camera, start a walk, or open Time Machine. */
+    fun focus(action: ExperienceAction) {
+        _state.update { it.copy(focusedExperienceId = action.id) }
+        val point = action.anchor
+        if (point != null && Geo.isValid(point)) moveCamera(point, 16.0, fromUser = true)
+        if (action.openTimeMachine) openTimeMachine(point)
+        if (action.startWalk) {
+            val id = runCatching { Uuid.parse(action.id) }.getOrNull()
+            startWalk(id)
+        }
+    }
+
+    /** Hides a walk or campaign. A changed revision can show it again. Alerts use [dismissAlert]. */
+    fun dismissExperience(item: Experience) {
+        if (item.placeholder || item.kind == ExperienceKind.LIVE_ALERT) return
+        _state.update { current ->
+            if (current.focusedExperienceId == item.id) current.copy(focusedExperienceId = null) else current
+        }
+        viewModelScope.launch { experiences.dismiss(item.id, item.revision) }
+    }
+
+    fun undoDismiss() {
+        val pending = _state.value.experienceLocal.pendingUndo ?: return
+        viewModelScope.launch { experiences.undo(pending.id) }
+    }
+
+    fun clearUndo() {
+        viewModelScope.launch { experiences.clearUndo() }
+    }
+
     fun dismissQuest(id: Uuid) {
+        if (_state.value.focusedExperienceId == id.toString()) {
+            _state.update { it.copy(focusedExperienceId = null) }
+        }
         viewModelScope.launch {
             try {
                 services.walks.dismissQuest(id)
@@ -518,6 +574,7 @@ class MapViewModel(
 
     private suspend fun fetch(frame: CameraFrame) {
         lastFrame = frame
+        anchor.publish(frame)
         val slugs = _state.value.selection.slugs
         _state.update {
             it.copy(

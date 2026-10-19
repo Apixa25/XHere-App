@@ -150,6 +150,25 @@ fun SettingsScreen(
                     )
                 }
             }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(stringResource(R.string.settings_explore_hint), style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        stringResource(R.string.settings_explore_hint_body),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Switch(
+                    checked = state.exploreHint,
+                    onCheckedChange = viewModel::setExploreHint,
+                    modifier = Modifier.testTag(TestTags.SETTINGS_EXPLORE_HINT),
+                )
+            }
             Text(stringResource(R.string.settings_voice_title), style = MaterialTheme.typography.titleMedium)
             Text(stringResource(R.string.settings_voice_body), style = MaterialTheme.typography.bodyMedium)
             Row(

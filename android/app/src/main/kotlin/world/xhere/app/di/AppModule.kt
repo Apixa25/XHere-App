@@ -28,7 +28,12 @@ import world.xhere.app.drop.MlKitImageLabeler
 import world.xhere.app.drop.SnapSuggester
 import world.xhere.app.location.AndroidDeviceLocation
 import world.xhere.app.location.DeviceLocation
+import world.xhere.app.explore.DataStoreExperienceMemory
+import world.xhere.app.explore.ExperienceFocus
+import world.xhere.app.explore.ExperienceMemory
+import world.xhere.app.explore.ExploreViewModel
 import world.xhere.app.map.FilterPresetStore
+import world.xhere.app.map.MapAnchor
 import world.xhere.app.map.MapCanvas
 import world.xhere.app.map.MapLibreMapCanvas
 import world.xhere.app.map.MapViewModel
@@ -85,6 +90,9 @@ val appModule = module {
     single<DropSharer> { AndroidDropSharer(androidContext()) }
     single<DataExporter> { AndroidDataExporter(androidContext()) }
     single { FilterPresetStore(androidContext()) }
+    single { MapAnchor() }
+    single { ExperienceFocus() }
+    single<ExperienceMemory> { DataStoreExperienceMemory(androidContext()) }
     single { PendingDropSpot() }
     single {
         HerePlaces(get<XHereServices>().places, NominatimClient()::reverse)
@@ -107,7 +115,8 @@ val appModule = module {
             providers = listOf(NwsWeatherAlertProvider()),
         )
     }
-    viewModel { MapViewModel(get(), get(), get(), get(), get(), conditions = get()) }
+    viewModel { ExploreViewModel(get(), get(), get(), get(), get(), conditions = get()) }
+    viewModel { MapViewModel(get(), get(), get(), get(), get(), conditions = get(), experiences = get(), anchor = get()) }
     viewModel { ArViewModel(get(), get(), get()) }
     viewModel { (shortId: String) -> DropDetailViewModel(shortId, get(), get()) }
     viewModel { AuthViewModel(get(), get(), get(), get(), get(), PrefsAuthDraft(androidContext())) }
@@ -123,6 +132,7 @@ val appModule = module {
             deleteFailed = context.getString(R.string.settings_delete_failed),
             signOutFailed = context.getString(R.string.settings_sign_out_failed),
             exporter = get(),
+            experiences = get(),
         )
     }
 }

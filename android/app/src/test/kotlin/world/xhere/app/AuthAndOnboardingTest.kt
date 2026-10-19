@@ -99,7 +99,7 @@ class AuthAndOnboardingTest {
         rule.signInWithEmail()
         rule.onNodeWithTag(TestTags.ONBOARDING_SKIP).performClick()
         rule.openSettings()
-        rule.onNodeWithTag(TestTags.SETTINGS_SIGN_OUT).performClick()
+        rule.onNodeWithTag(TestTags.SETTINGS_SIGN_OUT).performScrollTo().performClick()
         rule.waitForTag(TestTags.AUTH_EMAIL)
         assertNull(runBlocking { TestGraph.services.auth.currentSession() })
     }
@@ -158,6 +158,12 @@ class FreshSessionRule : TestRule {
             val app = ApplicationProvider.getApplicationContext<Application>()
             app.getSharedPreferences(OnboardingStore.PREFS, Context.MODE_PRIVATE).edit().clear().commit()
             app.getSharedPreferences(world.xhere.app.map.FilterPresetStore.PREFS, Context.MODE_PRIVATE).edit().clear().commit()
+            runBlocking {
+                runCatching { org.koin.core.context.GlobalContext.get().get<world.xhere.app.explore.ExperienceMemory>().reset() }
+            }
+            if (TestGraph.isReady()) {
+                TestGraph.conditions.alerts = emptyList()
+            }
             app.getSharedPreferences(world.xhere.app.auth.PrefsAuthDraft.PREFS, Context.MODE_PRIVATE).edit().clear().commit()
             if (TestGraph.isReady()) {
                 runBlocking {

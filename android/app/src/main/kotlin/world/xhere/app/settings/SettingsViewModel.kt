@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import world.xhere.app.explore.ExperienceMemory
 import world.xhere.app.session.SignOutNotice
 import world.xhere.shared.data.XHereServices
 import world.xhere.shared.data.canModerate
@@ -27,6 +28,8 @@ data class SettingsUiState(
     /** From `my_badges`. The switch stays off the screen until that read returns. */
     val showOnLeaderboard: Boolean = true,
     val leaderboardReady: Boolean = false,
+    /** The small "Explore: N nearby" pill on the map. */
+    val exploreHint: Boolean = true,
 )
 
 /**
@@ -41,12 +44,18 @@ class SettingsViewModel(
     private val deleteFailed: String,
     private val signOutFailed: String,
     private val exporter: DataExporter,
+    private val experiences: ExperienceMemory,
     private val clock: Clock = Clock.System,
 ) : ViewModel() {
     private val _state = MutableStateFlow(SettingsUiState())
     val state: StateFlow<SettingsUiState> = _state.asStateFlow()
 
     init {
+        viewModelScope.launch {
+            experiences.state.collect { local ->
+                _state.update { it.copy(exploreHint = local.hintEnabled) }
+            }
+        }
         viewModelScope.launch {
             val email = runCatching { services.auth.currentSession()?.email }.getOrNull()
             val profile = runCatching { services.profiles.currentProfile() }.getOrNull()
@@ -77,6 +86,10 @@ class SettingsViewModel(
                 _state.update { it.copy(showOnLeaderboard = previous) }
             }
         }
+    }
+
+    fun setExploreHint(enabled: Boolean) {
+        viewModelScope.launch { experiences.setHintEnabled(enabled) }
     }
 
     fun setLocationGranted(granted: Boolean) {

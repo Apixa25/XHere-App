@@ -23,6 +23,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Place
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Button
 import androidx.compose.material3.CenterAlignedTopAppBar
@@ -235,6 +236,7 @@ internal fun PlayCityMap(pins: List<PlayPin>, modifier: Modifier = Modifier) {
 private fun PlayBottomBar(selected: String) {
     val tabs = listOf(
         Triple("map", R.string.nav_map, Icons.Filled.Place),
+        Triple("explore", R.string.nav_explore, Icons.Filled.Search),
         Triple("drop", R.string.nav_drop, Icons.Filled.Add),
         Triple("profile", R.string.nav_profile, Icons.Filled.Person),
     )
