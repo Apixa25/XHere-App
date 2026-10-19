@@ -92,13 +92,16 @@ select is(
   0,
   'an unlisted thing is not public'
 );
-select is(
-  (with updated as (
-    update public.things set title = 'Stolen' where id = current_setting('t.thing')::uuid returning 1
-  ) select count(*)::integer from updated),
-  0,
-  'another person cannot edit the story'
-);
+do $$
+declare
+  n integer;
+begin
+  update public.things set title = 'Stolen' where id = current_setting('t.thing')::uuid;
+  get diagnostics n = row_count;
+  perform set_config('t.stolen', n::text, true);
+end;
+$$;
+select is(current_setting('t.stolen'), '0', 'another person cannot edit the story');
 
 set local request.jwt.claims to '{"sub": "11111111-1111-4111-8111-111111111111", "role": "authenticated"}';
 select lives_ok(
