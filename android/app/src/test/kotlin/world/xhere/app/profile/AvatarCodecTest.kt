@@ -26,4 +26,19 @@ class AvatarCodecTest {
         assertTrue(encoded.bytes.size in 1..ProfileFields.AVATAR_MAX_BYTES)
         assertTrue(encoded.mimeType == "image/webp" || encoded.mimeType == "image/jpeg")
     }
+
+    @Test
+    fun noisyPhotosStayUnderTheBucketLimit() {
+        val source = Bitmap.createBitmap(900, 700, Bitmap.Config.ARGB_8888)
+        val pixels = IntArray(source.width * source.height)
+        var n = 1
+        for (i in pixels.indices) {
+            n = n * 1103515245 + 12345
+            pixels[i] = Color.argb(255, (n shr 16) and 255, (n shr 8) and 255, n and 255)
+        }
+        source.setPixels(pixels, 0, source.width, 0, 0, source.width, source.height)
+        val encoded = AvatarCodec.compress(AvatarCodec.circle(source, zoom = 1f))
+        assertTrue(encoded.bytes.size in 1..ProfileFields.AVATAR_MAX_BYTES)
+        assertTrue(encoded.mimeType == "image/webp" || encoded.mimeType == "image/jpeg")
+    }
 }

@@ -1,5 +1,15 @@
 package world.xhere.shared.profile
 
+import io.github.jan.supabase.auth.auth
+import io.github.jan.supabase.auth.user.UserInfo
+import io.github.jan.supabase.auth.user.UserSession
+import io.ktor.client.engine.mock.MockEngine
+import io.ktor.client.engine.mock.respond
+import io.ktor.http.HttpHeaders
+import io.ktor.http.HttpMethod
+import io.ktor.http.HttpStatusCode
+import io.ktor.http.headersOf
+import io.ktor.utils.io.ByteReadChannel
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -8,9 +18,11 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.uuid.Uuid
 import kotlinx.coroutines.test.runTest
+import world.xhere.shared.SupabaseConfig
 import world.xhere.shared.data.ProfileDraft
 import world.xhere.shared.data.XHereApiException
 import world.xhere.shared.data.fake.InMemoryXHere
+import world.xhere.shared.data.supabase.SupabaseXHereClient
 import world.xhere.shared.demo.JamestownDemo
 import world.xhere.shared.model.DropSource
 import world.xhere.shared.model.DropStatus
@@ -82,5 +94,77 @@ class ProfileEditTest {
         hidden.status = DropStatus.REMOVED
         val afterRemoved = steven.profiles.publicProfile("demo_guide")!!.dropCount
         assertTrue(afterRemoved < before)
+    }
+}
+
+private data class AvatarRequest(
+    val method: HttpMethod,
+    val path: String,
+    val upsert: String?,
+    val contentType: String?,
+)
+
+class AvatarUploadContractTest {
+    @Test
+    fun avatarUploadPostsWithUpsertAndAnImageContentType() = runTest {
+        val seen = mutableListOf<AvatarRequest>()
+        val engine = MockEngine { request ->
+            val headerType = request.headers[HttpHeaders.ContentType]
+            val bodyType = request.body.contentType?.toString()
+            seen += AvatarRequest(
+                method = request.method,
+                path = request.url.encodedPath,
+                upsert = request.headers["x-upsert"],
+                contentType = headerType ?: bodyType,
+            )
+            val uploading = request.method == HttpMethod.Post && request.url.encodedPath.contains("/object/avatars/")
+            val body = if (uploading) """{"Id":"obj","Key":"avatars/file.webp"}""" else "{}"
+            respond(
+                content = ByteReadChannel(body),
+                status = HttpStatusCode.OK,
+                headers = headersOf(HttpHeaders.ContentType, "application/json"),
+            )
+        }
+        val userId = "11111111-1111-4111-8111-111111111111"
+        val client = SupabaseXHereClient(
+            SupabaseConfig(url = "https://example.supabase.co", anonKey = "test-anon-key"),
+            engine = engine,
+        )
+        client.supabase.auth.importSession(
+            UserSession(
+                accessToken = "test-access-token",
+                refreshToken = "",
+                expiresIn = 3_600,
+                tokenType = "bearer",
+                user = UserInfo(id = userId, aud = "authenticated"),
+            ),
+            autoRefresh = false,
+        )
+
+        val webp = client.media.uploadAvatar(byteArrayOf(1, 2, 3, 4), "image/webp")
+        assertTrue(webp.startsWith("$userId/"), webp)
+        assertTrue(webp.endsWith(".webp"), webp)
+        val webpUpload = seen.last { it.method == HttpMethod.Post && it.path.contains("/object/avatars/") }
+        assertEquals(HttpMethod.Post, webpUpload.method)
+        assertEquals("true", webpUpload.upsert)
+        assertEquals("image/webp", webpUpload.contentType?.substringBefore(';')?.trim())
+        assertTrue(webpUpload.path.contains("/storage/v1/object/avatars/$userId/"), webpUpload.path)
+        assertTrue(seen.none { it.method == HttpMethod.Put && it.path.contains("avatars") })
+
+        val jpeg = client.media.uploadAvatar(byteArrayOf(5, 6, 7), "image/jpeg")
+        assertTrue(jpeg.endsWith(".jpg"), jpeg)
+        val jpegUpload = seen.last { it.path.endsWith(".jpg") }
+        assertEquals(HttpMethod.Post, jpegUpload.method)
+        assertEquals("true", jpegUpload.upsert)
+        assertEquals("image/jpeg", jpegUpload.contentType?.substringBefore(';')?.trim())
+
+        client.media.deleteAvatar(webp)
+        val deletion = seen.last { it.method == HttpMethod.Delete }
+        assertTrue(deletion.path.contains("/storage/v1/object/avatars"), deletion.path)
+
+        val tooBig = assertFailsWith<XHereApiException> {
+            client.media.uploadAvatar(ByteArray(ProfileFields.AVATAR_MAX_BYTES + 1), "image/webp")
+        }
+        assertEquals("invalid_avatar", tooBig.code)
     }
 }

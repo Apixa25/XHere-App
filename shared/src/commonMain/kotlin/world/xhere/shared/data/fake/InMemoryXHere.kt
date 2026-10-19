@@ -991,6 +991,14 @@ class InMemoryXHere(
             return path
         }
 
+        override suspend fun deleteAvatar(path: String) {
+            val stored = path.trim().trimStart('/')
+            if (stored.isEmpty()) return
+            val profile = requireViewer()
+            if (!stored.startsWith("${profile.id}/")) return
+            store.mediaBytes.remove(stored)
+        }
+
         override fun avatarUrl(path: String?): String? = ProfileFields.avatarUrl(null, path)
     }
 
