@@ -3,6 +3,7 @@ package world.xhere.app.map
 import android.annotation.SuppressLint
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -31,6 +32,7 @@ internal fun IiifViewer(
     year: String,
     onDismiss: () -> Unit,
 ) {
+    BackHandler(onBack = onDismiss)
     Surface(modifier = Modifier.fillMaxSize().testTag(TestTags.TIME_VIEWER)) {
         Column(modifier = Modifier.fillMaxSize()) {
             TextButton(onClick = onDismiss, modifier = Modifier.testTag(TestTags.TIME_VIEWER_CLOSE)) {

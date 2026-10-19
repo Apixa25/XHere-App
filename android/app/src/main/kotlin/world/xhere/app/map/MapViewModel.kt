@@ -63,6 +63,7 @@ class MapViewModel(
     private val conditions: LiveConditions = QuietConditions,
     private val experiences: ExperienceMemory = MemoryExperienceStore(),
     private val anchor: MapAnchor = MapAnchor(),
+    private val sheets: SheetSignals = SheetSignals(),
 ) : ViewModel() {
     private val _state = MutableStateFlow(
         MapUiState(
@@ -90,6 +91,9 @@ class MapViewModel(
     private var questsLoaded = false
 
     init {
+        viewModelScope.launch {
+            sheets.dismissals.collect { dismissOpenSheets() }
+        }
         viewModelScope.launch {
             experiences.state.collect { local ->
                 _state.update { it.copy(experienceLocal = local) }
@@ -525,6 +529,17 @@ class MapViewModel(
 
     fun dismissCelebration() {
         _state.update { it.copy(celebrateWalk = false, celebrateQuest = false) }
+    }
+
+    /** Clears every sheet so the map underneath is usable again. */
+    fun dismissOpenSheets() {
+        dismissSubcategories()
+        dismissSavePreset()
+        closeNearMe()
+        dismissHere()
+        dismissTimeMachine()
+        dismissTeaser()
+        dismissCelebration()
     }
 
     fun dismissAlert(id: String) {

@@ -1,5 +1,6 @@
 package world.xhere.app.shell
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -60,6 +61,7 @@ import world.xhere.app.detail.IncomingLinks
 import world.xhere.app.drop.DropScreen
 import world.xhere.app.drop.PendingDropSpot
 import world.xhere.app.explore.ExperienceFocus
+import world.xhere.app.map.SheetSignals
 import world.xhere.app.explore.ExploreScreen
 import world.xhere.app.map.CampaignCard
 import world.xhere.app.map.MapScreen
@@ -99,6 +101,7 @@ fun MainShell() {
     val links: IncomingLinks = koinInject()
     val pendingDrop: PendingDropSpot = koinInject()
     val focus: ExperienceFocus = koinInject()
+    val sheets: SheetSignals = koinInject()
     val pending by links.pending.collectAsStateWithLifecycle()
     val pendingThing by links.pendingThing.collectAsStateWithLifecycle()
     val backStack by nav.currentBackStackEntryAsState()
@@ -136,6 +139,8 @@ fun MainShell() {
                         NavigationBarItem(
                             selected = route == tab.route,
                             onClick = {
+                                sheets.requestDismiss()
+                                if (route == tab.route) return@NavigationBarItem
                                 if (tab.route == Routes.DROP) pendingDrop.clear()
                                 nav.navigate(tab.route) {
                                     popUpTo(nav.graph.findStartDestination().id) { saveState = true }
@@ -269,6 +274,11 @@ private fun ProfilePage(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     var showLevelUp by rememberSaveable { mutableStateOf(false) }
+    val sheets: SheetSignals = koinInject()
+    LaunchedEffect(sheets) {
+        sheets.dismissals.collect { showLevelUp = false }
+    }
+    BackHandler(enabled = showLevelUp) { showLevelUp = false }
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner, viewModel) {
         val observer = LifecycleEventObserver { _, event ->

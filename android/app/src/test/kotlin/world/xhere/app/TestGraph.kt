@@ -40,6 +40,7 @@ import world.xhere.app.explore.ExperienceMemory
 import world.xhere.app.explore.ExploreViewModel
 import world.xhere.app.map.FilterPresetStore
 import world.xhere.app.map.MapAnchor
+import world.xhere.app.map.SheetSignals
 import world.xhere.app.map.MapCanvas
 import world.xhere.app.map.MapViewModel
 import world.xhere.app.map.PreviewMapCanvas
@@ -171,6 +172,7 @@ fun testModule() = module {
     single<DeviceLocation> { location }
     single { FilterPresetStore(androidContext()) }
     single { MapAnchor() }
+    single { SheetSignals() }
     single { ExperienceFocus() }
     single<ExperienceMemory> { DataStoreExperienceMemory(androidContext()) }
     single { PendingDropSpot() }
@@ -205,7 +207,7 @@ fun testModule() = module {
     single { VoicePreferences(androidContext()) }
     single<VoiceRadio> { radio }
     single { VoiceSession(get(), get()) }
-    viewModel { ThingsViewModel(get(), get()) }
+    viewModel { ThingsViewModel(get(), get(), get()) }
     viewModel { ExploreViewModel(get(), get(), get(), get(), get(), conditions = get()) }
     viewModel {
         MapViewModel(
@@ -218,6 +220,7 @@ fun testModule() = module {
             conditions = get(),
             experiences = get(),
             anchor = get(),
+            sheets = get(),
         )
     }
     viewModel { VoiceViewModel(get(), get(), get(), get(), get(), get(), get(), get()) }
