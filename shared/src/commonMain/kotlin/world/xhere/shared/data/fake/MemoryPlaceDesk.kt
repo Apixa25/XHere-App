@@ -494,11 +494,12 @@ class MemoryPlaceDesk(
     fun decorate(drop: StoredDrop, card: world.xhere.shared.model.DropCard, viewerId: Uuid?): world.xhere.shared.model.DropCard {
         val locked = Capsules.isLocked(drop.capsuleMode, drop.capsuleOpenedAt)
         val official = officialPlaceFor(drop)
+        val record = official?.let { place -> store.placeOfficial.firstOrNull { it.placeId == place.id } }
         var next = card.copy(
             official = official != null,
             placeName = official?.name,
-            officialSummary = official?.summary,
-            officialHours = official?.hours ?: emptyList(),
+            officialSummary = record?.summary,
+            officialHours = record?.hours ?: emptyList(),
             capsuleMode = drop.capsuleMode,
             capsuleUnlockAt = drop.capsuleUnlockAt,
             capsuleOpenedAt = drop.capsuleOpenedAt,
