@@ -10,6 +10,7 @@ import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.JsonObject
@@ -36,17 +37,26 @@ class CampaignTest {
     @Test
     fun theMapShowsJamestownProgressAndPanningAwayHidesIt() {
         rule.openMap()
+        rule.waitForTag(TestTags.EXPLORE_PILL)
+        rule.onNodeWithTag(TestTags.NAV_EXPLORE).performClick()
+        rule.waitForTag(TestTags.exploreFilter("campaigns"))
+        rule.onNodeWithTag(TestTags.exploreFilter("campaigns")).performScrollTo().performClick()
         rule.waitForTag(TestTags.CAMPAIGN_CARD)
         rule.onNodeWithTag(TestTags.CAMPAIGN_TITLE).assertTextContains("Map Jamestown", substring = true)
         rule.onNodeWithTag(TestTags.CAMPAIGN_PROGRESS).assertTextContains("7 of 200", substring = true)
         rule.onNodeWithTag(TestTags.CAMPAIGN_MINE).assertTextContains("You haven't added one yet", substring = true)
         rule.onNodeWithTag(TestTags.CAMPAIGN_BOARD).assertTextContains("Demo guide", substring = true)
+        rule.onNodeWithTag(TestTags.NAV_MAP).performClick()
+        rule.waitForTag(TestTags.SCREEN_MAP)
         rule.onNodeWithTag(TestTags.marker("fenton")).performClick()
         rule.waitForTag(TestTags.TEASER_FOUNDING)
         rule.onNodeWithTag(TestTags.TEASER_FOUNDING).assertTextContains("Founding Local", substring = true)
         rule.onNodeWithTag(TestTags.TEASER_CLOSE).performClick()
 
         rule.onNodeWithTag(TestTags.MAP_PAN_AWAY).performClick()
+        rule.onNodeWithTag(TestTags.NAV_EXPLORE).performClick()
+        rule.waitForTag(TestTags.exploreFilter("campaigns"))
+        rule.onNodeWithTag(TestTags.exploreFilter("campaigns")).performScrollTo().performClick()
         rule.waitUntil(timeoutMillis = 8_000) {
             rule.onAllNodesWithTag(TestTags.CAMPAIGN_CARD).fetchSemanticsNodes().isEmpty()
         }
@@ -55,7 +65,7 @@ class CampaignTest {
     @Test
     fun aDropEarnsFoundingLocalAndTheBoardCanHideAName() {
         rule.openMap()
-        rule.waitForTag(TestTags.CAMPAIGN_CARD)
+        rule.waitForTag(TestTags.EXPLORE_PILL)
         runBlocking {
             TestGraph.services.drops.createDrop(
                 CreateDropRequest(

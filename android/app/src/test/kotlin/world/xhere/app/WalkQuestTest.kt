@@ -1,13 +1,16 @@
 package world.xhere.app
 
+import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.semantics.SemanticsPropertyKey
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.junit4.AndroidComposeTestRule
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -36,27 +39,36 @@ class WalkQuestTest {
     @Test
     fun mapOffersTheWalkAndTheStarterQuest() {
         rule.openMap()
-        rule.waitForTag(TestTags.WALK_CARD)
-        rule.onNodeWithTag(TestTags.WALK_TITLE).assertTextContains("Downtown Jamestown history walk")
-        rule.onNodeWithTag(TestTags.WALK_META).assertTextContains("about 14 min", substring = true)
-        rule.onNodeWithTag(TestTags.WALK_START).assertIsDisplayed()
-        rule.onNodeWithTag(TestTags.QUEST_CARD).assertIsDisplayed()
-        rule.onNodeWithTag(TestTags.QUEST_PROGRESS).assertTextContains("0 of 3", substring = true)
+        rule.waitForTag(TestTags.EXPLORE_PILL)
+        rule.onNodeWithTag(TestTags.EXPLORE_PILL).assertTextContains("Explore: 3 nearby")
+        rule.onNodeWithTag(TestTags.WALK_CARD).assertDoesNotExist()
+        rule.onNodeWithTag(TestTags.QUEST_CARD).assertDoesNotExist()
         val route = rule.route()
         assertTrue(route.startsWith("route:"))
         assertFalse(route.contains("guide:"))
         assertTrue(route.contains("-79.244603"))
         assertTrue(route.contains("-79.238704"))
         rule.onNodeWithTag(TestTags.marker("fenton")).assertIsDisplayed()
+        rule.onNodeWithTag(TestTags.NAV_EXPLORE).performClick()
+        rule.waitForTag(TestTags.SCREEN_EXPLORE)
+        rule.onNodeWithTag(TestTags.exploreFilter("walks")).performScrollTo().performClick()
+        rule.waitForTag(TestTags.WALK_TITLE)
+        rule.onNodeWithTag(TestTags.WALK_TITLE).assertTextContains("Downtown Jamestown history walk")
+        rule.onNodeWithTag(TestTags.WALK_META).assertTextContains("about 14 min", substring = true)
+        rule.onNodeWithTag(TestTags.WALK_START).assertIsDisplayed()
+        rule.onNodeWithTag(TestTags.exploreFilter("quests")).performScrollTo().performClick()
+        rule.waitForTag(TestTags.QUEST_CARD)
+        rule.onNodeWithTag(TestTags.QUEST_PROGRESS).assertTextContains("0 of 3", substring = true)
     }
 
     @Test
     fun panningAwayHidesAWalkThatHasNotStarted() {
         rule.openMap()
-        rule.waitForTag(TestTags.WALK_CARD)
+        rule.waitForTag(TestTags.EXPLORE_PILL)
+        rule.onNodeWithTag(TestTags.EXPLORE_PILL).assertTextContains("Explore: 3 nearby")
         rule.onNodeWithTag(TestTags.MAP_PAN_AWAY).performClick()
         rule.waitUntil(timeoutMillis = 8_000) {
-            rule.onAllNodesWithTag(TestTags.WALK_CARD).fetchSemanticsNodes().isEmpty()
+            rule.onAllNodesWithText("Explore: 1 nearby", substring = true).fetchSemanticsNodes().isNotEmpty()
         }
         assertEquals("none", rule.route())
     }
@@ -65,13 +77,18 @@ class WalkQuestTest {
     fun nextStopChecksOffInsideTheRevealRadiusAndTheWalkCanBeDismissedFromTheQuest() {
         TestGraph.location.setPermission(true)
         rule.openMap()
+        rule.onNodeWithTag(TestTags.NAV_EXPLORE).performClick()
+        rule.waitForTag(TestTags.exploreFilter("walks"))
+        rule.onNodeWithTag(TestTags.exploreFilter("walks")).performScrollTo().performClick()
         rule.waitForTag(TestTags.WALK_START)
         rule.onNodeWithTag(TestTags.WALK_START).performClick()
         rule.waitForTag(TestTags.WALK_NEXT)
         rule.onNodeWithTag(TestTags.WALK_NEXT).assertTextContains("Erie Railroad Station", substring = true)
 
         TestGraph.location.emit(LatLng(42.094509, -79.244603))
-        rule.waitForTag(TestTags.WALK_PROGRESS)
+        rule.waitUntil(timeoutMillis = 8_000) {
+            rule.onAllNodesWithText("2 of 8", substring = true).fetchSemanticsNodes().isNotEmpty()
+        }
         rule.onNodeWithTag(TestTags.WALK_PROGRESS).assertTextContains("2 of 8")
         rule.onNodeWithTag(TestTags.WALK_NEXT).assertTextContains("The Wellman Building", substring = true)
         assertTrue(rule.route().contains("guide:"))
@@ -79,7 +96,14 @@ class WalkQuestTest {
         rule.onNodeWithTag(TestTags.MAP_PAN_AWAY).performClick()
         rule.waitForTag(TestTags.marker("buffalo"))
         rule.onNodeWithTag(TestTags.WALK_CARD).assertIsDisplayed()
+        val cardBottom = rule.onNodeWithTag(TestTags.WALK_CARD).fetchSemanticsNode().boundsInRoot.bottom
+        val controlsTop = rule.onNodeWithTag(TestTags.MY_LOCATION).fetchSemanticsNode().boundsInRoot.top
+        assertTrue(cardBottom <= controlsTop)
 
+        rule.onNodeWithTag(TestTags.NAV_EXPLORE).performClick()
+        rule.waitForTag(TestTags.exploreFilter("quests"))
+        rule.onNodeWithTag(TestTags.exploreFilter("quests")).performScrollTo().performClick()
+        rule.waitForTag(TestTags.QUEST_DISMISS)
         rule.onNodeWithTag(TestTags.QUEST_DISMISS).performClick()
         rule.waitUntil(timeoutMillis = 8_000) {
             rule.onAllNodesWithTag(TestTags.QUEST_CARD).fetchSemanticsNodes().isEmpty()
@@ -90,6 +114,9 @@ class WalkQuestTest {
     fun finishingTheWalkCelebratesOnce() {
         TestGraph.location.setPermission(true)
         rule.openMap()
+        rule.onNodeWithTag(TestTags.NAV_EXPLORE).performClick()
+        rule.waitForTag(TestTags.exploreFilter("walks"))
+        rule.onNodeWithTag(TestTags.exploreFilter("walks")).performScrollTo().performClick()
         rule.waitForTag(TestTags.WALK_START)
         rule.onNodeWithTag(TestTags.WALK_START).performClick()
         rule.waitForTag(TestTags.WALK_NEXT)

@@ -44,6 +44,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
 import world.xhere.app.R
+import world.xhere.app.explore.DismissibleCard
+import world.xhere.app.explore.ExperienceFocus
+import world.xhere.app.explore.ExperienceUndoBar
+import world.xhere.shared.explore.Experiences
 import world.xhere.app.detail.IncomingLinks
 import world.xhere.app.location.ForegroundLocation
 import world.xhere.app.ui.TestTags
@@ -94,15 +98,18 @@ fun MapScreen(
     onDropHere: (world.xhere.shared.geo.LatLng, String?) -> Unit = { _, _ -> },
     onOpenDrop: (String) -> Unit = {},
     onOpenAr: () -> Unit = {},
+    onExplore: () -> Unit = {},
     viewModel: MapViewModel = koinViewModel(),
     canvas: MapCanvas = koinInject(),
     things: ThingsViewModel = koinViewModel(),
     voice: VoiceSession = koinInject(),
     links: IncomingLinks = koinInject(),
+    focus: ExperienceFocus = koinInject(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val voiceState by things.state.collectAsStateWithLifecycle()
     val pendingThing by links.pendingThing.collectAsStateWithLifecycle()
+    val pendingFocus by focus.requests.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     DisposableEffect(lifecycle, viewModel) {
@@ -121,6 +128,11 @@ fun MapScreen(
         things.openFromLink(id)
         links.consumeThing()
     }
+    androidx.compose.runtime.LaunchedEffect(pendingFocus) {
+        val action = pendingFocus ?: return@LaunchedEffect
+        viewModel.focus(action)
+        focus.consume()
+    }
     val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { granted ->
         if (granted.values.any { it }) viewModel.goToMyLocation() else viewModel.locationDenied()
     }
@@ -132,6 +144,10 @@ fun MapScreen(
     }
     val walk = state.walk?.takeIf { walk -> walk.stops.any { it.available } }
     val quest = state.quests.firstOrNull()
+    val walkCard = walkOnMap(state)
+    val campaignCard = campaignOnMap(state)
+    val questCard = questOnMap(state)
+    val hintCount = exploreHintCount(state)
     val loadingLabel = stringResource(R.string.map_loading)
     val myLocationLabel = stringResource(R.string.map_my_location)
     Box(
@@ -172,11 +188,44 @@ fun MapScreen(
                 onLongPressGroup = viewModel::showSubcategories,
                 onSave = viewModel::showSavePreset,
             )
-            MapStatusStack(
-                campaign = state.campaigns.firstOrNull(),
-                alerts = state.alerts,
-                onDismissAlert = viewModel::dismissAlert,
-            )
+            if (campaignCard != null && state.alerts.isNotEmpty()) {
+                val item = Experiences.campaign(campaignCard)
+                DismissibleCard(
+                    enabled = true,
+                    onDismiss = { viewModel.dismissExperience(item) },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    MapStatusStack(
+                        campaign = campaignCard,
+                        alerts = state.alerts,
+                        onDismissAlert = viewModel::dismissAlert,
+                        onDismissCampaign = { viewModel.dismissExperience(item) },
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+            } else {
+                if (campaignCard != null) {
+                    val item = Experiences.campaign(campaignCard)
+                    DismissibleCard(
+                        enabled = true,
+                        onDismiss = { viewModel.dismissExperience(item) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp),
+                    ) {
+                        CampaignCard(
+                            campaign = campaignCard,
+                            now = kotlin.time.Clock.System.now(),
+                            compact = true,
+                            onDismiss = { viewModel.dismissExperience(item) },
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
+                }
+                if (state.alerts.isNotEmpty()) {
+                    WeatherAlertBanner(alerts = state.alerts, onDismiss = viewModel::dismissAlert)
+                }
+            }
         }
         Column(
             modifier = Modifier
@@ -187,16 +236,25 @@ fun MapScreen(
             if (voiceState.speakingId != null) {
                 SpeakingBanner(onStop = things::stopSpeaking)
             }
-            quest?.let { card ->
+            questCard?.let { card ->
                 QuestCard(quest = card, onDismiss = { viewModel.dismissQuest(card.id) })
             }
-            walk?.let { card ->
+            walkCard?.let { card ->
+                val item = Experiences.walk(card, state.myLocation)
                 val distance = state.myLocation?.let { here -> WalkGuide.distanceToNext(here, card) }
-                WalkCard(
-                    walk = card,
-                    distanceToNextM = distance,
-                    onStart = hapticClick(viewModel::startWalk),
-                )
+                DismissibleCard(
+                    enabled = true,
+                    onDismiss = { viewModel.dismissExperience(item) },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    WalkCard(
+                        walk = card,
+                        distanceToNextM = distance,
+                        onStart = hapticClick(viewModel::startWalk),
+                        onDismiss = { viewModel.dismissExperience(item) },
+                        modifier = Modifier.weight(1f),
+                    )
+                }
             }
             state.notice?.let { notice ->
                 Surface(
@@ -229,6 +287,23 @@ fun MapScreen(
                     onClose = viewModel::dismissTeaser,
                     onOpen = { onOpenDrop(teaser.shortId) },
                 )
+            }
+            if (hintCount > 0 && state.experienceLocal.hintEnabled) {
+                Surface(
+                    onClick = onExplore,
+                    shape = MaterialTheme.shapes.large,
+                    color = MaterialTheme.colorScheme.surface,
+                    shadowElevation = 2.dp,
+                    modifier = Modifier
+                        .defaultMinSize(minHeight = 40.dp)
+                        .testTag(TestTags.EXPLORE_PILL),
+                ) {
+                    Text(
+                        text = stringResource(R.string.explore_pill, hintCount),
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+                        style = MaterialTheme.typography.labelLarge,
+                    )
+                }
             }
             FlowRow(
                 modifier = Modifier.fillMaxWidth(),
@@ -349,6 +424,14 @@ fun MapScreen(
             }
             MapAttribution()
         }
+        ExperienceUndoBar(
+            pending = state.experienceLocal.pendingUndo,
+            onUndo = viewModel::undoDismiss,
+            onDismissed = viewModel::clearUndo,
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .padding(top = 72.dp, start = 12.dp, end = 12.dp),
+        )
         val groupSlug = state.subcategoryGroup
         if (groupSlug != null) {
             val taxonomy = state.taxonomy

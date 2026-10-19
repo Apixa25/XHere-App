@@ -1,5 +1,6 @@
 package world.xhere.app.map
 
+import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertTextContains
@@ -49,15 +50,15 @@ class LiveConditionsUiTest {
         // button, and a touch click there does not reach it.
         TestGraph.conditions.alerts = listOf(storm, watch)
         rule.openMap()
+        rule.onNodeWithTag(TestTags.WEATHER_BANNER).assertIsDisplayed()
         rule.onNodeWithTag(TestTags.WEATHER_SEVERITY).assertTextContains("Severe")
         rule.onNodeWithTag(TestTags.WEATHER_EVENT).assertTextContains("Severe Thunderstorm Warning")
-        val collapsedPx = rule.onNodeWithTag(TestTags.MAP_STATUS).fetchSemanticsNode().size.height
-        val density = rule.activity.resources.displayMetrics.density
-        assertTrue(collapsedPx / density < 140f)
-        rule.onNodeWithTag(TestTags.MAP_STATUS_TOGGLE).performClick()
         rule.onNodeWithTag(TestTags.WEATHER_SOURCE).assertTextContains("National Weather Service", substring = true)
         rule.onNodeWithText("2026-10-18 18:30 UTC", substring = true).assertIsDisplayed()
         rule.onNodeWithTag(TestTags.WEATHER_MORE).assertTextContains("+ 1 more")
+        val bannerBottom = rule.onNodeWithTag(TestTags.WEATHER_BANNER).fetchSemanticsNode().boundsInRoot.bottom
+        val controlsTop = rule.onNodeWithTag(TestTags.MY_LOCATION).fetchSemanticsNode().boundsInRoot.top
+        assertTrue(bannerBottom <= controlsTop)
         // The walk and quest cards cover this control. The action still runs.
         rule.onNodeWithTag(TestTags.MAP_LONG_PRESS).performSemanticsAction(SemanticsActions.OnClick)
         rule.waitForTag(TestTags.HERE_SHEET)

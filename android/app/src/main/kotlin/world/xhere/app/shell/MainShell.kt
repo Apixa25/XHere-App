@@ -14,6 +14,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Place
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.CenterAlignedTopAppBar
@@ -58,6 +59,8 @@ import world.xhere.app.detail.DropDetailScreen
 import world.xhere.app.detail.IncomingLinks
 import world.xhere.app.drop.DropScreen
 import world.xhere.app.drop.PendingDropSpot
+import world.xhere.app.explore.ExperienceFocus
+import world.xhere.app.explore.ExploreScreen
 import world.xhere.app.map.CampaignCard
 import world.xhere.app.map.MapScreen
 import world.xhere.app.profile.ProfileViewModel
@@ -73,6 +76,7 @@ import world.xhere.app.ui.TestTags
 
 private object Routes {
     const val MAP = "map"
+    const val EXPLORE = "explore"
     const val DROP = "drop"
     const val PROFILE = "profile"
     const val SETTINGS = "settings"
@@ -94,6 +98,7 @@ fun MainShell() {
     val nav = rememberNavController()
     val links: IncomingLinks = koinInject()
     val pendingDrop: PendingDropSpot = koinInject()
+    val focus: ExperienceFocus = koinInject()
     val pending by links.pending.collectAsStateWithLifecycle()
     val pendingThing by links.pendingThing.collectAsStateWithLifecycle()
     val backStack by nav.currentBackStackEntryAsState()
@@ -168,6 +173,25 @@ fun MainShell() {
                     onOpenAr = {
                         nav.navigate(Routes.AR) { launchSingleTop = true }
                     },
+                    onExplore = {
+                        nav.navigate(Routes.EXPLORE) {
+                            popUpTo(nav.graph.findStartDestination().id) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
+                )
+            }
+            composable(Routes.EXPLORE) {
+                ExploreScreen(
+                    onOpenMap = { action ->
+                        focus.request(action)
+                        nav.navigate(Routes.MAP) {
+                            popUpTo(nav.graph.findStartDestination().id) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
                 )
             }
             composable(Routes.AR) {
@@ -217,6 +241,7 @@ fun MainShell() {
 
 private enum class Tab(val route: String, val label: Int, val tag: String, val icon: ImageVector) {
     Map(Routes.MAP, R.string.nav_map, TestTags.NAV_MAP, Icons.Filled.Place),
+    Explore(Routes.EXPLORE, R.string.nav_explore, TestTags.NAV_EXPLORE, Icons.Filled.Search),
     Drop(Routes.DROP, R.string.nav_drop, TestTags.NAV_DROP, Icons.Filled.Add),
     Profile(Routes.PROFILE, R.string.nav_profile, TestTags.NAV_PROFILE, Icons.Filled.Person),
 }

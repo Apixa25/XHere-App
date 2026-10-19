@@ -10,6 +10,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import world.xhere.app.explore.ExperienceCloseButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -37,6 +38,7 @@ internal fun MapStatusStack(
     campaign: CampaignProgress?,
     alerts: List<WeatherAlert>,
     onDismissAlert: (String) -> Unit,
+    onDismissCampaign: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     val active = campaign
@@ -98,6 +100,9 @@ internal fun MapStatusStack(
                             if (expanded) R.string.map_status_hide else R.string.map_status_details,
                         ),
                     )
+                }
+                if (onDismissCampaign != null) {
+                    ExperienceCloseButton(onClick = onDismissCampaign, tag = TestTags.CAMPAIGN_DISMISS)
                 }
             }
             if (!expanded) {

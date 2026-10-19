@@ -11,6 +11,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import world.xhere.app.explore.ExperienceCloseButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -37,6 +38,7 @@ internal fun WalkCard(
     walk: Walk,
     distanceToNextM: Double?,
     onStart: () -> Unit,
+    onDismiss: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     val stops = WalkGuide.ordered(walk)
@@ -94,8 +96,17 @@ internal fun WalkCard(
                         )
                     }
                 }
+                if (onDismiss != null) {
+                    ExperienceCloseButton(onClick = onDismiss, tag = TestTags.WALK_DISMISS)
+                }
             }
             when {
+                !walk.started && !walk.completed && stops.isNotEmpty() -> Text(
+                    text = stringResource(R.string.walk_progress, done, stops.size),
+                    modifier = Modifier.testTag(TestTags.WALK_PROGRESS),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
                 walk.completed -> Text(
                     text = stringResource(R.string.walk_done),
                     modifier = Modifier.testTag(TestTags.WALK_DONE),
@@ -141,6 +152,7 @@ internal fun CampaignCard(
     campaign: CampaignProgress,
     now: Instant,
     compact: Boolean,
+    onDismiss: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     val days = (campaign.endsAt - now).inWholeDays
@@ -209,6 +221,9 @@ internal fun CampaignCard(
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
+                    if (onDismiss != null) {
+                        ExperienceCloseButton(onClick = onDismiss, tag = TestTags.CAMPAIGN_DISMISS)
+                    }
                 }
             }
         } else {
@@ -216,13 +231,20 @@ internal fun CampaignCard(
                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
-                Text(
-                    text = campaign.title,
-                    modifier = Modifier.testTag(TestTags.CAMPAIGN_TITLE),
-                    style = MaterialTheme.typography.titleSmall,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = campaign.title,
+                        modifier = Modifier
+                            .weight(1f)
+                            .testTag(TestTags.CAMPAIGN_TITLE),
+                        style = MaterialTheme.typography.titleSmall,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    if (onDismiss != null) {
+                        ExperienceCloseButton(onClick = onDismiss, tag = TestTags.CAMPAIGN_DISMISS)
+                    }
+                }
                 Text(
                     text = campaign.description,
                     style = MaterialTheme.typography.bodyMedium,

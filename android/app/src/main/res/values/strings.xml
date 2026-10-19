@@ -29,6 +29,7 @@
     <string name="onboarding_skip">Not now</string>
 
     <string name="nav_map">Map</string>
+    <string name="nav_explore">Explore</string>
     <string name="nav_drop">Drop</string>
     <string name="nav_profile">Profile</string>
 
@@ -395,4 +396,29 @@
     <string name="settings_voice_title">Objects nearby</string>
     <string name="settings_voice_body">Listen while XHere is in the background. This stays off until you turn it on. XHere does not record which objects you walked past. Scanning pauses when the battery is low or power saving is on.</string>
     <string name="settings_voice_switch">Background listening</string>
+    <string name="explore_heading">Explore</string>
+    <string name="explore_intro">Walks, quests, campaigns, and whatever else is known around here.</string>
+    <string name="explore_pill">Explore: %1$d nearby</string>
+    <string name="explore_close">Close</string>
+    <string name="explore_hide">Hide</string>
+    <string name="explore_hidden">Hidden on the map</string>
+    <string name="explore_undo">Undo</string>
+    <string name="explore_undo_message">Hidden. It stays in Explore.</string>
+    <string name="explore_sort_distance">Distance</string>
+    <string name="explore_sort_relevance">Relevance</string>
+    <string name="explore_filter_all">All</string>
+    <string name="explore_section_walks">Walks</string>
+    <string name="explore_section_quests">Quests</string>
+    <string name="explore_section_campaigns">Campaigns</string>
+    <string name="explore_section_live">Live</string>
+    <string name="explore_section_time">Time Machine</string>
+    <string name="explore_section_things">Things</string>
+    <string name="explore_section_capsules">Time capsules</string>
+    <string name="explore_live_empty">No live alerts in this area.</string>
+    <string name="explore_distance">%1$s away</string>
+    <string name="explore_duration">about %1$d min</string>
+    <string name="explore_progress">%1$d of %2$d</string>
+    <string name="explore_placeholder">Coming later</string>
+    <string name="settings_explore_hint">Show the Explore hint on the map</string>
+    <string name="settings_explore_hint_body">A small count of walks, quests, campaigns, and alerts you have not hidden.</string>
 </resources>
