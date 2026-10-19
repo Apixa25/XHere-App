@@ -2,7 +2,7 @@
 -- PLAN §3 and §7. Research recommendation #7.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(58);
+select plan(60);
 
 insert into auth.users (id, email) values
   ('11111111-1111-4111-8111-111111111111', 'alice@example.test'),
@@ -219,6 +219,22 @@ where drop_id = current_setting('t.fay')::uuid
 select is(
   (select points from public.profiles where id = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'),
   10, 'a reviewed flag (false) counts again'
+);
+update public.confirmations
+set counts_for_credit = false
+where drop_id = current_setting('t.fay')::uuid
+  and user_id = '33333333-3333-4333-8333-333333333333';
+select is(
+  (select points from public.profiles where id = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'),
+  2, 'a confirm that failed the location check is left out'
+);
+update public.confirmations
+set counts_for_credit = true
+where drop_id = current_setting('t.fay')::uuid
+  and user_id = '33333333-3333-4333-8333-333333333333';
+select is(
+  (select points from public.profiles where id = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'),
+  10, 'a confirm that counts for credit is restored'
 );
 
 -- Imported public records never score.

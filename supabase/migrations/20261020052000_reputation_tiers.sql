@@ -17,10 +17,10 @@
 -- anyone else's score. The drops stay on the map. A pinned demo tier stays.
 --
 -- spoof_flag (nullable) on confirmations, drop_views, and walk_progress, and
--- on quest_completions, is the M12 hook. private.reputation_signal_left_out
--- is the one predicate. Null counts. True is left out. False means it was
--- looked at and still counts. A later pass can treat counts_for_credit = false
--- as left out by changing that function, without a second scoring path.
+-- on quest_completions, is one M12 hook. Null counts. True is left out.
+-- False means it was looked at and still counts. counts_for_credit = false
+-- on a drop or a confirmation is the other hook, from location integrity.
+-- private.reputation_signal_left_out is the one predicate for both.
 --
 -- Tiers stay new / regular / trusted / guide. The app calls regular "Local".
 --   regular at 24, trusted at 80, guide at 200.
@@ -409,16 +409,20 @@ begin
 end;
 $$;
 
--- One predicate for "leave this signal out." Null and false still count.
--- M12 can extend this function when a row is marked counts_for_credit = false.
-create function private.reputation_signal_left_out(p_spoof boolean)
+-- One predicate for "leave this signal out."
+-- spoof_flag null or false still counts. True is left out.
+-- counts_for_credit false is left out. Null credit still counts.
+create function private.reputation_signal_left_out(
+  p_spoof boolean,
+  p_counts boolean default true
+)
 returns boolean
 language sql
 immutable
 security definer
 set search_path = ''
 as $$
-  select p_spoof is true;
+  select p_spoof is true or coalesce(p_counts, true) is not true;
 $$;
 
 -- Demo accounts are not real contributors. Same gate as founding.
@@ -452,7 +456,8 @@ as $$
     from public.confirmations c
     join public.drops d on d.id = c.drop_id
     where c.verdict = 'still_true'
-      and not private.reputation_signal_left_out(c.spoof_flag)
+      and d.counts_for_credit
+      and not private.reputation_signal_left_out(c.spoof_flag, c.counts_for_credit)
       and d.source = 'user'
       and d.status <> 'removed'
       and (
@@ -502,18 +507,19 @@ begin
   v_scores := private.confirm_direction_scores(p_author, p_actor);
 
   for v_row in
-    select c.drop_id, c.user_id, c.verdict, c.spoof_flag, c.created_at, d.status, d.source
+    select c.drop_id, c.user_id, c.verdict, c.spoof_flag, c.counts_for_credit,
+           c.created_at, d.status, d.source, d.counts_for_credit as drop_counts
     from public.confirmations c
     join public.drops d on d.id = c.drop_id
     where d.author_id = p_author and c.user_id = p_actor
   loop
     v_key := 'confirm:' || v_row.drop_id::text || ':' || v_row.user_id::text;
-    if v_row.source <> 'user' or v_row.status = 'removed' then
+    if v_row.source <> 'user' or v_row.status = 'removed' or not v_row.drop_counts then
       delete from public.reputation_ledger where source_key = v_key;
       continue;
     end if;
 
-    v_excluded := private.reputation_signal_left_out(v_row.spoof_flag);
+    v_excluded := private.reputation_signal_left_out(v_row.spoof_flag, v_row.counts_for_credit);
     if v_row.verdict = 'still_true' then
       if not v_scores then
         v_points := 0;
@@ -526,7 +532,8 @@ begin
           and d.source = 'user'
           and d.status <> 'removed'
           and c.verdict = 'still_true'
-          and not private.reputation_signal_left_out(c.spoof_flag)
+          and d.counts_for_credit
+          and not private.reputation_signal_left_out(c.spoof_flag, c.counts_for_credit)
           and (c.created_at, c.drop_id) < (v_row.created_at, v_row.drop_id);
         v_points := private.confirm_points_for_index(v_prior);
       end if;
@@ -539,7 +546,8 @@ begin
         and d.source = 'user'
         and d.status <> 'removed'
         and c.verdict = 'not_true'
-        and not private.reputation_signal_left_out(c.spoof_flag)
+        and d.counts_for_credit
+        and not private.reputation_signal_left_out(c.spoof_flag, c.counts_for_credit)
         and (c.created_at, c.drop_id) < (v_row.created_at, v_row.drop_id);
       v_points := -private.deny_points_for_index(v_prior);
     end if;
@@ -594,7 +602,7 @@ begin
   select d.author_id, d.source, d.status
     into v_author, v_source, v_status
   from public.drops d
-  where d.id = p_drop_id;
+  where d.id = p_drop_id and d.counts_for_credit;
 
   select v.spoof_flag into v_spoof
   from public.drop_views v
@@ -616,6 +624,7 @@ begin
     and d.author_id = v_author
     and d.source = 'user'
     and d.status <> 'removed'
+    and d.counts_for_credit
     and not private.reputation_signal_left_out(v.spoof_flag)
     and v.drop_id <> p_drop_id;
 
@@ -673,11 +682,13 @@ begin
 
   select count(*)::integer into v_drops
   from public.drops d
-  where d.author_id = p_user and d.source = 'user' and d.status <> 'removed';
+  where d.author_id = p_user and d.source = 'user' and d.status <> 'removed'
+    and d.counts_for_credit;
 
   select count(*)::integer into v_confirmed
   from public.drops d
-  where d.author_id = p_user and d.source = 'user' and d.status = 'confirmed';
+  where d.author_id = p_user and d.source = 'user' and d.status = 'confirmed'
+    and d.counts_for_credit;
 
   select count(*)::integer into v_walks
   from public.walk_progress w
@@ -695,6 +706,7 @@ begin
   where d.author_id = p_user
     and d.source = 'user'
     and d.status <> 'removed'
+    and d.counts_for_credit
     and not private.reputation_signal_left_out(v.spoof_flag)
     and v.viewer_id <> p_user
     and private.earns_reputation(v.viewer_id);
@@ -825,6 +837,7 @@ declare
 begin
   if tg_op = 'INSERT' then
     if new.source = 'user' and new.author_id is not null and new.status <> 'removed'
+       and new.counts_for_credit
        and private.earns_reputation(new.author_id) then
       perform private.award_finished_quests(new.author_id);
       perform private.apply_tier(new.author_id, true);
@@ -842,8 +855,26 @@ begin
     return null;
   end if;
 
-  if not private.earns_reputation(new.author_id) then
+  if not private.earns_reputation(new.author_id) or not new.counts_for_credit then
     delete from public.reputation_ledger where drop_id = new.id;
+    perform private.apply_tier(new.author_id, true);
+    perform private.sync_reputation_badges(new.author_id);
+    return null;
+  end if;
+
+  if old.counts_for_credit is not true and new.counts_for_credit then
+    for v_actor in
+      select c.user_id from public.confirmations c where c.drop_id = new.id
+    loop
+      perform private.resync_confirm_direction(new.author_id, v_actor);
+      perform private.resync_confirm_direction(v_actor, new.author_id);
+    end loop;
+    for v_viewer in
+      select v.viewer_id from public.drop_views v where v.drop_id = new.id
+    loop
+      perform private.sync_view_reputation(new.id, v_viewer);
+    end loop;
+    perform private.apply_tier(new.author_id, true);
     perform private.sync_reputation_badges(new.author_id);
     return null;
   end if;
@@ -972,7 +1003,7 @@ end;
 $$;
 
 create trigger drops_reputation
-  after insert or update of status, source on public.drops
+  after insert or update of status, source, counts_for_credit on public.drops
   for each row execute function private.sync_drop_reputation();
 
 create trigger confirmations_reputation
@@ -1325,11 +1356,13 @@ begin
   v_card.source := p_drop.source;
   v_card.author_badges := '[]'::jsonb;
   v_card.author_tier := null;
+  v_card.location_trust := p_drop.location_trust;
+  v_card.location_withheld := false;
 
   if p_viewer is not null then
     select c.verdict into v_card.my_verdict
     from public.confirmations c
-    where c.drop_id = p_drop.id and c.user_id = p_viewer;
+    where c.drop_id = p_drop.id and c.user_id = p_viewer and c.counts_for_credit;
   end if;
 
   if p_drop.author_id is not null
