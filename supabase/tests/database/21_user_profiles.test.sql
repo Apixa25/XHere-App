@@ -205,9 +205,11 @@ select is_empty(
 
 set local role anon;
 set local request.jwt.claims to '';
-select is_empty(
+select throws_ok(
   $$ select 1 from public.public_profile('ada_l') $$,
-  'a signed-out visitor does not get the public card'
+  '42501',
+  null,
+  'a signed-out visitor cannot call the public card'
 );
 
 select * from finish();
