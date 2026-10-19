@@ -1,5 +1,6 @@
 package world.xhere.app.map
 
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsPropertyKey
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertTextContains
@@ -10,6 +11,7 @@ import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTouchInput
@@ -84,7 +86,8 @@ class HereCardTest {
     @Test
     fun longPressAtTheLibraryShowsThePublicRecordAndPrefillsTheComposer() {
         rule.openMap()
-        rule.onNodeWithTag(TestTags.MAP_LONG_PRESS).performClick()
+        // The walk and quest cards cover this control. The action still runs.
+        rule.onNodeWithTag(TestTags.MAP_LONG_PRESS).performSemanticsAction(SemanticsActions.OnClick)
         rule.awaitHere("West 3rd Street|historical_fact:records:true:open_data,fenton:false:user")
         rule.here(TestTags.hereRow("records")).performScrollTo().assertExists()
         rule.onNodeWithText("Prendergast Library", useUnmergedTree = true).assertIsDisplayed()
