@@ -15,6 +15,7 @@ import world.xhere.shared.model.PlaceLabel
 import world.xhere.shared.model.QuestProgress
 import world.xhere.shared.model.Taxonomy
 import world.xhere.shared.model.Walk
+import world.xhere.shared.reputation.Reputation
 import world.xhere.shared.walks.WalkGuide
 
 /** What the map last asked the repository for. Tests read this to prove the RPC arguments. */
@@ -39,9 +40,12 @@ internal fun describeFeatures(features: List<MapFeature>): String = features.joi
     }
 }
 
-/** Stable near-me text for UI tests: `title|meters`, nearest first. */
+/**
+ * Stable near-me text for UI tests: `title|meters|tier`.
+ * Order is trust-adjusted. The meters are still the real distance.
+ */
 internal fun describeNearMe(cards: List<DropCard>): String = cards.joinToString(";") { card ->
-    "${card.title}|${card.distanceM?.toInt() ?: ""}"
+    "${card.title}|${card.distanceM?.toInt() ?: ""}|${card.authorTier?.name ?: "none"}"
 }
 
 data class CameraTarget(
@@ -94,6 +98,8 @@ data class TeaserUi(
     val confirmCount: Int = 0,
     /** Icon and name, for example "🌱 Founding Local". Empty on a public record or an anonymous drop. */
     val foundingLabel: String? = null,
+    /** Author tier chip. Null on a public record or an anonymous drop. */
+    val tierLabel: String? = null,
 )
 
 /**
@@ -235,6 +241,7 @@ internal fun DropCard.toTeaser(taxonomy: Taxonomy?, distanceM: Double?): TeaserU
         } else {
             authorBadges.firstOrNull()?.let { "${it.icon} ${it.name}" }
         },
+        tierLabel = authorTier?.let(Reputation::label),
     )
 }
 

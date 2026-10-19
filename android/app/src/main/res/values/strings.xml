@@ -152,6 +152,19 @@
 
     <string name="profile_settings">Settings</string>
     <string name="profile_signed_in">Signed in</string>
+    <string name="reputation_how">How to level up</string>
+    <string name="reputation_badges">Badges</string>
+    <string name="reputation_points">%1$d points</string>
+    <string name="reputation_next">Next is %1$s, at %2$d points.</string>
+    <string name="reputation_top">Guide is the top. Keep the map honest.</string>
+    <string name="reputation_confirms">Someone new saying your drop is still true is %1$d points. The same person again is %2$d, then %3$d, then nothing.</string>
+    <string name="reputation_views">Someone opening your drops is %1$d points the first time, then %2$d, for their first %3$d opens.</string>
+    <string name="reputation_finish">Finishing a walk is %1$d. Finishing a quest is %2$d. Once each.</string>
+    <string name="reputation_deny">Not anymore is minus %1$d, then minus %2$d from that person.</string>
+    <string name="reputation_removed">A drop removed by moderation is minus %1$d, and that drop\'s other points come off.</string>
+    <string name="reputation_reports">Trusted and Guide need %1$d more reports before a drop is held for review.</string>
+    <string name="reputation_own">Your own taps on your own drops never count. Imported public records never count.</string>
+    <string name="reputation_ladder_row">%1$s · %2$d</string>
     <string name="impact_title">Your drop helped</string>
     <string name="impact_empty">When someone sees or confirms a drop you posted, it shows up here. One note per drop each day.</string>
     <string name="impact_new">New</string>

@@ -16,6 +16,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import world.xhere.app.R
+import world.xhere.app.reputation.TierChip
 import world.xhere.app.ui.TestTags
 
 @Composable
@@ -53,6 +54,9 @@ internal fun TeaserCard(
                         style = MaterialTheme.typography.titleMedium,
                         modifier = Modifier.testTag(TestTags.TEASER_TITLE),
                     )
+                    teaser.tierLabel?.let { tier ->
+                        TierChip(label = tier, tag = TestTags.TEASER_TIER)
+                    }
                     teaser.foundingLabel?.let { founding ->
                         Text(
                             text = founding,

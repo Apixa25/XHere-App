@@ -27,6 +27,8 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 import world.xhere.app.map.MapFeaturesSemantics
 import world.xhere.app.map.NearMeOrderSemantics
+import world.xhere.shared.model.UserTier
+import world.xhere.shared.reputation.Reputation
 import world.xhere.app.map.ViewportQuery
 import world.xhere.app.map.ViewportQuerySemantics
 import world.xhere.app.ui.TestTags
@@ -146,11 +148,16 @@ class MapDiscoveryTest {
         }
         val rows = rule.property(NearMeOrderSemantics, TestTags.NEAR_ME_LIST).orEmpty().split(";")
         val titles = rows.map { it.substringBefore("|") }
-        val meters = rows.map { it.substringAfter("|").toInt() }
+        val adjusted = rows.map { row ->
+            val parts = row.split("|")
+            val raw = parts[1].toDouble()
+            val tier = parts.getOrNull(2)?.takeIf { it.isNotBlank() && it != "none" }?.let { UserTier.valueOf(it) }
+            Reputation.adjustedMeters(raw, tier)
+        }
         assertEquals("West 3rd at lunch", titles.first())
         assertTrue("Lake view from Celoron" in titles)
         assertFalse("Steps at Niagara Square" in titles)
-        assertTrue(meters.zipWithNext().all { (a, b) -> a <= b })
+        assertTrue(adjusted.zipWithNext().all { (a, b) -> a <= b + 0.01 })
         rule.onNodeWithTag(TestTags.nearRow("lunch")).assertIsDisplayed()
     }
 

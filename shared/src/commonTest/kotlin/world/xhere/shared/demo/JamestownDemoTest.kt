@@ -65,7 +65,10 @@ class JamestownDemoTest {
         val near = client().drops.dropsNearby(JamestownDemo.center, radiusM = 5_000)
         assertEquals("West 3rd at lunch", near.first().title)
         assertTrue(near.none { it.title == "Steps at Niagara Square" })
-        assertTrue(near.zipWithNext().all { (a, b) -> (a.distanceM ?: 0.0) <= (b.distanceM ?: 0.0) })
+        assertTrue(near.zipWithNext().all { (a, b) ->
+            world.xhere.shared.reputation.Reputation.adjustedMeters(a.distanceM ?: 0.0, a.authorTier) <=
+                world.xhere.shared.reputation.Reputation.adjustedMeters(b.distanceM ?: 0.0, b.authorTier)
+        })
         assertTrue(near.any { it.title == "Lake view from Celoron" })
     }
 

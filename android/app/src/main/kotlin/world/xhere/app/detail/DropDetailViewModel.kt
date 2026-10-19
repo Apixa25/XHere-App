@@ -31,6 +31,7 @@ import world.xhere.shared.model.ReportTarget
 import world.xhere.shared.model.Taxonomy
 import world.xhere.shared.safety.SafetyDirectory
 import world.xhere.shared.safety.SafetyResources
+import world.xhere.shared.reputation.Reputation
 import world.xhere.shared.share.ShareLinks
 
 enum class DetailNotice {
@@ -52,6 +53,8 @@ data class DetailUiState(
     val categoryLabel: String = "",
     val icon: String = "📍",
     val authorHandle: String? = null,
+    /** Null when the author is hidden or this is a public record. */
+    val authorTierLabel: String? = null,
     /** Empty when the drop is anonymous, a public record, or the author has no badge here. */
     val authorBadges: List<BadgeAward> = emptyList(),
     val approximate: Boolean = false,
@@ -338,6 +341,7 @@ class DropDetailViewModel(
                 categoryLabel = category?.label ?: current.categorySlug,
                 icon = category?.icon ?: group?.icon ?: "📍",
                 authorHandle = current.authorHandle,
+                authorTierLabel = current.authorTier?.let(Reputation::label),
                 authorBadges = if (publicRecord) emptyList() else current.authorBadges,
                 approximate = current.locationPrecisionM > 0,
                 revealRadiusM = current.revealRadiusM,

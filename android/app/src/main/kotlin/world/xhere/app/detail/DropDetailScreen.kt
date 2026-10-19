@@ -45,6 +45,7 @@ import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
 import org.koin.core.parameter.parametersOf
 import world.xhere.app.R
+import world.xhere.app.reputation.TierChip
 import world.xhere.app.location.ForegroundLocation
 import world.xhere.app.map.formatMeters
 import world.xhere.app.safety.BlockDialog
@@ -287,11 +288,16 @@ private fun DetailBody(
         )
     }
     state.authorHandle?.let { handle ->
-        Text(
-            text = stringResource(R.string.detail_author, handle),
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = stringResource(R.string.detail_author, handle),
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            state.authorTierLabel?.let { tier ->
+                TierChip(label = tier, tag = TestTags.DETAIL_TIER)
+            }
+        }
     }
     state.authorBadges.forEach { badge ->
         Text(

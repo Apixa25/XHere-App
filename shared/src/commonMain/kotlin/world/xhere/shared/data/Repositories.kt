@@ -23,6 +23,7 @@ import world.xhere.shared.model.PlaceLabel
 import world.xhere.shared.model.MapFeature
 import world.xhere.shared.model.ModerateDropAction
 import world.xhere.shared.model.Profile
+import world.xhere.shared.reputation.ReputationStanding
 import world.xhere.shared.model.ReportReason
 import world.xhere.shared.model.ReportStatus
 import world.xhere.shared.model.ReportTarget
@@ -72,6 +73,12 @@ interface ProfileRepository {
 
     /** Null when no live account has that handle. Used to report or block the author shown on a drop. */
     suspend fun publicProfile(handle: String): PublicProfile?
+
+    /**
+     * Points, tier, and the public thresholds (`my_reputation`).
+     * The level-up sheet reads this. A pinned tier can sit above the score.
+     */
+    suspend fun reputation(): ReputationStanding
 }
 
 interface TaxonomyRepository {

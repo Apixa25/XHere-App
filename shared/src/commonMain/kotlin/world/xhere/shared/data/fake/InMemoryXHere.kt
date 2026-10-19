@@ -57,6 +57,10 @@ import world.xhere.shared.model.Confirmation
 import world.xhere.shared.model.ConfirmationVerdict
 import world.xhere.shared.model.CreateDropResult
 import world.xhere.shared.model.DropCard
+import world.xhere.shared.model.DropSource
+import world.xhere.shared.model.UserTier
+import world.xhere.shared.reputation.Reputation
+import world.xhere.shared.reputation.ReputationStanding
 import world.xhere.shared.model.PlaceLabel
 import world.xhere.shared.model.DropMedia
 import world.xhere.shared.model.DropStatus
@@ -156,7 +160,7 @@ class InMemoryXHere(
     ): DropCard {
         val anonymous = drop.displayAnonymous && drop.category.allowAnonymousDisplay
         val badges = store.awardsFor(drop.authorId, drop.trueLocation, anonymous, clock())
-        return drop.toCard(viewerId, distance, verdict, revealDistance, badges)
+        return drop.toCard(viewerId, distance, verdict, revealDistance, badges, rankTier(drop))
     }
 
     private fun decideLocation(
@@ -223,6 +227,17 @@ class InMemoryXHere(
         store.noteHelped(drop, "view", clock())
     }
 
+    /** Same bonus as `private.tier_rank_bonus_m`: public records, anonymous drops, and reduced-trust drops get none. */
+    private fun rankTier(drop: StoredDrop): UserTier? {
+        if (drop.source != DropSource.USER) return null
+        if (!drop.countsForCredit) return null
+        if (drop.displayAnonymous && drop.category.allowAnonymousDisplay) return null
+        return store.profiles[drop.authorId]?.tier
+    }
+
+    private fun trustMeters(drop: StoredDrop, distance: Double): Double =
+        Reputation.adjustedMeters(distance, rankTier(drop))
+
     private fun requireViewer(): Profile {
         val current = viewer ?: throw XHereApiException("not_authenticated", sqlState = XHereApiException.SQL_PERMISSION)
         if (current.deletedAt != null) {
@@ -264,6 +279,11 @@ class InMemoryXHere(
 
     private inner class ProfileRepo : ProfileRepository {
         override suspend fun currentProfile(): Profile = requireViewer()
+
+        override suspend fun reputation(): ReputationStanding {
+            val profile = requireViewer()
+            return Reputation.standing(profile.points, profile.tier)
+        }
 
         override suspend fun publicProfile(handle: String): PublicProfile? {
             requireViewer()
@@ -314,7 +334,7 @@ class InMemoryXHere(
                 .filter { it.passes(categories) }
                 .map { it to Geo.distanceMeters(location, it.displayLocation) }
                 .filter { it.second <= radiusM }
-                .sortedWith(compareBy({ it.second }, { -it.first.createdAt.toEpochMilliseconds() }))
+                .sortedWith(compareBy({ trustMeters(it.first, it.second) }, { -it.first.createdAt.toEpochMilliseconds() }))
                 .take(capped)
                 .map { (drop, distance) -> card(drop, viewer?.id, distance, store.verdict(drop.id, viewer?.id)) }
         }
@@ -338,7 +358,7 @@ class InMemoryXHere(
             return store.visible(viewerId, clock())
                 .map { it to Geo.distanceMeters(spot, it.displayLocation) }
                 .filter { it.second <= radiusM }
-                .sortedWith(compareBy({ it.second }, { -it.first.createdAt.toEpochMilliseconds() }))
+                .sortedWith(compareBy({ trustMeters(it.first, it.second) }, { -it.first.createdAt.toEpochMilliseconds() }))
                 .take(capped)
                 .map { (drop, distance) ->
                     val revealDistance = viewer?.let { Geo.distanceMeters(it, drop.displayLocation) }
@@ -764,7 +784,8 @@ class InMemoryXHere(
                     val open = store.reports.values.count {
                         it.targetType == ReportTarget.DROP && it.targetId == targetId && it.status == ReportStatus.OPEN
                     }
-                    if (open >= drop.category.reportsToHide) {
+                    val authorTier = if (drop.source == DropSource.OPEN_DATA) null else store.profiles[drop.authorId]?.tier
+                    if (open >= Reputation.reportsToHide(drop.category.reportsToHide, authorTier)) {
                         drop.status = DropStatus.PENDING_REVIEW
                         store.log(null, "drop", drop.id, ModerationActionType.AUTO_HIDE, "report threshold reached", clock())
                     }
@@ -1541,6 +1562,7 @@ private fun StoredDrop.toCard(
     myVerdict: ConfirmationVerdict?,
     revealDistance: Double? = distance,
     authorBadges: List<BadgeAward> = emptyList(),
+    authorTier: UserTier? = null,
 ): DropCard {
     val publicRecord = source == world.xhere.shared.model.DropSource.OPEN_DATA
     val mine = viewerId != null && authorId == viewerId && !publicRecord
@@ -1579,6 +1601,7 @@ private fun StoredDrop.toCard(
         myVerdict = myVerdict,
         authorBadges = authorBadges,
         locationTrust = locationTrust,
+        authorTier = authorTier,
     )
 }
 
