@@ -33,6 +33,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.SemanticsPropertyKey
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
@@ -360,7 +363,8 @@ private fun DetailBody(
         )
     }
     val body = state.body
-    if (state.showBody && !body.isNullOrBlank()) {
+    val inscription = state.inscription
+    if (state.showBody && !body.isNullOrBlank() && body != inscription) {
         Text(
             text = body,
             style = MaterialTheme.typography.bodyLarge,
@@ -368,8 +372,29 @@ private fun DetailBody(
                 .padding(top = 4.dp)
                 .testTag(TestTags.DETAIL_BODY),
         )
-    } else {
+    } else if (!state.showBody) {
         LockedCard(state = state, onUseLocation = onUseLocation)
+    }
+    if (state.showBody && !inscription.isNullOrBlank()) {
+        Text(
+            text = stringResource(R.string.detail_inscription_label),
+            style = MaterialTheme.typography.titleMedium,
+        )
+        Text(
+            text = inscription,
+            style = MaterialTheme.typography.bodyLarge,
+            modifier = Modifier.testTag(TestTags.DETAIL_INSCRIPTION),
+        )
+    }
+    state.imageAltTexts.forEachIndexed { index, alt ->
+        val description = alt.ifBlank { stringResource(R.string.detail_photo) }
+        Text(
+            text = description,
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier
+                .testTag(if (index == 0) TestTags.DETAIL_PHOTO else "${TestTags.DETAIL_PHOTO}_$index")
+                .semantics { contentDescription = description },
+        )
     }
     if (state.publicRecord && !state.attribution.isNullOrBlank()) {
         Text(
@@ -396,6 +421,16 @@ private fun DetailBody(
             modifier = Modifier.testTag(TestTags.DETAIL_SOURCE),
         ) {
             Text(stringResource(R.string.detail_view_source))
+        }
+    }
+    val hmdbUrl = state.hmdbUrl
+    if (state.showBody && !hmdbUrl.isNullOrBlank()) {
+        val hmdbContext = LocalContext.current
+        TextButton(
+            onClick = { hmdbContext.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(hmdbUrl))) },
+            modifier = Modifier.testTag(TestTags.DETAIL_HMDB),
+        ) {
+            Text(stringResource(R.string.detail_hmdb))
         }
     }
     if (state.isMine) {

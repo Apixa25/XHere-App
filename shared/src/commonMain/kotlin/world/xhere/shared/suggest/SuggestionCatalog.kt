@@ -25,6 +25,7 @@ internal object SuggestionCatalog {
         CatalogEntry("historical_fact", "Historical fact", "Something that happened here, ideally with a source.", "history historical museum happened year source archive"),
         CatalogEntry("story", "Story", "A personal or local story tied to this spot.", "story tale personal memory anecdote grandmother"),
         CatalogEntry("memorial", "Memorial", "Remembering a person or event connected to this place.", "memorial plaque remember remembrance candle"),
+        CatalogEntry("historical_marker", "Historical marker", "A plaque, roadside marker, or historic information board.", "historical marker roadside plaque inscription board"),
         CatalogEntry("viewpoint", "Viewpoint", "A view worth stopping for.", "viewpoint view overlook vista scenic lake panorama overlook scenic vista"),
         CatalogEntry("trail_note", "Trail note", "Conditions, turns, and tips on a trail.", "trail hike path muddy turn conditions hiking"),
         CatalogEntry("wildlife", "Wildlife sighting", "An animal or plant seen here recently.", "wildlife animal bird owl deer fox plant sighting owl owl"),

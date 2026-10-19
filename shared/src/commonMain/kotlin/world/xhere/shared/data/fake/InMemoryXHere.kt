@@ -503,6 +503,7 @@ class InMemoryXHere(
                         width = item.width,
                         height = item.height,
                         durationS = item.durationS,
+                        altText = item.altText?.trim()?.take(300)?.ifBlank { null },
                         takenHere = LocationIntegrity.photoTakenHere(
                             LatLng(request.latitude, request.longitude),
                             capture,

@@ -15,6 +15,8 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.contentOrNull
 import world.xhere.app.location.DeviceLocation
 import world.xhere.app.location.LocationReading
 import world.xhere.shared.data.XHereApiException
@@ -26,6 +28,7 @@ import world.xhere.shared.model.ConfirmationVerdict
 import world.xhere.shared.model.DropCard
 import world.xhere.shared.model.DropSource
 import world.xhere.shared.model.DropStatus
+import world.xhere.shared.model.MediaKind
 import world.xhere.shared.model.ReportReason
 import world.xhere.shared.model.ReportTarget
 import world.xhere.shared.model.Taxonomy
@@ -93,6 +96,12 @@ data class DetailUiState(
     val canUndoHide: Boolean = false,
     /** Close enough, but the location check withheld the body. */
     val locationWithheld: Boolean = false,
+    /** Alt text for each revealed image, in sort order. Empty when the photo is hidden. */
+    val imageAltTexts: List<String> = emptyList(),
+    /** Inscription copied from an open-data historical marker, when the source published one. */
+    val inscription: String? = null,
+    /** HMdb link only. Marker text is never copied from HMdb. */
+    val hmdbUrl: String? = null,
 )
 
 /**
@@ -375,9 +384,21 @@ class DropDetailViewModel(
                 gone = previous.gone,
                 canUndoHide = previous.canUndoHide,
                 locationWithheld = current.locationWithheld && !publicRecord && !current.isMine,
+                imageAltTexts = if (showBody) {
+                    current.media.orEmpty()
+                        .filter { it.mediaKind == MediaKind.IMAGE }
+                        .map { it.altText?.trim().orEmpty() }
+                } else {
+                    emptyList()
+                },
+                inscription = if (showBody) attributeText(current, "inscription") else null,
+                hmdbUrl = if (showBody) attributeText(current, "hmdb_url") else null,
             )
         }
     }
+
+    private fun attributeText(card: DropCard, key: String): String? =
+        (card.attributes?.get(key) as? JsonPrimitive)?.contentOrNull?.trim()?.takeIf { it.isNotEmpty() }
 
     private fun noticeFor(error: XHereApiException): DetailNotice = when (error.code) {
         "too_far" -> DetailNotice.TOO_FAR

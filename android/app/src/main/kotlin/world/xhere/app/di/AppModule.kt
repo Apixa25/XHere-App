@@ -21,8 +21,11 @@ import world.xhere.app.drop.CameraXDropCapture
 import world.xhere.app.drop.DropCapture
 import world.xhere.app.drop.DropViewModel
 import world.xhere.app.drop.PendingDropSpot
+import world.xhere.app.drop.GeminiNanoSnapSuggester
 import world.xhere.app.drop.ImageLabeler
+import world.xhere.app.drop.LabelSnapSuggester
 import world.xhere.app.drop.MlKitImageLabeler
+import world.xhere.app.drop.SnapSuggester
 import world.xhere.app.location.AndroidDeviceLocation
 import world.xhere.app.location.DeviceLocation
 import world.xhere.app.map.FilterPresetStore
@@ -84,8 +87,9 @@ val appModule = module {
     single<MapCanvas> { MapLibreMapCanvas() }
     single<DropCapture> { CameraXDropCapture() }
     single<ImageLabeler> { MlKitImageLabeler() }
+    single<SnapSuggester> { GeminiNanoSnapSuggester(androidContext(), LabelSnapSuggester(get())) }
     viewModel { SessionViewModel(get(), get(), get()) }
-    viewModel { DropViewModel(get(), get(), get(), get()) }
+    viewModel { DropViewModel(get(), get(), get(), get(), get()) }
     single<LiveConditions> {
         CachingLiveConditions(
             live = get<world.xhere.shared.data.XHereServices>().live,

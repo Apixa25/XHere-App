@@ -263,6 +263,7 @@ object JamestownDemo {
             category(21, history, "historical_fact", "Historical fact", "🏛️", 150, 1, attributes = HISTORICAL_SCHEMA),
             category(22, history, "story", "Story", "📖", 150, 2, attributes = HISTORICAL_SCHEMA),
             category(30, history, "memorial", "Memorial", "🕯️", 150, 3, attributes = HISTORICAL_SCHEMA),
+            category(53, history, "historical_marker", "Historical marker", "🪧", 150, 4, attributes = MARKER_SCHEMA),
             category(23, nature, "viewpoint", "Viewpoint", "🏞️", 300, 1),
             category(31, nature, "trail_note", "Trail note", "🥾", 300, 2),
             category(32, nature, "wildlife", "Wildlife sighting", "🦉", 300, 3),
@@ -471,6 +472,16 @@ object JamestownDemo {
         "era":{"type":"string","maxLength":60},
         "year":{"type":"integer","minimum":-5000,"maximum":2100},
         "source_url":{"type":"string","format":"uri","maxLength":500}}}""",
+    )
+    private val MARKER_SCHEMA = schema(
+        """{"type":"object","additionalProperties":false,"properties":{
+        "era":{"type":"string","maxLength":60},
+        "year":{"type":"integer","minimum":-5000,"maximum":2100},
+        "source_url":{"type":"string","maxLength":500},
+        "citation":{"type":"string","maxLength":300},
+        "inscription":{"type":"string","maxLength":1000},
+        "marker_kind":{"type":"string","maxLength":40},
+        "hmdb_url":{"type":"string","maxLength":500}}}""",
     )
     private val FOOD_SCHEMA = schema(
         """{"type":"object","additionalProperties":false,"properties":{

@@ -2209,5 +2209,25 @@
       "citation": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/10920153980"
     }
+  },
+  {
+    "source_slug": "osm-historical-markers",
+    "source_name": "OpenStreetMap contributors",
+    "source_home": "https://www.openstreetmap.org/copyright",
+    "external_id": "osm:node/11249065011",
+    "category_slug": "historical_marker",
+    "title": "Historical plaque",
+    "summary": "OpenStreetMap records this historical marker (plaque).",
+    "lat": 42.080554,
+    "lng": -79.236788,
+    "source_url": "https://www.openstreetmap.org/node/11249065011",
+    "license": "ODbL 1.0",
+    "attribution": "© OpenStreetMap contributors. Historical markers under the Open Database License. HMdb text is not copied; a marker may link out to HMdb.",
+    "region_id": "us-ny-jamestown",
+    "attributes": {
+      "citation": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/11249065011",
+      "marker_kind": "plaque"
+    }
   }
 ]

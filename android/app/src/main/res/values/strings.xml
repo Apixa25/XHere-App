@@ -126,6 +126,16 @@
     <string name="drop_ttl_24h">24 hours</string>
     <string name="drop_post">Post</string>
     <string name="drop_another">Post another</string>
+    <string name="drop_snap_gemini">Suggestion from on-device AI. Edit anything. Nothing is posted until you tap Post.</string>
+    <string name="drop_snap_labels">Suggestion from on-device photo labels. Edit anything. Nothing is posted until you tap Post.</string>
+    <string name="drop_snap_editable">Suggestion. You can change this.</string>
+    <string name="drop_snap_title">Title</string>
+    <string name="drop_snap_description">Description</string>
+    <string name="drop_snap_alt">Alt text for the photo</string>
+    <string name="drop_photo">Photo</string>
+    <string name="detail_photo">Photo</string>
+    <string name="detail_inscription_label">Inscription</string>
+    <string name="detail_hmdb">View on HMdb</string>
 
     <string name="detail_back">Back</string>
     <string name="detail_missing">This drop isn\'t here.</string>

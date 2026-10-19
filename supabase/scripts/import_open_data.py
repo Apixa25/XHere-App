@@ -12,6 +12,11 @@ Sources:
   arcgis_feature  A public ArcGIS FeatureServer. The National Register of
                   Historic Places is the built-in field map (public domain).
   osm_overpass    OpenStreetMap historic / heritage / tourism points (ODbL).
+  osm_historical_markers
+                  OpenStreetMap plaques, historic markers, and historic
+                  information boards (ODbL). Inscriptions come from OSM.
+                  An HMdb website on the same object is stored as a link.
+                  HMdb text is never copied.
   open311         Open311 GeoReport v2 requests.json. Only where a region
                   YAML lists an https endpoint. Request text is not copied.
 
@@ -65,8 +70,9 @@ ALLOWED_CATEGORIES = {
     "street_art",
     "infrastructure",
     "civic_issue",
+    "historical_marker",
 }
-HISTORY_CATEGORIES = {"historical_fact", "story", "memorial"}
+HISTORY_CATEGORIES = {"historical_fact", "story", "memorial", "historical_marker"}
 FORBIDDEN_MARKERS = ("hmdb", "atlasobscura", "atlas-obscura")
 # The public Overpass mirrors fail independently. The first one that answers is used.
 # If every mirror fails, the importer falls back to the OSM map API in small tiles.
@@ -118,6 +124,17 @@ def main(argv: list[str]) -> int:
     if not region_path:
         raise ImportError("pass --region path/to/region.yaml")
     region = load_region(Path(region_path))
+    merge_id = _option(args, "--merge")
+    if merge_id:
+        out = Path(_option(args, "--out") or default_out(region))
+        if not out.exists():
+            raise ImportError(f"no snapshot to merge into: {out}")
+        existing = json.loads(out.read_text(encoding="utf-8"))
+        items = merge_into_snapshot(region, existing, merge_id)
+        counts = validate_snapshot(items, region)
+        write_snapshot(out, items)
+        print(json.dumps({"wrote": str(out), "sql": str(sql_path_for(out)), "counts": counts}, indent=2))
+        return 0
     write_live_seed(region)
     items = fetch_region(region)
     counts = validate_snapshot(items, region)
@@ -347,21 +364,11 @@ def fetch_region(region: dict) -> list[dict]:
     region_id = region["region"]["id"]
     items: list[dict] = []
     seen_qids: set[str] = set()
+    skip_markers = any(source["adapter"] == "osm_historical_markers" for source in region["sources"])
     for source in region["sources"]:
-        adapter = source["adapter"]
-        if adapter == "wikipedia_geo":
-            batch = fetch_wikipedia(source, bbox, region_id)
+        batch = fetch_source(source, bbox, region_id, seen_qids, skip_markers)
+        if source["adapter"] == "wikipedia_geo":
             seen_qids.update(item["qid"] for item in batch if item.get("qid"))
-        elif adapter == "wikidata_geo":
-            batch = fetch_wikidata(source, bbox, region_id, skip_qids=seen_qids)
-        elif adapter == "arcgis_feature":
-            batch = fetch_arcgis(source, bbox, region_id)
-        elif adapter == "osm_overpass":
-            batch = fetch_osm(source, bbox, region_id, skip_qids=seen_qids)
-        elif adapter == "open311":
-            batch = fetch_open311(source, bbox, region_id)
-        else:
-            raise ImportError(f"unknown adapter {adapter}. Add it once, then reuse it from region YAML.")
         print(f"{source['id']}: {len(batch)}", file=sys.stderr)
         items.extend(batch)
     deduped = dedupe(items)
@@ -575,7 +582,68 @@ def fetch_arcgis(source: dict, bbox: list[float], region_id: str) -> list[dict]:
     return items
 
 
-def fetch_osm(source: dict, bbox: list[float], region_id: str, skip_qids: set[str]) -> list[dict]:
+def fetch_source(
+    source: dict,
+    bbox: list[float],
+    region_id: str,
+    seen_qids: set[str],
+    skip_markers: bool,
+) -> list[dict]:
+    adapter = source["adapter"]
+    if adapter == "wikipedia_geo":
+        return fetch_wikipedia(source, bbox, region_id)
+    if adapter == "wikidata_geo":
+        return fetch_wikidata(source, bbox, region_id, skip_qids=seen_qids)
+    if adapter == "arcgis_feature":
+        return fetch_arcgis(source, bbox, region_id)
+    if adapter == "osm_overpass":
+        return fetch_osm(source, bbox, region_id, skip_qids=seen_qids, skip_markers=skip_markers)
+    if adapter == "osm_historical_markers":
+        return fetch_historical_markers(source, bbox, region_id)
+    if adapter == "open311":
+        return fetch_open311(source, bbox, region_id)
+    raise ImportError(f"unknown adapter {adapter}. Add it once, then reuse it from region YAML.")
+
+
+def merge_into_snapshot(region: dict, existing: list, source_id: str) -> list[dict]:
+    """Replace one source in an existing snapshot and leave the other rows.
+
+    A full refetch would drift Wikipedia and the National Register. Historical
+    markers are appended, and an older heritage row that is the same plaque
+    (same name, memorial category) is dropped so the inscription is the one
+    people see.
+    """
+    source = next((row for row in region["sources"] if row["id"] == source_id), None)
+    if source is None:
+        raise ImportError(f"unknown source {source_id}")
+    bbox = region["region"]["bbox"]
+    region_id = region["region"]["id"]
+    skip_markers = any(row["adapter"] == "osm_historical_markers" for row in region["sources"])
+    fresh = fetch_source(source, bbox, region_id, set(), skip_markers)
+    for row in fresh:
+        row.pop("qid", None)
+    kept = [row for row in existing if row.get("source_slug") != source_id]
+    if source["adapter"] == "osm_historical_markers":
+        names = {normalize_name(row["title"]) for row in fresh}
+        kept = [
+            row for row in kept
+            if not (
+                row.get("source_slug") == "osm-heritage"
+                and row.get("category_slug") == "memorial"
+                and normalize_name(row.get("title") or "") in names
+            )
+        ]
+    print(f"{source_id}: {len(fresh)}", file=sys.stderr)
+    return kept + fresh
+
+
+def fetch_osm(
+    source: dict,
+    bbox: list[float],
+    region_id: str,
+    skip_qids: set[str],
+    skip_markers: bool = False,
+) -> list[dict]:
     try:
         elements = overpass_elements(source, bbox)
     except ImportError as error:
@@ -587,6 +655,8 @@ def fetch_osm(source: dict, bbox: list[float], region_id: str, skip_qids: set[st
         tags = element.get("tags") or {}
         name = (tags.get("name") or "").strip()
         if not name:
+            continue
+        if skip_markers and is_historical_marker(tags):
             continue
         qid = tags.get("wikidata")
         if qid and qid in skip_qids:
@@ -618,6 +688,155 @@ def fetch_osm(source: dict, bbox: list[float], region_id: str, skip_qids: set[st
     return items
 
 
+def fetch_historical_markers(source: dict, bbox: list[float], region_id: str) -> list[dict]:
+    """Plaques, historic markers, and historic information boards from OSM.
+
+    One Overpass query covers nodes and ways. If every mirror fails, the map
+    API fallback keeps a marker that has an inscription and no name.
+    """
+    try:
+        elements = overpass_marker_elements(bbox)
+    except ImportError as error:
+        print(f"overpass unavailable ({error}); using the OSM map API for markers", file=sys.stderr)
+        elements = osm_map_markers(bbox)
+    items = []
+    seen: set[str] = set()
+    for element in elements:
+        external_id = f"osm:{element.get('type')}/{element.get('id')}"
+        if external_id in seen:
+            continue
+        record = marker_record(source, region_id, element, bbox)
+        if record is None:
+            continue
+        seen.add(external_id)
+        items.append(record)
+    return items
+
+
+def overpass_marker_elements(bbox: list[float]) -> list[dict]:
+    west, south, east, north = bbox
+    box = f"({south},{west},{north},{east})"
+    query = (
+        "[out:json][timeout:60];("
+        f'node["historic"="memorial"]["memorial"="plaque"]{box};'
+        f'way["historic"="memorial"]["memorial"="plaque"]{box};'
+        f'node["historic"="marker"]{box};'
+        f'way["historic"="marker"]{box};'
+        f'node["tourism"="information"]["information"="board"]["historic"]{box};'
+        f'way["tourism"="information"]["information"="board"]["historic"]{box};'
+        f'relation["historic"="memorial"]["memorial"="plaque"]{box};'
+        f'relation["historic"="marker"]{box};'
+        f'relation["tourism"="information"]["information"="board"]["historic"]{box};'
+        ");out center tags;"
+    )
+    payload = overpass(query, timeout=70)
+    return payload.get("elements") or []
+
+
+def osm_map_markers(bbox: list[float]) -> list[dict]:
+    return osm_map_elements(
+        {"historic": True},
+        bbox,
+        require_name=False,
+        accept=lambda tags: is_historical_marker(tags) and marker_title(tags, marker_inscription(tags)) is not None,
+    )
+
+
+def marker_record(source: dict, region_id: str, element: dict, bbox: list[float]) -> dict | None:
+    tags = element.get("tags") or {}
+    if not is_historical_marker(tags):
+        return None
+    inscription = marker_inscription(tags)
+    title = marker_title(tags, inscription)
+    if not title:
+        return None
+    lat, lng = element_point(element)
+    if lat is None or lng is None or not inside_bbox(lat, lng, bbox):
+        return None
+    kind = marker_kind(tags)
+    element_type = element.get("type")
+    element_id = element.get("id")
+    if not element_type or element_id is None:
+        return None
+    source_url = f"https://www.openstreetmap.org/{element_type}/{element_id}"
+    link = hmdb_link(tags)
+    attributes = attributes_for("historical_marker", source_url, "OpenStreetMap")
+    attributes["marker_kind"] = kind
+    if inscription:
+        attributes["inscription"] = inscription
+    if link:
+        attributes["hmdb_url"] = link
+    return item(
+        source,
+        region_id,
+        external_id=f"osm:{element_type}/{element_id}",
+        title=title,
+        summary=f"OpenStreetMap records this historical marker ({kind}).",
+        lat=lat,
+        lng=lng,
+        source_url=source_url,
+        category="historical_marker",
+        citation="OpenStreetMap",
+        attributes=attributes,
+    )
+
+
+def is_historical_marker(tags: dict) -> bool:
+    historic = (tags.get("historic") or "").strip()
+    memorial = (tags.get("memorial") or "").strip()
+    tourism = (tags.get("tourism") or "").strip()
+    information = (tags.get("information") or "").strip()
+    if historic == "memorial" and memorial == "plaque":
+        return True
+    if historic == "marker":
+        return True
+    return tourism == "information" and information == "board" and bool(historic)
+
+
+def marker_kind(tags: dict) -> str:
+    if (tags.get("historic") or "").strip() == "marker":
+        return "marker"
+    if (tags.get("tourism") or "").strip() == "information" and (tags.get("information") or "").strip() == "board":
+        return "board"
+    return "plaque"
+
+
+def marker_inscription(tags: dict) -> str | None:
+    raw = tags.get("inscription") or tags.get("inscription:en") or ""
+    compact = " ".join(str(raw).split())
+    if not compact:
+        return None
+    if len(compact) <= 1000:
+        return compact
+    return compact[:997].rstrip() + "..."
+
+
+def marker_title(tags: dict, inscription: str | None) -> str | None:
+    name = (tags.get("name") or tags.get("name:en") or "").strip()
+    if name:
+        return clip_title(name)
+    if inscription:
+        sentence = re.split(r"(?<=[.!?])\s", inscription, maxsplit=1)[0]
+        titled = clip_title(sentence)
+        if titled:
+            return titled
+    return {
+        "marker": "Historic marker",
+        "board": "Historic information board",
+    }.get(marker_kind(tags), "Historical plaque")
+
+
+def hmdb_link(tags: dict) -> str | None:
+    for key in ("website", "url", "contact:website"):
+        link = https_or_none(tags.get(key))
+        if not link:
+            continue
+        host = urllib.parse.urlparse(link).netloc.lower()
+        if host == "hmdb.org" or host.endswith(".hmdb.org"):
+            return link
+    return None
+
+
 def overpass_elements(source: dict, bbox: list[float]) -> list[dict]:
     west, south, east, north = bbox
     box = f"({south},{west},{north},{east})"
@@ -642,7 +861,7 @@ def overpass_elements(source: dict, bbox: list[float]) -> list[dict]:
     return elements
 
 
-def osm_map_elements(source: dict, bbox: list[float]) -> list[dict]:
+def osm_map_elements(source: dict, bbox: list[float], *, require_name: bool = True, accept=None) -> list[dict]:
     """Named historic/heritage/tourism features from the OSM map API.
 
     One city bbox is more nodes than the API allows, so the box is walked
@@ -669,6 +888,7 @@ def osm_map_elements(source: dict, bbox: list[float]) -> list[dict]:
                 osm_map_tile(
                     lng0, lat0, lng1, lat1,
                     want_historic, want_heritage, tourism_ok, seen,
+                    require_name=require_name, accept=accept,
                 )
             )
             lng0 = lng1
@@ -685,6 +905,9 @@ def osm_map_tile(
     want_heritage: bool,
     tourism_ok: set,
     seen: set[str],
+    *,
+    require_name: bool = True,
+    accept=None,
 ) -> list[dict]:
     url = OSM_MAP_API + "?" + urllib.parse.urlencode({
         "bbox": f"{west},{south},{east},{north}",
@@ -706,7 +929,10 @@ def osm_map_tile(
                 (mid_lng, mid_lat, east, north),
             ):
                 time.sleep(1)
-                pieces.extend(osm_map_tile(*piece, want_historic, want_heritage, tourism_ok, seen))
+                pieces.extend(osm_map_tile(
+                    *piece, want_historic, want_heritage, tourism_ok, seen,
+                    require_name=require_name, accept=accept,
+                ))
             return pieces
         raise
     root = ET.fromstring(payload)
@@ -725,9 +951,12 @@ def osm_map_tile(
         if key in seen:
             continue
         tags = {tag.get("k"): tag.get("v") for tag in element.findall("tag") if tag.get("k")}
-        if not tags.get("name"):
+        if require_name and not (tags.get("name") or "").strip():
             continue
-        if not osm_tags_wanted(tags, want_historic, want_heritage, tourism_ok):
+        if accept is not None:
+            if not accept(tags):
+                continue
+        elif not osm_tags_wanted(tags, want_historic, want_heritage, tourism_ok):
             continue
         if kind == "node":
             latlng = nodes.get(element_id)
@@ -759,12 +988,12 @@ def osm_tags_wanted(tags: dict, want_historic: bool, want_heritage: bool, touris
     return bool(tourism_ok) and tourism in tourism_ok
 
 
-def overpass(query: str) -> dict:
+def overpass(query: str, timeout: int = 35) -> dict:
     last_error: Exception | None = None
     data = urllib.parse.urlencode({"data": query}).encode()
     for endpoint in OVERPASS_ENDPOINTS:
         try:
-            return http_json(endpoint, data=data, timeout=35, retries=1)
+            return http_json(endpoint, data=data, timeout=timeout, retries=1)
         except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, urllib.error.HTTPError) as error:
             last_error = error
             time.sleep(1)
@@ -822,6 +1051,8 @@ def attributes_for(category: str, source_url: str, citation: str) -> dict:
 def osm_category(tags: dict) -> str:
     tourism = tags.get("tourism")
     historic = tags.get("historic")
+    if is_historical_marker(tags):
+        return "historical_marker"
     if tourism == "artwork":
         return "public_art"
     if tourism == "viewpoint":
@@ -832,7 +1063,13 @@ def osm_category(tags: dict) -> str:
 
 
 def dedupe(items: list[dict]) -> list[dict]:
-    rank = {"nrhp": 0, "wikipedia-geo": 1, "wikidata-geo": 2, "osm-heritage": 3}
+    rank = {
+        "nrhp": 0,
+        "wikipedia-geo": 1,
+        "wikidata-geo": 2,
+        "osm-historical-markers": 3,
+        "osm-heritage": 4,
+    }
     ordered = sorted(items, key=lambda row: (rank.get(row["source_slug"], 9), row["title"].lower()))
     kept: list[dict] = []
     for row in ordered:
@@ -840,13 +1077,28 @@ def dedupe(items: list[dict]) -> list[dict]:
         if qid and any(other.get("qid") == qid for other in kept):
             continue
         if any(
+            other["source_slug"] == row["source_slug"] and other["external_id"] == row["external_id"]
+            for other in kept
+        ):
+            continue
+        if any(
             haversine_m(row["lat"], row["lng"], other["lat"], other["lng"]) <= 60
             and similar_name(row["title"], other["title"])
+            and not marker_kept_beside(row, other)
             for other in kept
         ):
             continue
         kept.append(row)
     return kept
+
+
+def marker_kept_beside(row: dict, other: dict) -> bool:
+    """A marker stays on the map even when a nearby place shares its name.
+
+    Two plaques can also share a fallback title ("Historical plaque") without
+    one of them being dropped.
+    """
+    return row.get("category_slug") == "historical_marker"
 
 
 def similar_name(left: str, right: str) -> bool:
@@ -1218,7 +1470,10 @@ def self_test() -> None:
         "wikidata_geo",
         "arcgis_feature",
         "osm_overpass",
+        "osm_historical_markers",
     ]
+    assert region["sources"][3]["id"] == "osm-heritage"
+    assert region["sources"][4]["id"] == "osm-historical-markers"
     decisions = {candidate["id"]: candidate["decision"] for candidate in region["candidates"]}
     assert decisions["hmdb"] == "link-only"
     assert decisions["atlas-obscura"] == "link-only"
@@ -1244,7 +1499,16 @@ def self_test() -> None:
     assert osm_category({"tourism": "artwork"}) == "public_art"
     assert osm_category({"tourism": "viewpoint"}) == "viewpoint"
     assert osm_category({"historic": "memorial"}) == "memorial"
+    assert osm_category({"historic": "monument"}) == "memorial"
+    assert osm_category({"historic": "memorial", "memorial": "plaque"}) == "historical_marker"
     assert osm_category({"historic": "building"}) == "historical_fact"
+    assert is_historical_marker({"historic": "memorial", "memorial": "plaque"})
+    assert is_historical_marker({"historic": "marker"})
+    assert not is_historical_marker({"historic": "memorial", "memorial": "statue"})
+    assert not is_historical_marker({"tourism": "information", "information": "board"})
+    assert is_historical_marker({"tourism": "information", "information": "board", "historic": "memorial"})
+    assert marker_title({"historic": "memorial", "memorial": "plaque"}, None) == "Historical plaque"
+    assert marker_title({"historic": "marker", "inscription": "Mill site."}, "Mill site.") == "Mill site."
     assert clip_title("x" * 200).endswith("...")
     assert len(clip_title("x" * 200)) == 120
     assert parse_wkt_point("Point(-79.24 42.10)") == (42.10, -79.24)
@@ -1290,12 +1554,23 @@ def self_test() -> None:
     kept = dedupe([wiki, nrhp, other])
     assert [row["external_id"] for row in kept] == ["nrhp:1", "wikidata:Q2"]
 
-    counts = validate_snapshot([nrhp, wiki, other, _osm_sample(region)], region)
+    plaque = _marker_sample(region)
+    assert plaque["summary"] == "OpenStreetMap records this historical marker (plaque)."
+    assert "hmdb" not in plaque["summary"].lower()
+    assert "Copied HMDB" not in json.dumps(plaque)
+    assert plaque["attributes"]["inscription"] == "Dedicated in 1892 to Reuben Fenton."
+    assert plaque["attributes"]["hmdb_url"] == "https://www.hmdb.org/m.asp?m=1"
+    assert "description" not in plaque["attributes"]
+    beside = dedupe([nrhp, plaque])
+    assert {row["external_id"] for row in beside} == {"nrhp:1", "osm:node/99"}
+
+    counts = validate_snapshot([nrhp, wiki, other, _osm_sample(region), plaque], region)
     assert counts == {
         "wikipedia-geo": 1,
         "wikidata-geo": 1,
         "nrhp": 1,
         "osm-heritage": 1,
+        "osm-historical-markers": 1,
     }
     try:
         validate_snapshot([nrhp, wiki, other], region)
@@ -1404,6 +1679,31 @@ def _osm_sample(region: dict) -> dict:
         category="viewpoint",
         citation="OpenStreetMap",
     )
+
+
+def _marker_sample(region: dict) -> dict:
+    record = marker_record(
+        region["sources"][4],
+        "us-ny-jamestown",
+        {
+            "type": "node",
+            "id": 99,
+            "lat": 42.09105,
+            "lon": -79.23905,
+            "tags": {
+                "historic": "memorial",
+                "memorial": "plaque",
+                "name": "Fenton History Center",
+                "inscription": "Dedicated in 1892 to Reuben Fenton.",
+                "description": "Copied HMDB text must not land in the summary.",
+                "website": "https://www.hmdb.org/m.asp?m=1",
+            },
+        },
+        region["region"]["bbox"],
+    )
+    if record is None:
+        raise AssertionError("marker sample was dropped")
+    return record
 
 
 if __name__ == "__main__":

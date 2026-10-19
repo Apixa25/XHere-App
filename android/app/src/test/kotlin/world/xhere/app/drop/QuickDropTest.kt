@@ -48,14 +48,20 @@ class QuickDropTest {
         rule.openDrop()
         rule.onNodeWithText("three taps", substring = true).assertIsDisplayed()
         rule.onNodeWithTag(TestTags.DROP_SHUTTER).performClick()
-        rule.waitForTag(TestTags.suggestion("food_truck"))
-        rule.onNodeWithTag(TestTags.suggestion("food_truck")).performScrollTo().performClick()
+        rule.waitForTag(TestTags.DROP_SNAP_BANNER)
+        rule.onNodeWithTag(TestTags.DROP_SNAP_BANNER).assertTextContains("Suggestion", substring = true)
+        rule.onNodeWithTag(TestTags.DROP_SNAP_BANNER).assertTextContains("Post", substring = true)
+        rule.onNodeWithTag(TestTags.DROP_SNAP_TITLE).assertTextContains("Food truck", substring = true)
+        rule.onNodeWithTag(TestTags.DROP_SNAP_ALT).performScrollTo().performTextReplacement("A truck serving tacos.")
+        assertTrue(TestGraph.services.store.drops.none { it.value.authorId == TestGraph.profile.id })
+        rule.onNodeWithTag(TestTags.DROP_POST).performScrollTo().performClick()
         rule.waitForTag(TestTags.DROP_SUCCESS)
         val posted = TestGraph.services.store.drops.values.filter {
             it.authorId == TestGraph.profile.id && it.category.slug == "food_truck"
         }
         assertEquals(1, posted.size)
         assertEquals("Food truck", posted.single().title)
+        assertEquals("A truck serving tacos.", posted.single().media.single().altText)
         val bytes = TestGraph.services.store.mediaBytes.values.single()
         assertFalse(ExifStrip.containsExifMarker(bytes))
         assertEquals(1, TestGraph.services.store.suggestionLogs.size)
