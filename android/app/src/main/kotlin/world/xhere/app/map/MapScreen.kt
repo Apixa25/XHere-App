@@ -127,6 +127,7 @@ fun MapScreen(
     voice: VoiceSession = koinInject(),
     links: IncomingLinks = koinInject(),
     focus: ExperienceFocus = koinInject(),
+    sheets: SheetSignals = koinInject(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val voiceState by things.state.collectAsStateWithLifecycle()
@@ -135,6 +136,9 @@ fun MapScreen(
     val talk by voiceModel.state.collectAsStateWithLifecycle()
     var accessDraft by remember { mutableStateOf(SurveyDraft()) }
     var deskRequest by remember { mutableStateOf<DeskRequest?>(null) }
+    androidx.compose.runtime.LaunchedEffect(sheets) {
+        sheets.dismissals.collect { deskRequest = null }
+    }
     val context = LocalContext.current
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     DisposableEffect(lifecycle, viewModel) {
