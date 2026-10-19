@@ -453,7 +453,9 @@ as $$
     and (p_until is null or p_drop.created_at < p_until)
     and exists (
       select 1 from public.profiles p
-      where p.id = p_drop.author_id and p.deleted_at is null
+      where p.id = p_drop.author_id
+        and p.deleted_at is null
+        and not p.is_demo
     )
     and extensions.st_x(p_drop.geog::extensions.geometry) between p_region.min_lng and p_region.max_lng
     and extensions.st_y(p_drop.geog::extensions.geometry) between p_region.min_lat and p_region.max_lat;
