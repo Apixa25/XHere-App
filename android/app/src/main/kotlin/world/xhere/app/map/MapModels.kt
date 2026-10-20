@@ -23,6 +23,8 @@ import world.xhere.shared.model.PlaceLabel
 import world.xhere.shared.model.QuestProgress
 import world.xhere.shared.model.Taxonomy
 import world.xhere.shared.model.Walk
+import world.xhere.shared.places.PublicPlace
+import world.xhere.shared.places.PublicSources
 import world.xhere.shared.profile.AuthorNames
 import world.xhere.shared.reputation.Reputation
 import world.xhere.shared.walks.WalkGuide
@@ -269,13 +271,23 @@ data class MapUiState(
     val experienceLocal: ExperienceLocal = ExperienceLocal(),
     /** Set when Explore asks the map to show one card. */
     val focusedExperienceId: String? = null,
-    /** Wheelchair pins. Off until the person turns the Accessibility layer on. */
+    /** Wheelchair pins. Off until the Accessibility chip or the saved layer. */
     val accessibilityLayer: Boolean = false,
     val accessPins: List<world.xhere.shared.access.AccessSummary> = emptyList(),
     val accessSurvey: Boolean = false,
+    /** Incident reports. Off until the Crime layer or the Safety chip. */
+    val crimeLayer: Boolean = false,
+    /** Hazards and safety alerts. Off until that layer or the Safety chip. */
+    val safetyLayer: Boolean = false,
+    /** Weather banner. Off until the Live conditions layer. */
+    val liveConditionsLayer: Boolean = false,
     /** Town Hall pins. Off until the person turns the layer on or picks that chip. */
     val townHallLayer: Boolean = false,
     val civicPins: List<world.xhere.shared.civic.CivicItem> = emptyList(),
+    val moreOpen: Boolean = false,
+    val layersOpen: Boolean = false,
+    val publicPlaces: List<PublicPlace> = emptyList(),
+    val publicPlace: PublicPlace? = null,
     /** Places with a photo or video from the last day. Drawn as a quiet halo. */
     val livePlaces: List<world.xhere.shared.contribution.LivePlace> = emptyList(),
 )
@@ -304,6 +316,7 @@ internal fun guideLine(state: MapUiState): List<LatLng> {
 }
 
 internal fun markerLabel(feature: MapFeature, taxonomy: Taxonomy?): String {
+    if (feature.kind == PublicPlace.KIND) return "✨"
     if (!feature.isCluster) {
         if (feature.capsuleSealed) return "🔒"
         return iconFor(taxonomy, feature.categorySlug, feature.groupSlug)
@@ -354,6 +367,28 @@ internal fun DropCard.toTeaser(taxonomy: Taxonomy?, distanceM: Double?, avatarUr
         authorAvatarUrl = if (source == DropSource.OPEN_DATA) null else avatarUrl,
     )
 }
+
+internal fun mapLayersOf(state: MapUiState): MapLayers = MapLayers(
+    accessibility = state.accessibilityLayer,
+    crime = state.crimeLayer,
+    safety = state.safetyLayer,
+    liveConditions = state.liveConditionsLayer,
+    townHall = state.townHallLayer,
+)
+
+internal fun MapUiState.withLayers(layers: MapLayers): MapUiState = copy(
+    accessibilityLayer = layers.accessibility,
+    crimeLayer = layers.crime,
+    safetyLayer = layers.safety,
+    liveConditionsLayer = layers.liveConditions,
+    townHallLayer = layers.townHall,
+    accessPins = if (layers.accessibility) accessPins else emptyList(),
+    civicPins = if (layers.townHall) civicPins else emptyList(),
+    alerts = if (layers.liveConditions) alerts else emptyList(),
+)
+
+internal fun publicCredit(state: MapUiState): String? =
+    if (state.publicPlaces.isEmpty()) null else PublicSources.MAP_CREDIT
 
 internal fun formatMeters(meters: Double): String {
     val rounded = meters.toInt()

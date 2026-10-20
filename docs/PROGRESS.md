@@ -460,6 +460,16 @@ Branch `cursor/claims-and-capsules-ce62` ([PR #43](https://github.com/Apixa25/XH
 - A time capsule is a story, a photo, or a voice clip that stays in `private.capsule_secrets` until a date, until the next person stands within 30 m with a location check that counts, or both. The author cannot be that person. Map pins use a sealed icon and the unlock line. The body is not on the card, the public API, or a client table read. Opening one writes the existing inbox. Oral history is a set of questions that are not tied to one town.
 - The Jamestown example is `supabase/seed/capsules/jamestown-ny.sql` (`is_demo` on the guide). Not applied on hosted Supabase from here. Apply `supabase/migrations/20261021140000_claims_and_capsules.sql` with `supabase db push`, then `psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/seed/capsules/jamestown-ny.sql`. Do not paste either file into the dashboard. It does not change Auth.
 
+## 2026-10-20 (Tue): Interesting places first
+
+PLAN §0 is the lens: what is known about here, with the interesting record ahead of the practical one. PLAN §3 and §4.4 are the free open-data layers, on a switch, not painted over the default map. Jamestown stays the pilot. Nothing in the client names a town.
+
+- Wheelchair pins stay off until the Accessibility category or Always show accessibility in Profile settings. That switch is saved on the phone. Crime, hazards, live conditions, and Town Hall are the same kind of opt-in, from Layers.
+- Historical markers, stories, photos, contributions, and other user drops rank ahead of practical pins. A tight view drops the lowest scores first.
+- A viewport with fewer than three interesting drops asks Wikipedia, Wikimedia Commons, and OpenStreetMap historic places (Wikidata if Overpass is empty). Free, no key, one request at a time, a named User-Agent, and a cache. The pin is Things around you. The sheet has the summary, the picture, the credit, the source, and Add your contribution. Close returns to the map.
+- The map keeps Drop, Near me, recenter, and More. Time Machine, Voice, Town Hall, Accessibility, AR, and Things around you are in that sheet.
+- No migration. The phone does not write a new table.
+
 ## 2026-10-20 (Tue): Drop photos sign and shrink
 
 Branch `cursor/drop-media-photo-read-9767`. PLAN §5 is why a photo stays private until the server says the viewer may see it, and why a sealed capsule does not publish its picture. The free-tier storage note in PLAN §8 is why a camera original is resized on the phone.

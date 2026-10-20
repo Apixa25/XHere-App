@@ -169,6 +169,25 @@ fun SettingsScreen(
                     modifier = Modifier.testTag(TestTags.SETTINGS_EXPLORE_HINT),
                 )
             }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(stringResource(R.string.settings_always_access), style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        stringResource(R.string.settings_always_access_body),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Switch(
+                    checked = state.alwaysShowAccessibility,
+                    onCheckedChange = viewModel::setAlwaysShowAccessibility,
+                    modifier = Modifier.testTag(TestTags.SETTINGS_ALWAYS_ACCESS),
+                )
+            }
             Text(stringResource(R.string.settings_voice_title), style = MaterialTheme.typography.titleMedium)
             Text(stringResource(R.string.settings_voice_body), style = MaterialTheme.typography.bodyMedium)
             Row(

@@ -42,6 +42,8 @@ import world.xhere.app.explore.ExperienceMemory
 import world.xhere.app.explore.ExploreViewModel
 import world.xhere.app.map.FilterPresetStore
 import world.xhere.app.map.MapAnchor
+import world.xhere.app.map.MapLayerMemory
+import world.xhere.app.map.MemoryMapLayers
 import world.xhere.app.map.SheetSignals
 import world.xhere.app.map.MapCanvas
 import world.xhere.app.map.MapViewModel
@@ -76,8 +78,11 @@ import world.xhere.shared.data.fake.InMemoryXHere
 import world.xhere.shared.demo.JamestownDemo
 import world.xhere.shared.geo.LatLng
 import world.xhere.shared.here.Here
+import world.xhere.shared.geo.BoundingBox
 import world.xhere.shared.live.LiveConditions
 import world.xhere.shared.live.WeatherAlert
+import world.xhere.shared.places.NearbyPublicPlaces
+import world.xhere.shared.places.PublicPlace
 import world.xhere.shared.model.PlaceLabel
 import world.xhere.shared.model.Profile
 import kotlinx.coroutines.channels.awaitClose
@@ -115,6 +120,7 @@ object TestGraph {
     lateinit var conditions: ScriptedConditions
     lateinit var ar: ScriptedArRuntime
     lateinit var radio: FakeVoiceRadio
+    lateinit var publicPlaces: ScriptedPublicPlaces
 
     fun isReady(): Boolean = ::services.isInitialized
 }
@@ -176,6 +182,11 @@ fun testModule() = module {
     viewModel { SessionViewModel(get(), get(), get()) }
     viewModel { AuthViewModel(get(), get(), get(), get(), get()) }
     single<DeviceLocation> { location }
+    val mapLayers = MemoryMapLayers()
+    val discovered = ScriptedPublicPlaces()
+    TestGraph.publicPlaces = discovered
+    single<MapLayerMemory> { mapLayers }
+    single<NearbyPublicPlaces> { discovered }
     single { FilterPresetStore(androidContext()) }
     single { MapAnchor() }
     single { SheetSignals() }
@@ -228,6 +239,8 @@ fun testModule() = module {
             experiences = get(),
             anchor = get(),
             sheets = get(),
+            mapLayers = get(),
+            publicPlaces = get(),
         )
     }
     viewModel { VoiceViewModel(get(), get(), get(), get(), get(), get(), get(), get()) }
@@ -247,6 +260,7 @@ fun testModule() = module {
             exporter = get(),
             experiences = get(),
             voicePrefs = get(),
+            mapLayers = get(),
         )
     }
 }
@@ -423,6 +437,12 @@ class RecordingDataExporter : DataExporter {
         this.fileName = fileName
         this.json = json
     }
+}
+
+class ScriptedPublicPlaces : NearbyPublicPlaces {
+    var places: List<PublicPlace> = emptyList()
+
+    override suspend fun around(box: BoundingBox): List<PublicPlace> = places
 }
 
 class TestXHereApplication : Application() {

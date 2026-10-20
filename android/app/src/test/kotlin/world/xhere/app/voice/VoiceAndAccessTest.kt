@@ -41,6 +41,7 @@ class VoiceAndAccessTest {
         TestGraph.location.setPermission(true)
         TestGraph.location.emit(JamestownDemo.center)
         TestGraph.speech.next = "pothole here"
+        rule.onNodeWithTag(TestTags.MAP_MORE).performClick()
         rule.onNodeWithTag(TestTags.VOICE_MIC).performClick()
         rule.waitForTag(TestTags.VOICE_POST)
         rule.onNodeWithTag(TestTags.VOICE_DROP_TITLE).assertTextContains("Pothole")
@@ -64,6 +65,7 @@ class VoiceAndAccessTest {
         TestGraph.location.emit(JamestownDemo.center)
         TestGraph.speech.next = "what's around me?"
         val before = TestGraph.services.store.drops.size
+        rule.onNodeWithTag(TestTags.MAP_MORE).performClick()
         rule.onNodeWithTag(TestTags.VOICE_MIC).performClick()
         rule.waitForTag(TestTags.VOICE_SPOKEN)
         assertTrue(TestGraph.speaker.last.orEmpty().contains("around"))
@@ -73,6 +75,7 @@ class VoiceAndAccessTest {
     @Test
     fun deniedMicrophoneOffersSettings() {
         rule.openMap()
+        rule.onNodeWithTag(TestTags.MAP_MORE).performClick()
         rule.onNodeWithTag(TestTags.VOICE_MIC).performClick()
         rule.waitForTag(TestTags.VOICE_DENIED)
         rule.onNodeWithTag(TestTags.VOICE_SETTINGS).assertTextContains("Settings", substring = true)
@@ -109,6 +112,7 @@ class VoiceAndAccessTest {
         rule.onNodeWithTag(TestTags.ACCESS_SAVE).performClick()
         rule.waitForTag(TestTags.ACCESS_STATUS)
         rule.onNodeWithTag(TestTags.HERE_CLOSE).performClick()
+        rule.onNodeWithTag(TestTags.MAP_MORE).performClick()
         rule.onNodeWithTag(TestTags.MAP_ACCESS).performClick()
         val key = TestGraph.services.store.accessChecks.single().placeKey
         rule.waitForTag(TestTags.accessPin(key))

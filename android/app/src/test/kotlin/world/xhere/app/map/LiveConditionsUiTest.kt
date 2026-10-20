@@ -50,6 +50,12 @@ class LiveConditionsUiTest {
         // button, and a touch click there does not reach it.
         TestGraph.conditions.alerts = listOf(storm, watch)
         rule.openMap()
+        rule.onNodeWithTag(TestTags.MAP_MORE).performClick()
+        rule.onNodeWithTag(TestTags.MAP_LAYERS).performClick()
+        rule.waitForTag(TestTags.MAP_LAYER_LIVE)
+        rule.onNodeWithTag(TestTags.MAP_LAYER_LIVE).performClick()
+        rule.onNodeWithTag(TestTags.SHEET_CLOSE).performClick()
+        rule.waitForTag(TestTags.WEATHER_BANNER)
         rule.onNodeWithTag(TestTags.WEATHER_BANNER).assertIsDisplayed()
         rule.onNodeWithTag(TestTags.WEATHER_SEVERITY).assertTextContains("Severe")
         rule.onNodeWithTag(TestTags.WEATHER_EVENT).assertTextContains("Severe Thunderstorm Warning")

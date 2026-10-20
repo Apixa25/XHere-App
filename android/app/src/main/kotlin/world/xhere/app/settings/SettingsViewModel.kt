@@ -10,6 +10,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import world.xhere.app.explore.ExperienceMemory
+import world.xhere.app.map.MapLayerMemory
+import world.xhere.app.map.MemoryMapLayers
 import world.xhere.app.session.SignOutNotice
 import world.xhere.app.voice.VoicePrefs
 import world.xhere.shared.data.XHereServices
@@ -33,6 +35,8 @@ data class SettingsUiState(
     val exploreHint: Boolean = true,
     /** Driving mode for Talk to the map. Off unless this phone turns it on. */
     val voiceAutoPost: Boolean = false,
+    /** Wheelchair pins on the map. Off until the person turns this on. */
+    val alwaysShowAccessibility: Boolean = false,
 )
 
 /**
@@ -49,15 +53,26 @@ class SettingsViewModel(
     private val exporter: DataExporter,
     private val experiences: ExperienceMemory,
     private val voicePrefs: VoicePrefs,
+    private val mapLayers: MapLayerMemory = MemoryMapLayers(),
     private val clock: Clock = Clock.System,
 ) : ViewModel() {
-    private val _state = MutableStateFlow(SettingsUiState(voiceAutoPost = voicePrefs.autoPost()))
+    private val _state = MutableStateFlow(
+        SettingsUiState(
+            voiceAutoPost = voicePrefs.autoPost(),
+            alwaysShowAccessibility = mapLayers.layers.value.accessibility,
+        ),
+    )
     val state: StateFlow<SettingsUiState> = _state.asStateFlow()
 
     init {
         viewModelScope.launch {
             experiences.state.collect { local ->
                 _state.update { it.copy(exploreHint = local.hintEnabled) }
+            }
+        }
+        viewModelScope.launch {
+            mapLayers.layers.collect { layers ->
+                _state.update { it.copy(alwaysShowAccessibility = layers.accessibility) }
             }
         }
         viewModelScope.launch {
@@ -99,6 +114,11 @@ class SettingsViewModel(
     fun setVoiceAutoPost(enabled: Boolean) {
         voicePrefs.setAutoPost(enabled)
         _state.update { it.copy(voiceAutoPost = enabled) }
+    }
+
+    /** Saved on this phone. The map reads the same switch. */
+    fun setAlwaysShowAccessibility(enabled: Boolean) {
+        mapLayers.save(mapLayers.layers.value.copy(accessibility = enabled))
     }
 
     fun setLocationGranted(granted: Boolean) {
