@@ -81,8 +81,8 @@ $$;
 
 select is(
   (select author_handle from public.contributions_for('drop', current_setting('t.drop')::uuid, 'newest') where id = current_setting('t.note')::uuid),
-  null,
-  'the author does not see their own name on an anonymous note'
+  'Anonymous',
+  'the author sees Anonymous on their own note'
 );
 
 reset role;
@@ -91,8 +91,8 @@ set local request.jwt.claims to '{"sub": "22222222-2222-4222-8222-222222222222",
 
 select is(
   (select author_handle from public.contributions_for('drop', current_setting('t.drop')::uuid, 'newest') where id = current_setting('t.note')::uuid),
-  null,
-  'another person does not see the anonymous author'
+  'Anonymous',
+  'another person sees Anonymous, not a name'
 );
 select is(
   (select is_mine from public.contributions_for('drop', current_setting('t.drop')::uuid) where id = current_setting('t.note')::uuid),

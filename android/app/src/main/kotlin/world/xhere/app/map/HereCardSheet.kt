@@ -29,6 +29,7 @@ import world.xhere.app.access.AccessStatusChip
 import world.xhere.app.contribution.CommunitySection
 import world.xhere.app.reputation.TierChip
 import world.xhere.shared.contribution.ContributionTarget
+import world.xhere.shared.share.ShareLinks
 import world.xhere.shared.data.XHereServices
 import world.xhere.app.ui.TestTags
 import world.xhere.shared.capsule.Capsules
@@ -309,6 +310,19 @@ private fun HereRow(card: DropCard, services: XHereServices? = null) {
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+        val shareContext = LocalContext.current
+        TextButton(
+            onClick = {
+                val send = Intent(Intent.ACTION_SEND).apply {
+                    type = "text/plain"
+                    putExtra(Intent.EXTRA_TEXT, ShareLinks.url(card.shortId))
+                }
+                shareContext.startActivity(Intent.createChooser(send, null))
+            },
+            modifier = Modifier.testTag(TestTags.hereShare(card.shortId)),
+        ) {
+            Text(stringResource(R.string.detail_share))
+        }
         if (!card.isPublicRecord()) {
             card.authorTier?.let { tier ->
                 TierChip(label = Reputation.label(tier), tag = TestTags.TIER_CHIP + "_" + card.shortId)

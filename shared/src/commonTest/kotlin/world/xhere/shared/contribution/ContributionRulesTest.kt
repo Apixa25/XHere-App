@@ -36,6 +36,18 @@ class ContributionRulesTest {
             listOf("high", "low"),
             ContributionRules.ordered(scored, ContributionSort.TOP, { now }, { it.second }).map { it.first },
         )
+        assertEquals(
+            listOf("old", "new"),
+            ContributionRules.ordered(rows, ContributionSort.OLDEST, { it.second }, { 0.0 }).map { it.first },
+        )
+    }
+
+    @Test
+    fun fiveDownvotesOrANetOfMinusFiveHidesThePost() {
+        assertFalse(ContributionRules.autoHidden(0, 4))
+        assertFalse(ContributionRules.autoHidden(6, 4))
+        assertTrue(ContributionRules.autoHidden(0, 5))
+        assertTrue(ContributionRules.autoHidden(1, 6))
     }
 
     @Test
@@ -46,6 +58,7 @@ class ContributionRulesTest {
         assertFalse(ContributionRules.live(stale, now))
         assertTrue(ContributionRules.pulses("photo", recent, now))
         assertTrue(ContributionRules.pulses("video", recent, now))
+        assertTrue(ContributionRules.pulses("media", recent, now))
         assertFalse(ContributionRules.pulses("text", recent, now))
         assertFalse(ContributionRules.pulses("photo", stale, now))
     }

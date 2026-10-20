@@ -286,14 +286,21 @@ internal object TestTags {
     const val COMMUNITY = "community"
     const val COMMUNITY_ADD = "community_add"
     const val COMMUNITY_NEWEST = "community_newest"
+    const val COMMUNITY_OLDEST = "community_oldest"
     const val COMMUNITY_TOP = "community_top"
     const val COMMUNITY_TEXT = "community_text"
     const val COMMUNITY_ANON = "community_anon"
     const val COMMUNITY_SEND = "community_send"
     const val COMMUNITY_CANCEL = "community_cancel"
     const val COMMUNITY_LIVE = "community_live"
+    const val COMMUNITY_SHARE = "community_share"
+    const val COMMUNITY_MORE = "community_more"
+    const val COMMUNITY_REPLY = "community_reply"
+    const val COMMUNITY_EDITED = "community_edited"
 
     fun communityCard(id: kotlin.uuid.Uuid): String = "community_$id"
+
+    fun hereShare(shortId: String): String = "here_share_$shortId"
 
     const val DETAIL_REPORT = "detail_report"
     const val DETAIL_HIDE = "detail_hide"

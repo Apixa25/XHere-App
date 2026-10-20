@@ -50,6 +50,7 @@ import world.xhere.app.safety.ReportForm
 import world.xhere.app.ui.TestTags
 import world.xhere.shared.contribution.ContributionCard
 import world.xhere.shared.contribution.ContributionFile
+import world.xhere.shared.contribution.ContributionRules
 import world.xhere.shared.contribution.ContributionSort
 import world.xhere.shared.contribution.NewContribution
 import world.xhere.shared.data.XHereApiException
@@ -72,20 +73,41 @@ fun CommunitySection(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var ui by remember(targetKind, targetId) { mutableStateOf(CommunityUi()) }
-    var draft by remember(targetKind, targetId) { mutableStateOf<DraftMedia?>(null) }
+    var drafts by remember(targetKind, targetId) { mutableStateOf<List<DraftMedia>>(emptyList()) }
 
-    suspend fun reload(sort: ContributionSort = ui.sort) {
+    suspend fun reload(sort: ContributionSort = ui.sort, offset: Int = 0, append: Boolean = false) {
         val place = runCatching { services.contributions.place(targetKind, targetId) }.getOrNull()
-        val cards = services.contributions.list(targetKind, targetId, sort)
+        val page = services.contributions.list(targetKind, targetId, sort, offset)
+        val cards = if (append) (ui.cards + page).distinctBy { it.id } else page
         val urls = signed(services, cards)
         ui = ui.copy(
             loading = false,
             anonymousAllowed = place?.anonymousAllowed != false,
+            shareUrl = place?.shareUrl,
             sort = sort,
+            offset = offset,
+            hasMore = page.count { it.parentId == null } >= ContributionRules.PAGE_SIZE,
             cards = cards,
             urls = urls,
             error = null,
         )
+    }
+
+    fun attach(next: DraftMedia?) {
+        if (next == null) return
+        if (drafts.size >= ContributionRules.MAX_FILES) {
+            ui = ui.copy(adding = true, error = context.getString(R.string.community_files))
+            return
+        }
+        drafts = drafts + next
+        val videos = drafts.any { it.file.mimeType.startsWith("video") }
+        val images = drafts.any { it.file.mimeType.startsWith("image") }
+        val kind = when {
+            videos && images -> "media"
+            videos -> "video"
+            else -> "photo"
+        }
+        ui = ui.copy(adding = true, kind = kind, error = draftError(context, next))
     }
 
     LaunchedEffect(targetKind, targetId) {
@@ -101,24 +123,20 @@ fun CommunitySection(
 
     val photoGallery = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
         if (uri == null) return@rememberLauncherForActivityResult
-        draft = readPhoto(context, uri)
-        ui = ui.copy(adding = true, kind = "photo", error = draftError(context, draft))
+        attach(readPhoto(context, uri))
     }
     val videoGallery = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
         if (uri == null) return@rememberLauncherForActivityResult
-        draft = readVideo(context, uri)
-        ui = ui.copy(adding = true, kind = "video", error = draftError(context, draft))
+        attach(readVideo(context, uri))
     }
     val cameraPhoto = rememberLauncherForActivityResult(ActivityResultContracts.TakePicturePreview()) { bitmap ->
         if (bitmap == null) return@rememberLauncherForActivityResult
-        draft = photoFromBitmap(bitmap)
-        ui = ui.copy(adding = true, kind = "photo", error = null)
+        attach(photoFromBitmap(bitmap))
     }
     val cameraVideo = rememberLauncherForActivityResult(CaptureShortVideo()) { ok ->
         if (!ok) return@rememberLauncherForActivityResult
         val uri = cameraUri(context) ?: return@rememberLauncherForActivityResult
-        draft = readVideo(context, uri)
-        ui = ui.copy(adding = true, kind = "video", error = draftError(context, draft))
+        attach(readVideo(context, uri))
     }
 
     Column(
@@ -127,13 +145,42 @@ fun CommunitySection(
             .testTag(TestTags.COMMUNITY),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Text(stringResource(R.string.community_title), style = MaterialTheme.typography.titleMedium)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                stringResource(R.string.community_title),
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.weight(1f),
+            )
+            val shareUrl = ui.shareUrl
+            if (!shareUrl.isNullOrBlank()) {
+                TextButton(
+                    onClick = {
+                        val send = Intent(Intent.ACTION_SEND).apply {
+                            type = "text/plain"
+                            putExtra(Intent.EXTRA_TEXT, shareUrl)
+                        }
+                        context.startActivity(Intent.createChooser(send, null))
+                    },
+                    modifier = Modifier.testTag(TestTags.COMMUNITY_SHARE),
+                ) { Text(stringResource(R.string.detail_share)) }
+            }
+        }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             FilterChip(
                 selected = ui.sort == ContributionSort.NEWEST,
                 onClick = { scope.launch { runCatching { reload(ContributionSort.NEWEST) } } },
                 label = { Text(stringResource(R.string.community_newest)) },
                 modifier = Modifier.testTag(TestTags.COMMUNITY_NEWEST),
+            )
+            FilterChip(
+                selected = ui.sort == ContributionSort.OLDEST,
+                onClick = { scope.launch { runCatching { reload(ContributionSort.OLDEST) } } },
+                label = { Text(stringResource(R.string.community_oldest)) },
+                modifier = Modifier.testTag(TestTags.COMMUNITY_OLDEST),
             )
             FilterChip(
                 selected = ui.sort == ContributionSort.TOP,
@@ -165,12 +212,19 @@ fun CommunitySection(
                     }
                 },
                 onOpen = { ui = ui.copy(openCollapsed = ui.openCollapsed + card.id) },
-                onReport = { ui = ui.copy(reporting = card.id) },
+                onReport = { ui = ui.copy(reporting = card.id, reportingMedia = false) },
+                onReportMedia = { ui = ui.copy(reporting = card.id, reportingMedia = true) },
+                onReply = { ui = ui.copy(adding = true, replyTo = card.id, kind = "text", error = null) },
                 onSendReport = { reason, details ->
                     scope.launch {
                         try {
-                            services.reports.report(ReportTarget.CONTRIBUTION, card.id, reason, details)
-                            ui = ui.copy(reporting = null, error = null)
+                            val mediaId = card.media.firstOrNull()?.id
+                            if (ui.reportingMedia && mediaId != null) {
+                                services.reports.report(ReportTarget.MEDIA, mediaId, reason, details)
+                            } else {
+                                services.reports.report(ReportTarget.CONTRIBUTION, card.id, reason, details)
+                            }
+                            ui = ui.copy(reporting = null, reportingMedia = false, error = null)
                         } catch (e: CancellationException) {
                             throw e
                         } catch (_: Throwable) {
@@ -178,7 +232,7 @@ fun CommunitySection(
                         }
                     }
                 },
-                onCancelReport = { ui = ui.copy(reporting = null) },
+                onCancelReport = { ui = ui.copy(reporting = null, reportingMedia = false) },
                 onRemove = {
                     scope.launch {
                         try {
@@ -193,13 +247,25 @@ fun CommunitySection(
                 },
             )
         }
+        if (ui.hasMore) {
+            TextButton(
+                onClick = { scope.launch { runCatching { reload(ui.sort, ui.offset + ContributionRules.PAGE_SIZE, append = true) } } },
+                modifier = Modifier.testTag(TestTags.COMMUNITY_MORE),
+            ) { Text(stringResource(R.string.community_more)) }
+        }
         if (!ui.adding) {
             OutlinedButton(
                 onClick = { ui = ui.copy(adding = true, kind = "text", error = null) },
                 modifier = Modifier.testTag(TestTags.COMMUNITY_ADD),
             ) { Text(stringResource(R.string.community_add)) }
         } else {
-            Text(stringResource(R.string.community_add), style = MaterialTheme.typography.titleSmall)
+            Text(
+                if (ui.replyTo == null) stringResource(R.string.community_add) else stringResource(R.string.community_reply),
+                style = MaterialTheme.typography.titleSmall,
+            )
+            if (drafts.isNotEmpty()) {
+                Text(stringResource(R.string.community_attached, drafts.size), style = MaterialTheme.typography.bodyMedium)
+            }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 TextButton(onClick = { cameraPhoto.launch(null) }) { Text(stringResource(R.string.community_camera)) }
                 TextButton(
@@ -236,8 +302,8 @@ fun CommunitySection(
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedButton(
                     onClick = {
-                        draft = null
-                        ui = ui.copy(adding = false, text = "", anonymous = false, busy = false)
+                        drafts = emptyList()
+                        ui = ui.copy(adding = false, text = "", anonymous = false, busy = false, replyTo = null)
                     },
                     modifier = Modifier.testTag(TestTags.COMMUNITY_CANCEL),
                 ) { Text(stringResource(R.string.community_cancel)) }
@@ -246,19 +312,37 @@ fun CommunitySection(
                         scope.launch {
                             ui = ui.copy(busy = true, error = null)
                             try {
+                                val files = drafts.map { part ->
+                                    part.file.copy(thumbnail = part.thumbnail ?: part.file.thumbnail)
+                                }
+                                val videos = files.any { it.mimeType.startsWith("video") }
+                                val images = files.any { it.mimeType.startsWith("image") }
+                                val kind = when {
+                                    files.isEmpty() -> "text"
+                                    videos && images -> "media"
+                                    videos -> "video"
+                                    else -> "photo"
+                                }
                                 services.contributions.add(
                                     NewContribution(
                                         targetKind = targetKind,
                                         targetId = targetId,
-                                        kind = ui.kind,
+                                        kind = kind,
                                         body = ui.text.trim().ifEmpty { null },
                                         anonymous = ui.anonymous && ui.anonymousAllowed,
-                                        file = if (ui.kind == "text") null else draft?.file,
-                                        thumbnail = if (ui.kind == "video") draft?.thumbnail else null,
+                                        files = files,
+                                        parentId = ui.replyTo,
                                     ),
                                 )
-                                draft = null
-                                ui = ui.copy(adding = false, text = "", anonymous = false, busy = false, kind = "text")
+                                drafts = emptyList()
+                                ui = ui.copy(
+                                    adding = false,
+                                    text = "",
+                                    anonymous = false,
+                                    busy = false,
+                                    kind = "text",
+                                    replyTo = null,
+                                )
                                 reload()
                             } catch (e: CancellationException) {
                                 throw e
@@ -289,6 +373,8 @@ private fun ContributionRow(
     onVote: (Int) -> Unit,
     onOpen: () -> Unit,
     onReport: () -> Unit,
+    onReportMedia: () -> Unit,
+    onReply: () -> Unit,
     onSendReport: (ReportReason, String?) -> Unit,
     onCancelReport: () -> Unit,
     onRemove: () -> Unit,
@@ -304,6 +390,7 @@ private fun ContributionRow(
         color = MaterialTheme.colorScheme.surfaceVariant,
         modifier = Modifier
             .fillMaxWidth()
+            .padding(start = if (card.parentId == null) 0.dp else 16.dp)
             .testTag(TestTags.communityCard(card.id)),
     ) {
         Column(
@@ -316,6 +403,14 @@ private fun ContributionRow(
                 val who = card.authorHandle?.let { stringResource(R.string.community_by, it) }
                     ?: stringResource(R.string.detail_neighbor)
                 Text(who, style = MaterialTheme.typography.labelLarge, modifier = Modifier.weight(1f))
+                if (card.editedAt != null) {
+                    Text(
+                        stringResource(R.string.community_edited),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.testTag(TestTags.COMMUNITY_EDITED),
+                    )
+                }
                 if (card.live) {
                     Text(
                         stringResource(R.string.community_live),
@@ -326,7 +421,13 @@ private fun ContributionRow(
                 }
             }
             card.body?.takeIf { it.isNotBlank() }?.let { Text(it, style = MaterialTheme.typography.bodyLarge) }
-            if (card.kind == "video" || card.kind == "photo") {
+            if (card.media.size > 1) {
+                Text(
+                    stringResource(R.string.community_attached, card.media.size),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            }
+            if (card.kind == "video" || card.kind == "photo" || card.kind == "media") {
                 Text(
                     text = if (card.kind == "video") stringResource(R.string.community_video_label) else stringResource(R.string.detail_photo),
                     style = MaterialTheme.typography.bodyMedium,
@@ -351,10 +452,18 @@ private fun ContributionRow(
                     }
                 }
             }
-            if (card.isMine) {
-                TextButton(onClick = onRemove) { Text(stringResource(R.string.community_remove)) }
-            } else if (!reporting) {
-                TextButton(onClick = onReport) { Text(stringResource(R.string.community_report)) }
+            Row {
+                TextButton(onClick = onReply, modifier = Modifier.testTag(TestTags.COMMUNITY_REPLY)) {
+                    Text(stringResource(R.string.community_reply))
+                }
+                if (card.isMine) {
+                    TextButton(onClick = onRemove) { Text(stringResource(R.string.community_remove)) }
+                } else if (!reporting) {
+                    TextButton(onClick = onReport) { Text(stringResource(R.string.community_report)) }
+                    if (card.media.any { it.id != null }) {
+                        TextButton(onClick = onReportMedia) { Text(stringResource(R.string.community_report_photo)) }
+                    }
+                }
             }
             if (reporting) {
                 ReportForm(
@@ -383,6 +492,11 @@ private data class CommunityUi(
     val error: String? = null,
     val openCollapsed: Set<Uuid> = emptySet(),
     val reporting: Uuid? = null,
+    val reportingMedia: Boolean = false,
+    val shareUrl: String? = null,
+    val offset: Int = 0,
+    val hasMore: Boolean = false,
+    val replyTo: Uuid? = null,
 )
 
 private data class DraftMedia(
