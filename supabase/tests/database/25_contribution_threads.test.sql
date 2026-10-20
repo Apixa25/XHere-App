@@ -90,6 +90,21 @@ begin
 end;
 $$;
 
+reset role;
+
+update public.contributions
+set created_at = now() - interval '3 minutes'
+where id = current_setting('t.photo')::uuid;
+update public.contributions
+set created_at = now() - interval '2 minutes'
+where id = current_setting('t.reply')::uuid;
+update public.contributions
+set created_at = now() - interval '1 minute'
+where body = 'A later note';
+
+set local role authenticated;
+set local request.jwt.claims to '{"sub": "11111111-1111-4111-8111-111111111111", "role": "authenticated"}';
+
 select is(
   (select kind from public.contributions_for('drop', current_setting('t.drop')::uuid) where id = current_setting('t.photo')::uuid),
   'photo',
@@ -167,7 +182,7 @@ select ok(
 select throws_ok(
   $$ select author_id from public.contribution_cards $$,
   '42703',
-  'author_id',
+  'column "author_id" does not exist',
   'asking the view for an author id fails'
 );
 select is(

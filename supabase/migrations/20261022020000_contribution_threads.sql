@@ -61,6 +61,9 @@ alter table public.contribution_media
 alter table public.contribution_media
   drop constraint contribution_media_contribution_id_key;
 
+create index contribution_media_contribution_idx
+  on public.contribution_media (contribution_id, ordinal);
+
 comment on table public.contribution_media is
   'Files on one contribution. Several photos and videos are allowed. The path is two random ids, never the author id.';
 
