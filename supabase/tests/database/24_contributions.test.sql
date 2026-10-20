@@ -1,7 +1,7 @@
 -- Community contributions: who can see a file, who is named, and who can vote.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(33);
+select plan(34);
 
 insert into auth.users (id, email) values
   ('11111111-1111-4111-8111-111111111111', 'alice@example.test'),
@@ -120,11 +120,16 @@ reset role;
 set local role authenticated;
 set local request.jwt.claims to '{"sub": "11111111-1111-4111-8111-111111111111", "role": "authenticated"}';
 
+select ok(
+  has_column_privilege('authenticated', 'public.contributions', 'id', 'SELECT')
+  and not has_column_privilege('authenticated', 'public.contributions', 'author_id', 'SELECT'),
+  'signed-in users may read a contribution but not its author id'
+);
 select throws_ok(
   $$ select author_id from public.contributions $$,
   '42501',
-  'permission denied for column author_id',
-  'the author column is not granted to signed-in users'
+  'permission denied for table contributions',
+  'reading the author column is denied'
 );
 
 do $$

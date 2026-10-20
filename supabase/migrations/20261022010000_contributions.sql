@@ -912,7 +912,7 @@ $$;
 comment on function public.create_contribution(text, uuid, text, text, boolean, jsonb) is
   'Adds a contribution and reserves a non-identifying storage path. The return value has no author id.';
 
-create function public.cast_contribution_vote(p_id uuid, p_value smallint)
+create function public.cast_contribution_vote(p_id uuid, p_value integer)
 returns void
 language plpgsql
 volatile
@@ -950,13 +950,13 @@ begin
     end if;
   end if;
   insert into public.contribution_votes (contribution_id, voter_id, value)
-  values (p_id, v_uid, p_value)
+  values (p_id, v_uid, p_value::smallint)
   on conflict (contribution_id, voter_id) do update
     set value = excluded.value, updated_at = now();
 end;
 $$;
 
-comment on function public.cast_contribution_vote(uuid, smallint) is
+comment on function public.cast_contribution_vote(uuid, integer) is
   'One vote per person. 1 or -1 sets it, 0 removes it. The author cannot vote.';
 
 create function public.delete_my_contribution(p_id uuid)
@@ -1045,7 +1045,7 @@ revoke all on function public.contributions_for(text, uuid, text) from public;
 revoke all on function public.contribution_author(uuid) from public;
 revoke all on function public.live_places_in_view(double precision, double precision, double precision, double precision) from public;
 revoke all on function public.create_contribution(text, uuid, text, text, boolean, jsonb) from public;
-revoke all on function public.cast_contribution_vote(uuid, smallint) from public;
+revoke all on function public.cast_contribution_vote(uuid, integer) from public;
 revoke all on function public.delete_my_contribution(uuid) from public;
 revoke all on function public.moderate_contribution(uuid, text, text) from public;
 
@@ -1054,7 +1054,7 @@ grant execute on function public.contributions_for(text, uuid, text) to anon, au
 grant execute on function public.live_places_in_view(double precision, double precision, double precision, double precision) to anon, authenticated;
 grant execute on function public.contribution_author(uuid) to authenticated;
 grant execute on function public.create_contribution(text, uuid, text, text, boolean, jsonb) to authenticated;
-grant execute on function public.cast_contribution_vote(uuid, smallint) to authenticated;
+grant execute on function public.cast_contribution_vote(uuid, integer) to authenticated;
 grant execute on function public.delete_my_contribution(uuid) to authenticated;
 grant execute on function public.moderate_contribution(uuid, text, text) to authenticated;
 
