@@ -479,6 +479,22 @@ create trigger contribution_votes_guard
   before insert or update on public.contribution_votes
   for each row execute function private.contribution_votes_guard();
 
+-- Private helpers stay off PUBLIC. Policies and triggers that run as the
+-- signed-in user keep execute; everything else is only reached from
+-- security-definer functions.
+revoke all on function private.contribution_target_visible(text, uuid, uuid) from public, anon, authenticated;
+revoke all on function private.anonymous_display_allowed(text, uuid) from public, anon, authenticated;
+revoke all on function private.contribution_point(text, uuid) from public, anon, authenticated;
+revoke all on function private.wilson_lower(integer, integer) from public, anon, authenticated;
+revoke all on function private.contribution_collapsed(integer, integer) from public, anon, authenticated;
+revoke all on function private.contribution_readable_id(uuid, uuid) from public, anon, authenticated;
+revoke all on function private.contribution_extension(text) from public, anon, authenticated;
+revoke all on function private.contribution_objects_hide_owner() from public, anon, authenticated;
+revoke all on function private.contribution_votes_guard() from public, anon, authenticated;
+grant execute on function private.contribution_readable_id(uuid, uuid) to authenticated;
+grant execute on function private.contribution_objects_hide_owner() to authenticated;
+grant execute on function private.contribution_votes_guard() to authenticated;
+
 alter table public.contributions enable row level security;
 alter table public.contribution_media enable row level security;
 alter table public.contribution_votes enable row level security;
