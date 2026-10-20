@@ -122,6 +122,7 @@ class HereCardTest {
     @Test
     fun timeMachineAndThisDayUseTheCachedHistory() {
         rule.openMap()
+        rule.onNodeWithTag(TestTags.MAP_MORE).performClick()
         rule.onNodeWithTag(TestTags.MAP_TIME).performClick()
         rule.awaitTime("1905|1886,1905|none")
         rule.onNodeWithText("Third Street, Jamestown, N.Y.", substring = true).assertIsDisplayed()

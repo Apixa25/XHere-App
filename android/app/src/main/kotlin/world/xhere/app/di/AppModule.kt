@@ -103,6 +103,10 @@ val appModule = module {
     single<DropSharer> { AndroidDropSharer(androidContext()) }
     single<DataExporter> { AndroidDataExporter(androidContext()) }
     single { FilterPresetStore(androidContext()) }
+    single<world.xhere.app.map.MapLayerMemory> { world.xhere.app.map.MapLayerPrefs(androidContext()) }
+    single<world.xhere.shared.places.NearbyPublicPlaces> {
+        world.xhere.shared.places.PublicPlaceClient()
+    }
     single { MapAnchor() }
     single { SheetSignals() }
     single { ExperienceFocus() }
@@ -136,7 +140,22 @@ val appModule = module {
         )
     }
     viewModel { ExploreViewModel(get(), get(), get(), get(), get(), conditions = get()) }
-    viewModel { MapViewModel(get(), get(), get(), get(), get(), get(), conditions = get(), experiences = get(), anchor = get(), sheets = get()) }
+    viewModel {
+        MapViewModel(
+            get(),
+            get(),
+            get(),
+            get(),
+            get(),
+            get(),
+            conditions = get(),
+            experiences = get(),
+            anchor = get(),
+            sheets = get(),
+            mapLayers = get(),
+            publicPlaces = get(),
+        )
+    }
     viewModel { VoiceViewModel(get(), get(), get(), get(), get(), get(), get(), get()) }
     viewModel { ArViewModel(get(), get(), get()) }
     viewModel { (shortId: String) -> DropDetailViewModel(shortId, get(), get(), get()) }
@@ -158,6 +177,7 @@ val appModule = module {
             exporter = get(),
             experiences = get(),
             voicePrefs = get(),
+            mapLayers = get(),
         )
     }
 }

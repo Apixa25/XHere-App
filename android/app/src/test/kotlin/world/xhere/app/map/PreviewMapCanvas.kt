@@ -34,8 +34,8 @@ class PreviewMapCanvas : MapCanvas {
             ProgrammaticMap(state, onCameraIdle, onFeatureClick, onMapClick, onMapLongClick)
             Column(
                 modifier = Modifier
-                    .align(Alignment.CenterEnd)
-                    .padding(top = 80.dp),
+                    .align(Alignment.TopEnd)
+                    .padding(top = 120.dp),
             ) {
                 TextButton(
                     onClick = {
