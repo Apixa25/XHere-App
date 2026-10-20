@@ -526,7 +526,7 @@ interface CivicRepository {
 
 /**
  * Photos, short videos, and notes on any place.
- * Cards never include an author id. Anonymous posts have a null handle.
+ * Cards never include an author id. Anonymous posts show "Anonymous".
  */
 interface ContributionRepository {
     suspend fun place(targetKind: String, targetId: Uuid): ContributionPlace
@@ -535,12 +535,20 @@ interface ContributionRepository {
         targetKind: String,
         targetId: Uuid,
         sort: ContributionSort = ContributionSort.NEWEST,
+        offset: Int = 0,
+        query: String? = null,
     ): List<ContributionCard>
 
-    /** Reserves the row and, when [NewContribution.file] is set, stores the bytes. */
+    /** Reserves the row and, when files are set, stores the bytes. */
     suspend fun add(request: NewContribution): CreatedContribution
 
-    /** 1 or -1 sets the vote. 0 removes it. The author cannot vote. */
+    /** The author changes the words. Sets the edited marker. */
+    suspend fun edit(id: Uuid, body: String)
+
+    /**
+     * 1 or -1 sets the vote. Repeating the same value removes it.
+     * The other direction switches it. 0 removes it. The author cannot vote.
+     */
     suspend fun vote(id: Uuid, value: Int)
 
     suspend fun delete(id: Uuid)

@@ -34,11 +34,13 @@ class StoredContribution(
     val authorId: Uuid,
     val authorHandle: String,
     val anonymous: Boolean,
-    val kind: String,
-    val body: String?,
+    var kind: String,
+    var body: String?,
     var status: String,
     val createdAt: Instant,
-    val media: StoredContributionMedia?,
+    val parentId: Uuid? = null,
+    var editedAt: Instant? = null,
+    val media: List<StoredContributionMedia> = emptyList(),
 )
 
 class StoredContributionMedia(
@@ -73,23 +75,49 @@ internal class MemoryContributions(
         if (!exists(targetKind, targetId)) {
             throw XHereApiException("place_not_found", sqlState = XHereApiException.SQL_NOT_FOUND)
         }
+        val drop = when (targetKind) {
+            ContributionTarget.DROP, ContributionTarget.MARKER, ContributionTarget.OPEN_DATA -> store.drops[targetId]
+            else -> null
+        }
         return ContributionPlace(
             anonymousAllowed = anonymousAllowed(targetKind, targetId),
             visible = targetVisible(targetKind, targetId, viewer()?.id),
+            shareUrl = drop?.shortId?.let { "https://xhere.world/d/$it" },
         )
     }
 
-    override suspend fun list(targetKind: String, targetId: Uuid, sort: ContributionSort): List<ContributionCard> {
+    override suspend fun list(
+        targetKind: String,
+        targetId: Uuid,
+        sort: ContributionSort,
+        offset: Int,
+        query: String?,
+    ): List<ContributionCard> {
         val me = viewer()
         if (!exists(targetKind, targetId)) {
             throw XHereApiException("place_not_found", sqlState = XHereApiException.SQL_NOT_FOUND)
         }
         val now = clock()
+        val needle = query?.trim()?.lowercase()?.ifEmpty { null }
         val rows = store.contributions.filter { row ->
-            row.targetKind == targetKind && row.targetId == targetId && readable(row, me?.id)
+            row.targetKind == targetKind && row.targetId == targetId && readable(row, me?.id) &&
+                (needle == null || row.body?.lowercase()?.contains(needle) == true)
         }
-        val cards = rows.map { row -> card(row, me?.id, now) }
-        return ContributionRules.ordered(cards, sort, { it.createdAt }, { it.score })
+        val byId = rows.associateBy { it.id }
+        val roots = rows.filter { it.parentId == null || byId[it.parentId] == null }
+        val orderedRoots = ContributionRules.ordered(roots, sort, { it.createdAt }, { row ->
+            val votes = store.contributionVotes.filter { it.contributionId == row.id }
+            ContributionRules.wilson(votes.count { it.value == 1 }, votes.count { it.value == -1 })
+        })
+        val page = orderedRoots.drop(offset.coerceAtLeast(0)).take(ContributionRules.PAGE_SIZE)
+        val pageIds = page.map { it.id }.toSet()
+        val shown = rows.filter { it.id in pageIds || it.parentId in pageIds }
+        val rootOrder = page.withIndex().associate { it.value.id to it.index }
+        return shown.map { card(it, me?.id, now) }.sortedWith(
+            compareBy<ContributionCard> { rootOrder[it.parentId ?: it.id] ?: 0 }
+                .thenBy { it.parentId != null }
+                .thenBy { it.createdAt },
+        )
     }
 
     override suspend fun add(request: NewContribution): CreatedContribution {
@@ -112,19 +140,33 @@ internal class MemoryContributions(
         if (recent >= dailyCap(profile.tier)) {
             throw XHereApiException("rate_limited", sqlState = XHereApiException.SQL_RATE_LIMITED, detail = "contributions per day")
         }
-        val file = request.file
-        if (request.kind == "text" && file != null) {
+        val files = request.files.ifEmpty { listOfNotNull(request.file) }
+        if (files.size > ContributionRules.MAX_FILES) {
+            throw XHereApiException("invalid_contribution", sqlState = XHereApiException.SQL_VALIDATION, detail = "at most 6 files")
+        }
+        if (request.kind == "text" && files.isNotEmpty()) {
             throw XHereApiException("invalid_contribution", sqlState = XHereApiException.SQL_VALIDATION)
         }
-        if (request.kind != "text" && file == null) {
-            throw XHereApiException("invalid_contribution", sqlState = XHereApiException.SQL_VALIDATION, detail = "a photo or video needs one file")
+        if (request.kind != "text" && files.isEmpty()) {
+            throw XHereApiException("invalid_contribution", sqlState = XHereApiException.SQL_VALIDATION, detail = "a photo or video needs a file")
         }
-        file?.let { problem(request.kind, it, request.thumbnail) }?.let { detail ->
-            throw XHereApiException("invalid_contribution", sqlState = XHereApiException.SQL_VALIDATION, detail = detail)
+        if (request.parentId != null) {
+            val parent = store.contributions.firstOrNull { it.id == request.parentId && readable(it, profile.id) }
+            if (parent == null || parent.targetKind != request.targetKind || parent.targetId != request.targetId) {
+                throw XHereApiException("contribution_not_found", sqlState = XHereApiException.SQL_NOT_FOUND)
+            }
         }
+        files.forEach { file ->
+            problem(request.kind, file, file.thumbnail ?: request.thumbnail)?.let { detail ->
+                throw XHereApiException("invalid_contribution", sqlState = XHereApiException.SQL_VALIDATION, detail = detail)
+            }
+        }
+        val storedKind = storedKind(request.kind, files)
         val status = if (held(request.targetKind, request.targetId, profile.tier)) "pending_review" else "active"
         val id = Uuid.random()
-        val media = file?.let { reserved(id, profile.id, request.kind, it, request.thumbnail) }
+        val media = files.map { file ->
+            reserved(id, profile.id, file, file.thumbnail ?: request.thumbnail)
+        }
         store.contributions += StoredContribution(
             id = id,
             targetKind = request.targetKind,
@@ -132,25 +174,41 @@ internal class MemoryContributions(
             authorId = profile.id,
             authorHandle = profile.handle,
             anonymous = request.anonymous,
-            kind = request.kind,
+            kind = storedKind,
             body = body,
             status = status,
             createdAt = clock(),
+            parentId = request.parentId,
             media = media,
         )
         return CreatedContribution(
             id = id,
             status = status,
             anonymous = request.anonymous,
-            media = listOfNotNull(media?.let {
+            media = media.map {
                 ContributionUploadSlot(
                     id = it.id,
                     storagePath = it.storagePath,
                     thumbPath = it.thumbPath,
                     mimeType = it.mimeType,
                 )
-            }),
+            },
         )
+    }
+
+    override suspend fun edit(id: Uuid, body: String) {
+        val profile = requireViewer()
+        val row = store.contributions.firstOrNull { it.id == id && it.authorId == profile.id && it.status != "removed" }
+            ?: throw XHereApiException("contribution_not_found", sqlState = XHereApiException.SQL_NOT_FOUND)
+        val cleaned = body.trim().ifEmpty { null }
+        if (row.kind == "text" && (cleaned == null || cleaned.length > 500)) {
+            throw XHereApiException("invalid_contribution", sqlState = XHereApiException.SQL_VALIDATION)
+        }
+        if (cleaned != null && cleaned.length > 500) {
+            throw XHereApiException("invalid_contribution", sqlState = XHereApiException.SQL_VALIDATION)
+        }
+        row.body = cleaned
+        row.editedAt = clock()
     }
 
     override suspend fun vote(id: Uuid, value: Int) {
@@ -160,20 +218,22 @@ internal class MemoryContributions(
         }
         val row = store.contributions.firstOrNull { it.id == id && readable(it, profile.id) }
             ?: throw XHereApiException("contribution_not_found", sqlState = XHereApiException.SQL_NOT_FOUND)
-        if (value == 0) {
-            store.contributionVotes.removeAll { it.contributionId == id && it.voterId == profile.id }
-            return
-        }
         if (row.authorId == profile.id) {
             throw XHereApiException("cannot_vote_self", sqlState = XHereApiException.SQL_VALIDATION)
         }
-        if (row.kind !in setOf("photo", "video") || row.status != "active") {
+        if (row.kind !in setOf("photo", "video", "media") || row.status != "active") {
             throw XHereApiException(
-                if (row.kind !in setOf("photo", "video")) "votes_are_for_media" else "contribution_not_found",
-                sqlState = if (row.kind !in setOf("photo", "video")) XHereApiException.SQL_VALIDATION else XHereApiException.SQL_NOT_FOUND,
+                if (row.kind !in setOf("photo", "video", "media")) "votes_are_for_media" else "contribution_not_found",
+                sqlState = if (row.kind !in setOf("photo", "video", "media")) XHereApiException.SQL_VALIDATION else XHereApiException.SQL_NOT_FOUND,
             )
         }
         val existing = store.contributionVotes.firstOrNull { it.contributionId == id && it.voterId == profile.id }
+        if (value == 0 || existing?.value == value) {
+            store.contributionVotes.removeAll { it.contributionId == id && it.voterId == profile.id }
+            store.contributionDownvotes.removeAll { it.first == id && it.second == profile.id }
+            refreshVoteState(row)
+            return
+        }
         if (existing == null) {
             val hourAgo = clock() - 1.hours
             val recent = store.contributionVotes.count { it.voterId == profile.id && it.createdAt > hourAgo }
@@ -184,6 +244,11 @@ internal class MemoryContributions(
         } else {
             existing.value = value
         }
+        store.contributionDownvotes.removeAll { it.first == id && it.second == profile.id }
+        if (value == -1) {
+            store.contributionDownvotes += Triple(id, profile.id, row.authorId)
+        }
+        refreshVoteState(row)
     }
 
     override suspend fun delete(id: Uuid) {
@@ -224,12 +289,13 @@ internal class MemoryContributions(
             downCount = down,
             score = ContributionRules.wilson(up, down),
             myVote = mine,
-            authorHandle = if (row.anonymous) null else row.authorHandle,
+            authorHandle = if (row.anonymous) ContributionRules.ANONYMOUS_NAME else row.authorHandle,
             anonymous = row.anonymous,
             isMine = viewerId != null && row.authorId == viewerId,
             collapsed = ContributionRules.collapsed(up, down),
-            media = listOfNotNull(row.media?.let {
+            media = row.media.map {
                 ContributionMediaRef(
+                    id = it.id,
                     storagePath = it.storagePath,
                     thumbPath = it.thumbPath,
                     mimeType = it.mimeType,
@@ -239,14 +305,35 @@ internal class MemoryContributions(
                     durationS = it.durationS,
                     altText = it.altText,
                 )
-            }),
+            },
+            parentId = row.parentId,
+            editedAt = row.editedAt,
         )
+    }
+
+    private fun refreshVoteState(row: StoredContribution) {
+        val votes = store.contributionVotes.filter { it.contributionId == row.id }
+        val up = votes.count { it.value == 1 }
+        val down = votes.count { it.value == -1 }
+        if (row.status == "active" && ContributionRules.autoHidden(up, down)) {
+            row.status = "hidden"
+        }
+    }
+
+    private fun storedKind(requested: String, files: List<ContributionFile>): String {
+        if (requested == "text") return "text"
+        val images = files.count { it.mimeType.substringBefore(';').trim().lowercase().startsWith("image/") }
+        val videos = files.count { it.mimeType.substringBefore(';').trim().lowercase().startsWith("video/") }
+        return when {
+            images > 0 && videos > 0 -> "media"
+            videos > 0 -> "video"
+            else -> "photo"
+        }
     }
 
     private fun reserved(
         contributionId: Uuid,
         authorId: Uuid,
-        kind: String,
         file: ContributionFile,
         thumbnail: ByteArray?,
     ): StoredContributionMedia {
@@ -264,7 +351,8 @@ internal class MemoryContributions(
         }
         val bytes = if (file.mimeType.startsWith("image/")) ExifStrip.strip(file.bytes, file.mimeType) else file.bytes
         store.contributionBytes[path] = bytes
-        val thumb = if (kind == "video") "c/$contributionId/$mediaId.thumb.jpg" else null
+        val video = file.mimeType.substringBefore(';').trim().lowercase().startsWith("video/")
+        val thumb = if (video) "c/$contributionId/$mediaId.thumb.jpg" else null
         if (thumb != null) {
             store.contributionBytes[thumb] = thumbnail ?: ByteArray(0)
         }
@@ -283,7 +371,13 @@ internal class MemoryContributions(
 
     private fun problem(kind: String, file: ContributionFile, thumbnail: ByteArray?): String? {
         val mime = file.mimeType.substringBefore(';').trim().lowercase()
-        return when (kind) {
+        val branch = when {
+            kind == "photo" -> "photo"
+            kind == "video" -> "video"
+            mime.startsWith("video/") -> "video"
+            else -> "photo"
+        }
+        return when (branch) {
             "photo" -> when {
                 !mime.startsWith("image/") -> "photos are images"
                 file.bytes.isEmpty() || file.bytes.size > ContributionMediaPolicy.PHOTO_MAX_BYTES -> "photos are at most 500 KB"
@@ -308,12 +402,13 @@ internal class MemoryContributions(
 
     private fun readable(row: StoredContribution, viewerId: Uuid?): Boolean {
         if (row.status == "removed") return false
+        if (!targetVisible(row.targetKind, row.targetId, viewerId)) return false
         if (viewerId != null && row.authorId == viewerId) {
             return row.status in setOf("active", "pending_review", "hidden")
         }
         if (row.status != "active") return false
         if (viewerId != null && store.blocked(viewerId, row.authorId)) return false
-        return targetVisible(row.targetKind, row.targetId, viewerId)
+        return true
     }
 
     private fun exists(kind: String, id: Uuid): Boolean = when (kind) {
@@ -325,17 +420,23 @@ internal class MemoryContributions(
         else -> false
     }
 
+    private fun dropOpen(drop: world.xhere.shared.data.fake.StoredDrop, viewerId: Uuid?): Boolean {
+        if (!store.canView(drop, viewerId, clock())) return false
+        if (drop.capsuleMode != null && drop.capsuleOpenedAt == null && drop.authorId != viewerId) return false
+        return true
+    }
+
     private fun targetVisible(kind: String, id: Uuid, viewerId: Uuid?): Boolean {
         val now = clock()
         return when (kind) {
-            ContributionTarget.DROP -> store.drops[id]?.let { store.canView(it, viewerId, now) } == true
+            ContributionTarget.DROP -> store.drops[id]?.let { dropOpen(it, viewerId) } == true
             ContributionTarget.MARKER -> {
                 val drop = store.drops[id]
-                drop?.category?.slug == "historical_marker" && drop.let { store.canView(it, viewerId, now) }
+                drop != null && drop.category.slug == "historical_marker" && dropOpen(drop, viewerId)
             }
             ContributionTarget.OPEN_DATA -> {
                 val drop = store.drops[id]
-                drop?.source == DropSource.OPEN_DATA && drop.let { store.canView(it, viewerId, now) }
+                drop != null && drop.source == DropSource.OPEN_DATA && dropOpen(drop, viewerId)
             }
             ContributionTarget.THING -> true
             ContributionTarget.CIVIC -> store.civicItems.any { item ->

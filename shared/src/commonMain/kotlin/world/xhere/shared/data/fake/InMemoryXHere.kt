@@ -1163,6 +1163,10 @@ class InMemoryXHere(
                 val row = store.contributions.firstOrNull { it.id == targetId }
                     ?: throw XHereApiException("contribution_not_found", sqlState = XHereApiException.SQL_NOT_FOUND)
                 if (row.authorId == profile.id) throw XHereApiException("cannot_report_self", sqlState = XHereApiException.SQL_VALIDATION)
+            } else if (targetType == ReportTarget.MEDIA) {
+                val row = store.contributions.firstOrNull { contribution -> contribution.media.any { it.id == targetId } }
+                    ?: throw XHereApiException("contribution_not_found", sqlState = XHereApiException.SQL_NOT_FOUND)
+                if (row.authorId == profile.id) throw XHereApiException("cannot_report_self", sqlState = XHereApiException.SQL_VALIDATION)
             } else if (targetId == profile.id) {
                 throw XHereApiException("cannot_report_self", sqlState = XHereApiException.SQL_VALIDATION)
             }
@@ -1181,11 +1185,22 @@ class InMemoryXHere(
                     }
                 }
             }
-            if (targetType == ReportTarget.CONTRIBUTION) {
-                val open = store.reports.values.count {
-                    it.targetType == ReportTarget.CONTRIBUTION && it.targetId == targetId && it.status == ReportStatus.OPEN
+            if (targetType == ReportTarget.CONTRIBUTION || targetType == ReportTarget.MEDIA) {
+                val parent = if (targetType == ReportTarget.CONTRIBUTION) {
+                    targetId
+                } else {
+                    store.contributions.firstOrNull { contribution -> contribution.media.any { it.id == targetId } }?.id
                 }
-                store.holdContributionForReports(targetId, open)
+                if (parent != null) {
+                    val open = store.reports.values.count { report ->
+                        report.status == ReportStatus.OPEN && (
+                            (report.targetType == ReportTarget.CONTRIBUTION && report.targetId == parent) ||
+                                (report.targetType == ReportTarget.MEDIA &&
+                                    store.contributions.firstOrNull { it.id == parent }?.media?.any { it.id == report.targetId } == true)
+                            )
+                    }
+                    store.holdContributionForReports(parent, open)
+                }
             }
             return id
         }
@@ -1878,6 +1893,8 @@ class MemoryStore(
     val contributions: MutableList<StoredContribution> = mutableListOf()
     val contributionVotes: MutableList<StoredContributionVote> = mutableListOf()
     val contributionBytes: MutableMap<String, ByteArray> = linkedMapOf()
+    /** Downvotes received, the in-memory stand-in for reputation_ledger kind downvote. */
+    val contributionDownvotes: MutableList<Triple<Uuid, Uuid, Uuid>> = mutableListOf()
     val civicFollows: MutableList<CivicFollow> = mutableListOf()
     val civicNotices: MutableList<StoredCivicNotice> = mutableListOf()
     /** Region programs (founding cap and campaign). Empty until a config is installed. */

@@ -13,7 +13,7 @@ import world.xhere.shared.json.UuidSerializer
 
 /**
  * Photos, short videos, and notes people add to a place (PLAN §0, PLAN §3).
- * The author id never appears on these cards. An anonymous post has a null handle.
+ * The author id never appears on these cards. An anonymous post is labeled Anonymous.
  */
 object ContributionTarget {
     const val DROP = "drop"
@@ -27,18 +27,23 @@ object ContributionTarget {
 
 enum class ContributionSort {
     NEWEST,
+    OLDEST,
     TOP,
     ;
 
     val wire: String
         get() = when (this) {
             NEWEST -> "newest"
+            OLDEST -> "oldest"
             TOP -> "top"
         }
 
     companion object {
-        fun fromWire(value: String?): ContributionSort =
-            if (value == "top") TOP else NEWEST
+        fun fromWire(value: String?): ContributionSort = when (value) {
+            "oldest" -> OLDEST
+            "top" -> TOP
+            else -> NEWEST
+        }
     }
 }
 
@@ -48,6 +53,10 @@ enum class ContributionSort {
  */
 object ContributionRules {
     const val LIVE_HOURS = 24
+    const val PAGE_SIZE = 20
+    const val MAX_FILES = 6
+    const val HIDE_DOWNVOTES = 5
+    const val ANONYMOUS_NAME = "Anonymous"
     const val COLLAPSE_BELOW = 0.2
     const val COLLAPSE_MIN_VOTES = 3
     private const val Z = 1.96
@@ -73,13 +82,20 @@ object ContributionRules {
             wilson(safeUp, safeDown) < COLLAPSE_BELOW
     }
 
+    /** Five downvotes, or a net of -5, sends the post to the moderation queue. */
+    fun autoHidden(up: Int, down: Int): Boolean {
+        val safeUp = up.coerceAtLeast(0)
+        val safeDown = down.coerceAtLeast(0)
+        return safeDown >= HIDE_DOWNVOTES || safeUp - safeDown <= -HIDE_DOWNVOTES
+    }
+
     /** Anything from the last 24 hours, including a line of text. */
     fun live(createdAt: Instant, now: Instant): Boolean =
         createdAt > now - LIVE_HOURS.hours
 
     /** The map halo is only for a photo or video in that window. */
     fun pulses(kind: String, createdAt: Instant, now: Instant): Boolean =
-        (kind == "photo" || kind == "video") && live(createdAt, now)
+        (kind == "photo" || kind == "video" || kind == "media") && live(createdAt, now)
 
     fun <T> ordered(
         items: List<T>,
@@ -88,6 +104,7 @@ object ContributionRules {
         score: (T) -> Double,
     ): List<T> = when (sort) {
         ContributionSort.NEWEST -> items.sortedByDescending(createdAt)
+        ContributionSort.OLDEST -> items.sortedBy(createdAt)
         ContributionSort.TOP -> items.sortedWith(compareByDescending<T>(score).thenByDescending(createdAt))
     }
 
@@ -126,6 +143,8 @@ object ContributionMediaPolicy {
 
 @Serializable
 data class ContributionMediaRef(
+    @Serializable(with = UuidSerializer::class)
+    val id: Uuid? = null,
     @SerialName("storage_bucket") val storageBucket: String = "contribution-media",
     @SerialName("storage_path") val storagePath: String,
     @SerialName("thumb_path") val thumbPath: String? = null,
@@ -158,12 +177,17 @@ data class ContributionCard(
     @SerialName("is_mine") val isMine: Boolean = false,
     val collapsed: Boolean = false,
     val media: List<ContributionMediaRef> = emptyList(),
+    @Serializable(with = UuidSerializer::class)
+    @SerialName("parent_id") val parentId: Uuid? = null,
+    @Serializable(with = InstantSerializer::class)
+    @SerialName("edited_at") val editedAt: Instant? = null,
 )
 
 @Serializable
 data class ContributionPlace(
     @SerialName("anonymous_allowed") val anonymousAllowed: Boolean = true,
     val visible: Boolean = true,
+    @SerialName("share_url") val shareUrl: String? = null,
 )
 
 @Serializable
@@ -203,6 +227,7 @@ data class ContributionFile(
     val height: Int? = null,
     val durationS: Double? = null,
     val altText: String? = null,
+    val thumbnail: ByteArray? = null,
 )
 
 data class NewContribution(
@@ -213,4 +238,6 @@ data class NewContribution(
     val anonymous: Boolean,
     val file: ContributionFile? = null,
     val thumbnail: ByteArray? = null,
+    val files: List<ContributionFile> = emptyList(),
+    val parentId: Uuid? = null,
 )

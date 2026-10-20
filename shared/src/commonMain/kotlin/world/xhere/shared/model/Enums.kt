@@ -71,6 +71,7 @@ enum class ReportTarget {
     @SerialName("drop") DROP,
     @SerialName("profile") PROFILE,
     @SerialName("contribution") CONTRIBUTION,
+    @SerialName("media") MEDIA,
 }
 
 @Serializable

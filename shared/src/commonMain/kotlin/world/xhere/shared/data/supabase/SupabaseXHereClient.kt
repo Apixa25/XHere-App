@@ -78,6 +78,7 @@ import world.xhere.shared.data.ThingRepository
 import world.xhere.shared.data.WalkRepository
 import world.xhere.shared.contribution.ContributionCard
 import world.xhere.shared.contribution.ContributionMediaPolicy
+import world.xhere.shared.contribution.ContributionRules
 import world.xhere.shared.contribution.ContributionPlace
 import world.xhere.shared.contribution.ContributionSort
 import world.xhere.shared.contribution.CreatedContribution
@@ -135,6 +136,7 @@ import world.xhere.shared.data.remote.ContributionPlaceParams
 import world.xhere.shared.data.remote.ContributionVoteParams
 import world.xhere.shared.data.remote.ContributionsForParams
 import world.xhere.shared.data.remote.CreateContributionParams
+import world.xhere.shared.data.remote.EditContributionParams
 import world.xhere.shared.data.remote.LivePlacesParams
 import world.xhere.shared.data.remote.taxonomyOf
 import world.xhere.shared.data.remote.toParams
@@ -1199,10 +1201,19 @@ class SupabaseXHereClient(
             targetKind: String,
             targetId: Uuid,
             sort: ContributionSort,
+            offset: Int,
+            query: String?,
         ): List<ContributionCard> = call {
             supabase.postgrest.rpc(
                 "contributions_for",
-                ContributionsForParams(targetKind, targetId, sort.wire).rpcJson(),
+                ContributionsForParams(
+                    targetKind,
+                    targetId,
+                    sort.wire,
+                    ContributionRules.PAGE_SIZE,
+                    offset,
+                    query?.trim()?.ifEmpty { null },
+                ).rpcJson(),
             ).decodeList<ContributionCard>()
         }
 
@@ -1218,6 +1229,7 @@ class SupabaseXHereClient(
                         body = request.body,
                         displayAnonymous = request.anonymous,
                         media = prepared?.wire.orEmpty(),
+                        parentId = request.parentId,
                     ).rpcJson(),
                 ).data,
             )
@@ -1233,6 +1245,13 @@ class SupabaseXHereClient(
                 throw XHereApiException("upload_failed", detail = "contribution upload failed", cause = e)
             }
             created
+        }
+
+        override suspend fun edit(id: Uuid, body: String) {
+            call {
+                supabase.postgrest.rpc("edit_contribution", EditContributionParams(id, body).rpcJson())
+                Unit
+            }
         }
 
         override suspend fun vote(id: Uuid, value: Int) {
@@ -1258,61 +1277,67 @@ class SupabaseXHereClient(
         }
 
         private fun prepare(request: NewContribution): PreparedContribution? {
-            val file = request.file ?: return null
-            val mime = file.mimeType.substringBefore(';').trim().lowercase()
-            val bytes = if (mime.startsWith("image/")) ExifStrip.strip(file.bytes, mime) else file.bytes
-            if (request.kind == "photo") {
-                if (bytes.isEmpty() || bytes.size > ContributionMediaPolicy.PHOTO_MAX_BYTES) {
+            val files = request.files.ifEmpty { listOfNotNull(request.file) }
+            if (files.isEmpty()) return null
+            if (files.size > ContributionRules.MAX_FILES) {
+                throw XHereApiException("invalid_contribution", sqlState = XHereApiException.SQL_VALIDATION, detail = "at most 6 files")
+            }
+            val parts = files.map { file ->
+                val mime = file.mimeType.substringBefore(';').trim().lowercase()
+                val bytes = if (mime.startsWith("image/")) ExifStrip.strip(file.bytes, mime) else file.bytes
+                val thumb = file.thumbnail ?: request.thumbnail
+                val video = mime.startsWith("video/")
+                if (!video && (bytes.isEmpty() || bytes.size > ContributionMediaPolicy.PHOTO_MAX_BYTES)) {
                     throw XHereApiException(
                         "invalid_contribution",
                         sqlState = XHereApiException.SQL_VALIDATION,
                         detail = "photos are at most 500 KB",
                     )
                 }
-            }
-            if (request.kind == "video") {
-                val duration = file.durationS
-                val thumb = request.thumbnail
-                if (
-                    duration == null || duration <= 0.0 || duration > ContributionMediaPolicy.VIDEO_MAX_SECONDS ||
-                    bytes.isEmpty() || bytes.size > ContributionMediaPolicy.VIDEO_MAX_BYTES ||
-                    file.width == null || file.height == null ||
-                    maxOf(file.width, file.height) > ContributionMediaPolicy.VIDEO_MAX_EDGE ||
-                    thumb == null || thumb.isEmpty() || thumb.size > ContributionMediaPolicy.PHOTO_MAX_BYTES
-                ) {
-                    throw XHereApiException(
-                        "invalid_contribution",
-                        sqlState = XHereApiException.SQL_VALIDATION,
-                        detail = "videos are at most 30 seconds, 720p, and 8 MB",
-                    )
+                if (video) {
+                    val duration = file.durationS
+                    if (
+                        duration == null || duration <= 0.0 || duration > ContributionMediaPolicy.VIDEO_MAX_SECONDS ||
+                        bytes.isEmpty() || bytes.size > ContributionMediaPolicy.VIDEO_MAX_BYTES ||
+                        file.width == null || file.height == null ||
+                        maxOf(file.width, file.height) > ContributionMediaPolicy.VIDEO_MAX_EDGE ||
+                        thumb == null || thumb.isEmpty() || thumb.size > ContributionMediaPolicy.PHOTO_MAX_BYTES
+                    ) {
+                        throw XHereApiException(
+                            "invalid_contribution",
+                            sqlState = XHereApiException.SQL_VALIDATION,
+                            detail = "videos are at most 30 seconds, 720p, and 8 MB",
+                        )
+                    }
                 }
-            }
-            return PreparedContribution(
-                bytes = bytes,
-                mime = mime,
-                thumb = request.thumbnail,
-                wire = listOf(
-                    ContributionMediaWire(
+                PreparedPart(
+                    bytes = bytes,
+                    mime = mime,
+                    thumb = if (video) thumb else null,
+                    wire = ContributionMediaWire(
                         mimeType = mime,
                         byteSize = bytes.size,
                         width = file.width,
                         height = file.height,
                         durationS = file.durationS,
                         altText = file.altText,
-                        thumbByteSize = if (request.kind == "video") request.thumbnail?.size else null,
+                        thumbByteSize = if (video) thumb?.size else null,
                     ),
-                ),
-            )
+                )
+            }
+            return PreparedContribution(parts)
         }
 
         private suspend fun uploadReserved(created: CreatedContribution, prepared: PreparedContribution?) {
-            val slot = created.media.firstOrNull() ?: return
-            val file = prepared ?: return
-            putContributionObject(slot.storagePath, file.bytes, file.mime)
-            val thumbPath = slot.thumbPath
-            val thumb = file.thumb
-            if (thumbPath != null && thumb != null) {
-                putContributionObject(thumbPath, thumb, "image/jpeg")
+            val parts = prepared?.parts.orEmpty()
+            created.media.forEachIndexed { index, slot ->
+                val file = parts.getOrNull(index) ?: return@forEachIndexed
+                putContributionObject(slot.storagePath, file.bytes, file.mime)
+                val thumbPath = slot.thumbPath
+                val thumb = file.thumb
+                if (thumbPath != null && thumb != null) {
+                    putContributionObject(thumbPath, thumb, "image/jpeg")
+                }
             }
         }
 
@@ -1359,12 +1384,18 @@ private val CONTRIBUTION_THUMB = Regex(
 
 private fun contributionPath(path: String): Boolean = CONTRIBUTION_FILE.matches(path) || CONTRIBUTION_THUMB.matches(path)
 
-private data class PreparedContribution(
+private data class PreparedPart(
     val bytes: ByteArray,
     val mime: String,
     val thumb: ByteArray?,
-    val wire: List<ContributionMediaWire>,
+    val wire: ContributionMediaWire,
 )
+
+private data class PreparedContribution(
+    val parts: List<PreparedPart>,
+) {
+    val wire: List<ContributionMediaWire> get() = parts.map { it.wire }
+}
 
 private const val CATEGORY_COLUMNS =
     "id,group_id,slug,label,description,icon,color,attributes_schema,min_tier_to_post,moderation_mode," +

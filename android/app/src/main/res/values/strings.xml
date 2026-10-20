@@ -598,6 +598,7 @@
     <string name="community_title">Community</string>
     <string name="community_add">Add yours</string>
     <string name="community_newest">Newest</string>
+    <string name="community_oldest">Oldest</string>
     <string name="community_top">Top</string>
     <string name="community_live">Live</string>
     <string name="community_loading">Loading community</string>
@@ -614,6 +615,12 @@
     <string name="community_down">Down %1$d</string>
     <string name="community_collapsed">Low score, tap to show</string>
     <string name="community_report">Report</string>
+    <string name="community_report_photo">Report this photo</string>
+    <string name="community_reply">Reply</string>
+    <string name="community_edited">Edited</string>
+    <string name="community_more">More</string>
+    <string name="community_files">Up to 6 photos or videos.</string>
+    <string name="community_attached">%1$d attached</string>
     <string name="community_remove">Remove</string>
     <string name="community_failed">That didn\'t go through.</string>
     <string name="community_video_label">Video</string>

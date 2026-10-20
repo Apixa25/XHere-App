@@ -536,6 +536,8 @@ internal data class CreateContributionParams(
     @SerialName("p_body") val body: String? = null,
     @SerialName("p_display_anonymous") val displayAnonymous: Boolean = false,
     @SerialName("p_media") val media: List<ContributionMediaWire> = emptyList(),
+    @Serializable(with = UuidSerializer::class)
+    @SerialName("p_parent_id") val parentId: Uuid? = null,
 )
 
 @Serializable
@@ -551,6 +553,16 @@ internal data class ContributionsForParams(
     @Serializable(with = UuidSerializer::class)
     @SerialName("p_target_id") val targetId: Uuid,
     @SerialName("p_sort") val sort: String,
+    @SerialName("p_limit") val limit: Int = 20,
+    @SerialName("p_offset") val offset: Int = 0,
+    @SerialName("p_query") val query: String? = null,
+)
+
+@Serializable
+internal data class EditContributionParams(
+    @Serializable(with = UuidSerializer::class)
+    @SerialName("p_id") val id: Uuid,
+    @SerialName("p_body") val body: String,
 )
 
 @Serializable
