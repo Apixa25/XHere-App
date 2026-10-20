@@ -337,6 +337,7 @@ fun MapScreen(
                     onClose = viewModel::dismissTeaser,
                     onOpen = { onOpenDrop(teaser.shortId) },
                     onOpenAuthor = { teaser.authorHandle?.let(onOpenAuthor) },
+                    services = services,
                 )
             }
             if (hintCount > 0 && state.experienceLocal.hintEnabled) {
@@ -465,6 +466,7 @@ fun MapScreen(
                 onOpen = { card -> onOpenDrop(card.shortId) },
                 onDismiss = viewModel::closeNearMe,
                 taxonomy = state.taxonomy,
+                services = services,
             )
         }
         state.here?.let { sheet ->

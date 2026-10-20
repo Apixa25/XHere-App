@@ -74,7 +74,7 @@ class PublicPlaceClient(
             parameter("exintro", "1")
             parameter("explaintext", "1")
             parameter("exchars", "280")
-            parameter("pithumbsize", "320")
+            parameter("pithumbsize", "400")
             parameter("piprop", "thumbnail")
         }
         return body?.let(WikipediaGeo::parse).orEmpty()
@@ -92,7 +92,7 @@ class PublicPlaceClient(
             parameter("ggsnamespace", "6")
             parameter("prop", "imageinfo|coordinates")
             parameter("iiprop", "url|extmetadata")
-            parameter("iiurlwidth", "480")
+            parameter("iiurlwidth", "400")
         }
         return body?.let(CommonsGeo::parse).orEmpty()
     }

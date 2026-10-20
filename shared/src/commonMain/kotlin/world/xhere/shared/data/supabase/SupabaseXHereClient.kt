@@ -165,6 +165,7 @@ import world.xhere.shared.data.remote.AccessBoxParams
 import world.xhere.shared.data.remote.AccessPlaceParams
 import world.xhere.shared.data.remote.SubmitAccessParams
 import world.xhere.shared.media.ExifGps
+import world.xhere.shared.media.MediaPaths
 import world.xhere.shared.voice.VoiceClips
 import world.xhere.shared.geo.Geo
 import world.xhere.shared.history.Clipping
@@ -784,7 +785,12 @@ class SupabaseXHereClient(
     }
 
     private inner class MediaRepo : MediaRepository {
-        override suspend fun uploadPhoto(bytes: ByteArray, mimeType: String, capture: LatLng?): MediaUpload {
+        override suspend fun uploadPhoto(
+            bytes: ByteArray,
+            mimeType: String,
+            capture: LatLng?,
+            thumbnail: ByteArray?,
+        ): MediaUpload {
             val mime = mimeType.substringBefore(';').trim().lowercase()
             try {
                 val response = edge.post(config.url.trimEnd('/') + "/functions/v1/strip-exif") {
@@ -801,6 +807,7 @@ class SupabaseXHereClient(
                     throw XHereApiException(code, detail = "photo upload failed")
                 }
                 val stored = XHereJson.decodeFromString(StoredPhotoWire.serializer(), payload)
+                storeDropThumb(stored.storagePath, thumbnail)
                 val located = capture ?: if (mime == "image/jpeg") ExifGps.read(bytes) else null
                 return MediaUpload(
                     storagePath = stored.storagePath,
@@ -816,6 +823,25 @@ class SupabaseXHereClient(
                 throw e
             } catch (e: Throwable) {
                 throw XHereApiException("upload_failed", detail = "photo upload failed", cause = e)
+            }
+        }
+
+        /**
+         * The list image sits beside the full photo. A failed thumb upload
+         * leaves the original in place, and the map falls back to that file.
+         */
+        private suspend fun storeDropThumb(storagePath: String, thumbnail: ByteArray?) {
+            val bytes = thumbnail?.takeIf { it.isNotEmpty() && it.size <= ContributionMediaPolicy.THUMB_MAX_BYTES } ?: return
+            val path = MediaPaths.thumbSibling(storagePath) ?: return
+            try {
+                supabase.storage.from("drop-media").upload(path, bytes) {
+                    upsert = false
+                    contentType = ContentType.Image.JPEG
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Throwable) {
+                // The full photo is already stored.
             }
         }
 
@@ -1294,6 +1320,24 @@ class SupabaseXHereClient(
                         detail = "photos are at most 500 KB",
                     )
                 }
+                if (
+                    !video && file.width != null && file.height != null &&
+                    maxOf(file.width, file.height) > ContributionMediaPolicy.PHOTO_MAX_EDGE
+                ) {
+                    throw XHereApiException(
+                        "invalid_contribution",
+                        sqlState = XHereApiException.SQL_VALIDATION,
+                        detail = "photos are at most 2048 px",
+                    )
+                }
+                if (thumb != null && thumb.isNotEmpty() && thumb.size > ContributionMediaPolicy.THUMB_MAX_BYTES) {
+                    throw XHereApiException(
+                        "invalid_contribution",
+                        sqlState = XHereApiException.SQL_VALIDATION,
+                        detail = "a thumbnail is at most 500 KB",
+                    )
+                }
+                val usableThumb = thumb?.takeIf { it.isNotEmpty() }
                 if (video) {
                     val duration = file.durationS
                     if (
@@ -1301,19 +1345,19 @@ class SupabaseXHereClient(
                         bytes.isEmpty() || bytes.size > ContributionMediaPolicy.VIDEO_MAX_BYTES ||
                         file.width == null || file.height == null ||
                         maxOf(file.width, file.height) > ContributionMediaPolicy.VIDEO_MAX_EDGE ||
-                        thumb == null || thumb.isEmpty() || thumb.size > ContributionMediaPolicy.PHOTO_MAX_BYTES
+                        usableThumb == null
                     ) {
                         throw XHereApiException(
                             "invalid_contribution",
                             sqlState = XHereApiException.SQL_VALIDATION,
-                            detail = "videos are at most 30 seconds, 720p, and 8 MB",
+                            detail = "videos are at most 60 seconds, 720p, and 22 MB",
                         )
                     }
                 }
                 PreparedPart(
                     bytes = bytes,
                     mime = mime,
-                    thumb = if (video) thumb else null,
+                    thumb = usableThumb,
                     wire = ContributionMediaWire(
                         mimeType = mime,
                         byteSize = bytes.size,
@@ -1321,7 +1365,7 @@ class SupabaseXHereClient(
                         height = file.height,
                         durationS = file.durationS,
                         altText = file.altText,
-                        thumbByteSize = if (video) thumb?.size else null,
+                        thumbByteSize = usableThumb?.size,
                     ),
                 )
             }

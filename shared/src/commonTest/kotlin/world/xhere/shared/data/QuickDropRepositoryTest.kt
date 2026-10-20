@@ -13,6 +13,7 @@ import world.xhere.shared.data.fake.InMemoryXHere
 import world.xhere.shared.data.fake.MemoryStore
 import world.xhere.shared.demo.JamestownDemo
 import world.xhere.shared.media.ExifStrip
+import world.xhere.shared.media.MediaPaths
 import world.xhere.shared.model.UserTier
 import world.xhere.shared.rules.CreateDropRequest
 import world.xhere.shared.suggest.SuggestionQuery
@@ -65,6 +66,16 @@ class QuickDropRepositoryTest {
         assertEquals("food_truck", suggestions.first().slug)
         client.suggestions.log(query, suggestions.map { it.slug }, "note")
         assertEquals(1, client.store.suggestionLogs.size)
+    }
+
+    @Test
+    fun aDropPhotoKeepsAListThumbnailBesideIt() = runTest {
+        val client = InMemoryXHere(JamestownDemo.store(), JamestownDemo.viewer, clock = { Fixtures.now })
+        val jpeg = byteArrayOf(0xFF.toByte(), 0xD8.toByte(), 0xFF.toByte(), 0xD9.toByte())
+        val thumb = byteArrayOf(1, 2, 3)
+        val uploaded = client.media.uploadPhoto(jpeg, "image/jpeg", thumbnail = thumb)
+        val sibling = MediaPaths.thumbSibling(uploaded.storagePath)
+        assertEquals(thumb.toList(), client.store.mediaBytes.getValue(sibling!!).toList())
     }
 
     private fun request(

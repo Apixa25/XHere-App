@@ -149,6 +149,9 @@ dependencies {
     implementation(libs.play.services.location)
     implementation(libs.coil.compose)
     implementation(libs.coil.okhttp)
+    implementation(libs.androidx.media3.transformer)
+    implementation(libs.androidx.media3.effect)
+    implementation(libs.androidx.exifinterface)
 
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)

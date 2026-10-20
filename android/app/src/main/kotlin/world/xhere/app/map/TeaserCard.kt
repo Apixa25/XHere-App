@@ -17,9 +17,11 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import world.xhere.app.R
+import world.xhere.app.media.SignedListImage
 import world.xhere.app.profile.ProfileAvatar
 import world.xhere.app.reputation.TierChip
 import world.xhere.app.ui.TestTags
+import world.xhere.shared.data.XHereServices
 
 @Composable
 internal fun TeaserCard(
@@ -27,6 +29,7 @@ internal fun TeaserCard(
     onClose: () -> Unit,
     onOpen: () -> Unit,
     onOpenAuthor: () -> Unit = {},
+    services: XHereServices? = null,
     modifier: Modifier = Modifier,
 ) {
     Surface(
@@ -39,6 +42,17 @@ internal fun TeaserCard(
     ) {
         Column(Modifier.padding(start = 16.dp, end = 8.dp, top = 8.dp, bottom = 12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
+                val photoBucket = teaser.photoBucket
+                val photoPath = teaser.photoPath
+                if (services != null && !photoBucket.isNullOrBlank() && !photoPath.isNullOrBlank()) {
+                    SignedListImage(
+                        services = services,
+                        bucket = photoBucket,
+                        path = photoPath,
+                        description = teaser.title,
+                        modifier = Modifier.padding(end = 8.dp),
+                    )
+                }
                 Text(teaser.icon, style = MaterialTheme.typography.headlineSmall)
                 Column(
                     modifier = Modifier

@@ -16,6 +16,7 @@ import world.xhere.shared.here.isPublicRecord
 import world.xhere.shared.live.WeatherAlert
 import world.xhere.shared.model.CampaignProgress
 import world.xhere.shared.model.CategoryGroup
+import world.xhere.app.media.listPhoto
 import world.xhere.shared.model.DropCard
 import world.xhere.shared.model.DropSource
 import world.xhere.shared.model.MapFeature
@@ -115,6 +116,9 @@ data class TeaserUi(
     val authorLabel: String? = null,
     val authorHandle: String? = null,
     val authorAvatarUrl: String? = null,
+    /** First revealed photo. The card signs the 400 px sibling and falls back to this path. */
+    val photoBucket: String? = null,
+    val photoPath: String? = null,
 )
 
 /**
@@ -342,6 +346,7 @@ internal fun iconFor(taxonomy: Taxonomy?, categorySlug: String?, groupSlug: Stri
 internal fun DropCard.toTeaser(taxonomy: Taxonomy?, distanceM: Double?, avatarUrl: String? = null): TeaserUi {
     val category = taxonomy?.category(categorySlug)
     val group = taxonomy?.group(groupSlug)
+    val photo = listPhoto()
     return TeaserUi(
         shortId = shortId,
         title = title,
@@ -365,6 +370,8 @@ internal fun DropCard.toTeaser(taxonomy: Taxonomy?, distanceM: Double?, avatarUr
         authorLabel = if (source == DropSource.OPEN_DATA) null else AuthorNames.label(authorDisplayName, authorHandle),
         authorHandle = if (source == DropSource.OPEN_DATA) null else authorHandle,
         authorAvatarUrl = if (source == DropSource.OPEN_DATA) null else avatarUrl,
+        photoBucket = photo?.first,
+        photoPath = photo?.second,
     )
 }
 

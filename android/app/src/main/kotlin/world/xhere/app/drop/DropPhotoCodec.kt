@@ -1,76 +1,116 @@
 package world.xhere.app.drop
 
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.os.Build
 import java.io.ByteArrayOutputStream
+import world.xhere.app.media.ImageOrientation
+import world.xhere.shared.contribution.ContributionMediaPolicy
 
 /**
- * Drop photos are resized before they leave the phone.
- * The long edge stays at about 1600 px, and the file is JPEG or WebP
- * around 80% until it fits under 500 KB. A camera original of a few
- * megabytes is too large for the free storage tier.
- * Bytes that are not a picture are returned unchanged, so a caller that
- * already holds a small file can still upload it.
+ * Drop photos and contribution photos are resized on the phone.
+ * The long edge stays at about 2048 px. The file is WebP or JPEG at
+ * quality 80–85, and it stays under 500 KB. A 400 px JPEG thumbnail is
+ * produced for map and list rows. Re-encoding drops EXIF, including GPS.
+ * The orientation tag is applied to the pixels first.
+ * Bytes that are not a picture are returned unchanged.
  */
 internal object DropPhotoCodec {
-    const val MAX_EDGE = 1600
-    const val TARGET_BYTES = 500 * 1024
-    private const val START_QUALITY = 80
+    const val MAX_EDGE = ContributionMediaPolicy.PHOTO_MAX_EDGE
+    const val THUMB_EDGE = ContributionMediaPolicy.THUMB_EDGE
+    const val TARGET_BYTES = ContributionMediaPolicy.PHOTO_MAX_BYTES
+    const val QUALITY = ContributionMediaPolicy.PHOTO_QUALITY
+    private val BAND = intArrayOf(85, 82, 80)
 
-    data class Encoded(val bytes: ByteArray, val mimeType: String)
+    data class Encoded(
+        val bytes: ByteArray,
+        val mimeType: String,
+        val width: Int = 0,
+        val height: Int = 0,
+        val thumbnail: ByteArray = ByteArray(0),
+    )
 
     fun compress(bytes: ByteArray, mimeType: String): Encoded {
         val mime = mimeType.substringBefore(';').trim().lowercase().ifBlank { "image/jpeg" }
-        val decoded = decode(bytes) ?: return Encoded(bytes, mime)
+        val decoded = ImageOrientation.decode(bytes, MAX_EDGE) ?: return Encoded(bytes, mime)
         return try {
-            encode(decoded)
+            val fitted = fit(decoded, MAX_EDGE)
+            try {
+                val packed = underLimit(fitted, floor = 960, limit = TARGET_BYTES)
+                Encoded(
+                    bytes = packed.bytes,
+                    mimeType = packed.mimeType,
+                    width = packed.width,
+                    height = packed.height,
+                    thumbnail = thumbnail(fitted),
+                )
+            } finally {
+                if (fitted !== decoded && !fitted.isRecycled) fitted.recycle()
+            }
         } finally {
             if (!decoded.isRecycled) decoded.recycle()
         }
     }
 
-    private fun decode(bytes: ByteArray): Bitmap? = runCatching {
-        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-        BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
-        if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
-        var sample = 1
-        while (bounds.outWidth / sample > MAX_EDGE * 2 || bounds.outHeight / sample > MAX_EDGE * 2) {
-            sample *= 2
+    /** A poster frame or an already-decoded bitmap, as a list thumbnail. */
+    fun thumbnail(source: Bitmap): ByteArray {
+        val fitted = fit(source, THUMB_EDGE)
+        return try {
+            underLimit(fitted, floor = 240, limit = ContributionMediaPolicy.THUMB_MAX_BYTES).bytes
+        } finally {
+            if (fitted !== source && !fitted.isRecycled) fitted.recycle()
         }
-        val options = BitmapFactory.Options().apply { inSampleSize = sample }
-        BitmapFactory.decodeByteArray(bytes, 0, bytes.size, options)
-    }.getOrNull()
+    }
 
-    private fun encode(source: Bitmap): Encoded {
-        var working = fit(source, MAX_EDGE)
-        var owned: Bitmap? = if (working !== source) working else null
-        var best: Encoded? = null
-        while (true) {
-            for (quality in intArrayOf(START_QUALITY, 65, 50, 35)) {
-                val webp = pack(working, webp = true, quality = quality)
-                val jpeg = pack(working, webp = false, quality = quality)
-                val chosen = smaller(webp, jpeg)
-                if (best == null || chosen.bytes.size < best.bytes.size) best = chosen
-                if (chosen.bytes.size in 1..TARGET_BYTES) {
-                    recycleOwned(owned, source)
-                    return chosen
+    private data class Packed(
+        val bytes: ByteArray,
+        val mimeType: String,
+        val width: Int,
+        val height: Int,
+    )
+
+    /**
+     * Stay at quality 80–85 while the long edge comes down.
+     * A noisy picture that is still over the cap at the floor may drop to
+     * quality 60 so the upload is not rejected. Ordinary photos do not reach that step.
+     */
+    private fun underLimit(source: Bitmap, floor: Int, limit: Int): Packed {
+        var working = source
+        var owned: Bitmap? = null
+        try {
+            while (true) {
+                val band = bestInBand(working)
+                if (band.bytes.size in 1..limit) {
+                    return band.copy(width = working.width, height = working.height)
                 }
+                if (maxOf(working.width, working.height) <= floor) {
+                    val low = smaller(pack(working, webp = true, quality = 60), pack(working, webp = false, quality = 60))
+                    return Packed(low.bytes, low.mimeType, working.width, working.height)
+                }
+                val nextEdge = (maxOf(working.width, working.height) * 3 / 4).coerceAtLeast(floor)
+                val next = fit(working, nextEdge)
+                if (next === working || (next.width >= working.width && next.height >= working.height)) {
+                    return band.copy(width = working.width, height = working.height)
+                }
+                if (owned != null && owned !== source && !owned.isRecycled) owned.recycle()
+                owned = if (next !== source) next else null
+                working = next
             }
-            if (maxOf(working.width, working.height) <= 480) {
-                recycleOwned(owned, source)
-                return best ?: pack(working, webp = false, quality = 35)
-            }
-            val nextEdge = (maxOf(working.width, working.height) * 3 / 4).coerceAtLeast(480)
-            val next = fit(working, nextEdge)
-            if (next.width >= working.width && next.height >= working.height) {
-                recycleOwned(owned, source)
-                return best ?: pack(working, webp = false, quality = 35)
-            }
-            recycleOwned(owned, source)
-            owned = next
-            working = next
+        } finally {
+            if (owned != null && owned !== source && !owned.isRecycled) owned.recycle()
         }
+    }
+
+    private fun bestInBand(bitmap: Bitmap): Packed {
+        var best: Encoded? = null
+        for (quality in BAND) {
+            val chosen = smaller(pack(bitmap, webp = true, quality), pack(bitmap, webp = false, quality))
+            if (best == null || chosen.bytes.size < best.bytes.size) best = chosen
+            if (chosen.bytes.size in 1..TARGET_BYTES && quality == QUALITY) {
+                return Packed(chosen.bytes, chosen.mimeType, bitmap.width, bitmap.height)
+            }
+        }
+        val chosen = best ?: pack(bitmap, webp = false, quality = QUALITY)
+        return Packed(chosen.bytes, chosen.mimeType, bitmap.width, bitmap.height)
     }
 
     private fun fit(source: Bitmap, edge: Int): Bitmap {
@@ -95,9 +135,5 @@ internal object DropPhotoCodec {
     }
 
     private fun smaller(left: Encoded, right: Encoded): Encoded =
-        if (left.bytes.isNotEmpty() && left.bytes.size <= right.bytes.size) left else right
-
-    private fun recycleOwned(owned: Bitmap?, original: Bitmap) {
-        if (owned != null && owned !== original && !owned.isRecycled) owned.recycle()
-    }
+        if (left.bytes.isNotEmpty() && (right.bytes.isEmpty() || left.bytes.size <= right.bytes.size)) left else right
 }

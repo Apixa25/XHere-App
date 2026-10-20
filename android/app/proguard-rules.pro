@@ -77,6 +77,10 @@
 -keep class androidx.camera.** { *; }
 -dontwarn androidx.camera.**
 
+# --- Media3 Transformer (on-device H.264/AAC). Consumer rules cover most of this.
+-keep class androidx.media3.** { *; }
+-dontwarn androidx.media3.**
+
 # --- ARCore (Geospatial, JNI). Keyless: no API key to keep. ---
 -keep class com.google.ar.** { *; }
 -dontwarn com.google.ar.**

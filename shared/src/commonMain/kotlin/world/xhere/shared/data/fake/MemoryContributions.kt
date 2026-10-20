@@ -352,9 +352,10 @@ internal class MemoryContributions(
         val bytes = if (file.mimeType.startsWith("image/")) ExifStrip.strip(file.bytes, file.mimeType) else file.bytes
         store.contributionBytes[path] = bytes
         val video = file.mimeType.substringBefore(';').trim().lowercase().startsWith("video/")
-        val thumb = if (video) "c/$contributionId/$mediaId.thumb.jpg" else null
+        val thumbBytes = thumbnail?.takeIf { it.isNotEmpty() }
+        val thumb = if (video || thumbBytes != null) "c/$contributionId/$mediaId.thumb.jpg" else null
         if (thumb != null) {
-            store.contributionBytes[thumb] = thumbnail ?: ByteArray(0)
+            store.contributionBytes[thumb] = thumbBytes ?: ByteArray(0)
         }
         return StoredContributionMedia(
             id = mediaId,
@@ -382,17 +383,19 @@ internal class MemoryContributions(
                 !mime.startsWith("image/") -> "photos are images"
                 file.bytes.isEmpty() || file.bytes.size > ContributionMediaPolicy.PHOTO_MAX_BYTES -> "photos are at most 500 KB"
                 file.width != null && file.height != null &&
-                    maxOf(file.width, file.height) > ContributionMediaPolicy.PHOTO_MAX_EDGE -> "photos are at most 1600 px"
+                    maxOf(file.width, file.height) > ContributionMediaPolicy.PHOTO_MAX_EDGE -> "photos are at most 2048 px"
+                thumbnail != null && thumbnail.isNotEmpty() && thumbnail.size > ContributionMediaPolicy.THUMB_MAX_BYTES ->
+                    "a thumbnail is at most 500 KB"
                 else -> null
             }
             "video" -> when {
                 mime != "video/mp4" && mime != "video/webm" -> "videos are mp4 or webm"
                 file.durationS == null || file.durationS <= 0 || file.durationS > ContributionMediaPolicy.VIDEO_MAX_SECONDS ->
-                    "videos are at most 30 seconds and 8 MB"
-                file.bytes.isEmpty() || file.bytes.size > ContributionMediaPolicy.VIDEO_MAX_BYTES -> "videos are at most 30 seconds and 8 MB"
+                    "videos are at most 60 seconds and 22 MB"
+                file.bytes.isEmpty() || file.bytes.size > ContributionMediaPolicy.VIDEO_MAX_BYTES -> "videos are at most 60 seconds and 22 MB"
                 file.width == null || file.height == null ||
                     maxOf(file.width, file.height) > ContributionMediaPolicy.VIDEO_MAX_EDGE -> "videos are at most 720p"
-                thumbnail == null || thumbnail.isEmpty() || thumbnail.size > ContributionMediaPolicy.PHOTO_MAX_BYTES ->
+                thumbnail == null || thumbnail.isEmpty() || thumbnail.size > ContributionMediaPolicy.THUMB_MAX_BYTES ->
                     "a video needs a thumbnail"
                 else -> null
             }

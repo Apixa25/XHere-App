@@ -26,6 +26,8 @@ import androidx.compose.ui.semantics.testTag
 import androidx.compose.ui.unit.dp
 import world.xhere.app.R
 import world.xhere.app.access.AccessStatusChip
+import world.xhere.app.media.SignedListImage
+import world.xhere.app.media.listPhoto
 import world.xhere.app.contribution.CommunitySection
 import world.xhere.app.reputation.TierChip
 import world.xhere.shared.contribution.ContributionTarget
@@ -296,6 +298,16 @@ private fun HereRow(card: DropCard, services: XHereServices? = null) {
             .testTag(TestTags.hereRow(card.shortId)),
         verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
+        val photo = card.listPhoto()
+        if (services != null && photo != null) {
+            SignedListImage(
+                services = services,
+                bucket = photo.first,
+                path = photo.second,
+                description = card.title,
+                size = 96.dp,
+            )
+        }
         Text(card.title, style = MaterialTheme.typography.titleSmall)
         val distance = card.distanceM?.let(::formatMeters)
         if (distance != null) {

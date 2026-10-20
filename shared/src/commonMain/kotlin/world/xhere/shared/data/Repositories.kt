@@ -413,7 +413,12 @@ interface MediaRepository {
      * [capture] is the GPS read from the original JPEG before the phone
      * resized it. Pass it when the bytes no longer contain Exif.
      */
-    suspend fun uploadPhoto(bytes: ByteArray, mimeType: String, capture: LatLng? = null): MediaUpload
+    suspend fun uploadPhoto(
+        bytes: ByteArray,
+        mimeType: String,
+        capture: LatLng? = null,
+        thumbnail: ByteArray? = null,
+    ): MediaUpload
 
     /**
      * A compressed clip, at most 30 seconds and 256 KB, in the private `voice-clips` bucket.

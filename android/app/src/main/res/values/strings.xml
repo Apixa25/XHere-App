@@ -624,7 +624,11 @@
     <string name="community_remove">Remove</string>
     <string name="community_failed">That didn\'t go through.</string>
     <string name="community_video_label">Video</string>
-    <string name="community_video_cap">Keep the video under 30 seconds and 720p.</string>
+    <string name="community_video_cap">Keep the video under a minute. We\'ll shrink it to 720p.</string>
+    <string name="community_video_progress">Preparing video… %1$d%%</string>
+    <string name="community_video_failed">That video couldn\'t be prepared.</string>
+    <string name="community_video_retry">Try again</string>
+    <string name="community_video_cancel">Cancel</string>
     <string name="map_more">More</string>
     <string name="map_more_body">The rest of the map tools. Close this to get back to the map.</string>
     <string name="map_voice">Voice</string>
