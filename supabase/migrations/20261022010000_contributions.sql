@@ -740,7 +740,7 @@ declare
   v_limit integer;
   v_recent integer;
   v_body text := nullif(btrim(p_body), '');
-  v_mode public.moderation_mode := 'post';
+  v_mode public.moderation_mode := 'post'::public.moderation_mode;
   v_status text := 'active';
   v_id uuid := gen_random_uuid();
   v_item jsonb;
