@@ -28,6 +28,7 @@ import world.xhere.shared.data.XHereApiException
 import world.xhere.shared.data.XHereServices
 import world.xhere.shared.geo.Geo
 import world.xhere.shared.geo.LatLng
+import world.xhere.shared.media.MediaPaths
 import world.xhere.shared.model.BadgeAward
 import world.xhere.shared.model.ConfirmationVerdict
 import world.xhere.shared.model.DropCard
@@ -501,6 +502,11 @@ class DropDetailViewModel(
         }
     }
 
+    private suspend fun signedThumb(bucket: String, path: String): String {
+        val sibling = MediaPaths.thumbSibling(path) ?: return ""
+        return runCatching { services.media.photoUrl(bucket, sibling) }.getOrDefault("")
+    }
+
     fun retryPhoto(index: Int) {
         val current = _state.value.photos.getOrNull(index) ?: return
         if (current.path.isBlank()) return
@@ -508,17 +514,19 @@ class DropDetailViewModel(
             _state.update { state ->
                 state.copy(
                     photos = state.photos.mapIndexed { i, photo ->
-                        if (i == index) photo.copy(url = "", phase = DropPhotoPhase.LOADING) else photo
+                        if (i == index) photo.copy(url = "", previewUrl = "", phase = DropPhotoPhase.LOADING) else photo
                     },
                 )
             }
             val url = runCatching { services.media.photoUrl(current.bucket, current.path) }.getOrDefault("")
+            val preview = signedThumb(current.bucket, current.path)
             _state.update { state ->
                 state.copy(
                     photos = state.photos.mapIndexed { i, photo ->
                         if (i == index && photo.path == current.path) {
                             photo.copy(
                                 url = url,
+                                previewUrl = preview,
                                 phase = if (url.isBlank()) DropPhotoPhase.FAILED else DropPhotoPhase.READY,
                             )
                         } else {
@@ -575,6 +583,7 @@ class DropDetailViewModel(
                             bucket = media.storageBucket,
                             path = media.storagePath,
                             phase = if (url.isBlank()) DropPhotoPhase.FAILED else DropPhotoPhase.READY,
+                            previewUrl = signedThumb(media.storageBucket, media.storagePath),
                         )
                     }
                     if (photoKey == key) _state.update { it.copy(photos = resolved) }

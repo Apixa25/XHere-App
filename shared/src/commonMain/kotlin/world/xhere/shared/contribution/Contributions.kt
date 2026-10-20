@@ -116,13 +116,27 @@ object ContributionRules {
         requested && allowAnonymousDisplay
 }
 
-/** Client-side caps before a file is uploaded. Photos are resized by the phone codec. */
+/**
+ * Caps the phone applies before an upload, and the same numbers the
+ * contribution row checks. A photo is about 2048 px on the long edge,
+ * WebP or JPEG around quality 82, and at most 500 KB. A list thumbnail
+ * is about 400 px. A video is H.264/AAC in MP4, 720p, about a minute.
+ * PLAN §1.4 and PLAN §8: stay inside the free storage tier.
+ */
 object ContributionMediaPolicy {
-    const val PHOTO_MAX_EDGE = 1600
+    const val PHOTO_MAX_EDGE = 2048
     const val PHOTO_MAX_BYTES = 500 * 1024
-    const val VIDEO_MAX_SECONDS = 30.0
+    const val PHOTO_QUALITY = 82
+    const val THUMB_EDGE = 400
+    /** The server still accepts a poster up to this. The phone aims much smaller. */
+    const val THUMB_MAX_BYTES = 512_000
+    const val VIDEO_MAX_SECONDS = 60.0
     const val VIDEO_MAX_EDGE = 1280
-    const val VIDEO_MAX_BYTES = 8 * 1024 * 1024
+    const val VIDEO_BITRATE = 2_250_000
+    const val AUDIO_BITRATE = 128_000
+    const val VIDEO_MAX_FPS = 30
+    /** 60 s at 2.5 Mbps plus 128 kbps audio, with a little room for the container. */
+    const val VIDEO_MAX_BYTES = 22 * 1024 * 1024
 
     fun videoFrame(width: Int, height: Int): Pair<Int, Int> {
         if (width <= 0 || height <= 0) return 2 to 2

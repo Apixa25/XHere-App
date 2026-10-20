@@ -3,7 +3,7 @@
 
 import { stripMetadata } from "../_shared/exif.ts";
 
-const MAX_BYTES = 10 * 1024 * 1024;
+const MAX_BYTES = 512 * 1024;
 
 export interface StoredPhoto {
   storage_path: string;

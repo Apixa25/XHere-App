@@ -55,7 +55,9 @@ import world.xhere.shared.integrity.LocationDecision
 import world.xhere.shared.integrity.LocationIntegrity
 import world.xhere.shared.integrity.LocationIntegrityFlag
 import world.xhere.shared.integrity.LocationSignal
+import world.xhere.shared.contribution.ContributionMediaPolicy
 import world.xhere.shared.media.ExifGps
+import world.xhere.shared.media.MediaPaths
 import world.xhere.shared.json.ExportJson
 import world.xhere.shared.model.BadgeAward
 import world.xhere.shared.model.BadgeShelf
@@ -932,14 +934,19 @@ class InMemoryXHere(
     }
 
     private inner class MediaRepo : MediaRepository {
-        override suspend fun uploadPhoto(bytes: ByteArray, mimeType: String, capture: LatLng?): MediaUpload {
+        override suspend fun uploadPhoto(
+            bytes: ByteArray,
+            mimeType: String,
+            capture: LatLng?,
+            thumbnail: ByteArray?,
+        ): MediaUpload {
             val profile = requireViewer()
             val mime = mimeType.substringBefore(';').trim().lowercase()
             if (mime != "image/jpeg" && mime != "image/png" && mime != "image/webp") {
                 throw XHereApiException("unsupported_type", sqlState = XHereApiException.SQL_VALIDATION, detail = mime)
             }
             if (bytes.isEmpty() || bytes.size > MAX_PHOTO_BYTES) {
-                throw XHereApiException("invalid_image", sqlState = XHereApiException.SQL_VALIDATION, detail = "photo must be 1 byte..10 MB")
+                throw XHereApiException("invalid_image", sqlState = XHereApiException.SQL_VALIDATION, detail = "photo must be 1 byte..512 KB")
             }
             val located = capture ?: if (mime == "image/jpeg") ExifGps.read(bytes) else null
             val stripped = ExifStrip.strip(bytes, mime)
@@ -950,6 +957,9 @@ class InMemoryXHere(
             }
             val path = "${profile.id}/${Uuid.random()}.$extension"
             store.mediaBytes[path] = stripped
+            val thumb = thumbnail?.takeIf { it.isNotEmpty() && it.size <= ContributionMediaPolicy.THUMB_MAX_BYTES }
+            val sibling = thumb?.let { MediaPaths.thumbSibling(path) }
+            if (thumb != null && sibling != null) store.mediaBytes[sibling] = thumb
             return MediaUpload(
                 storagePath = path,
                 mediaKind = MediaKind.IMAGE,
@@ -2274,7 +2284,7 @@ private fun StoredDrop.toFeature(): MapFeature = MapFeature(
 private fun LatLng.inBox(box: BoundingBox): Boolean =
     latitude in box.minLatitude..box.maxLatitude && longitude in box.minLongitude..box.maxLongitude
 
-private const val MAX_PHOTO_BYTES: Int = 10 * 1024 * 1024
+private const val MAX_PHOTO_BYTES: Int = 512 * 1024
 
 /** Same shape as `private.place_label_text_ok`: a place name, not markup or a link. */
 private fun acceptablePlaceText(value: String, max: Int): Boolean {

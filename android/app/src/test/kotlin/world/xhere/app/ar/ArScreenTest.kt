@@ -54,6 +54,7 @@ class ArScreenTest {
             Manifest.permission.ACCESS_FINE_LOCATION,
         )
         rule.openMap()
+        rule.onNodeWithTag(TestTags.MAP_MORE).performClick()
         rule.onNodeWithTag(TestTags.MAP_AR).assertIsDisplayed()
         rule.onNodeWithTag(TestTags.MAP_AR).performClick()
         rule.waitForTag(TestTags.AR_GUIDANCE)
@@ -70,6 +71,7 @@ class ArScreenTest {
         )
         TestGraph.ar.nextAdvice = ArAdvice.NEEDS_INSTALL
         rule.openMap()
+        rule.onNodeWithTag(TestTags.MAP_MORE).performClick()
         rule.onNodeWithTag(TestTags.MAP_AR).performClick()
         rule.waitForTag(TestTags.AR_GUIDANCE)
         rule.onNodeWithTag(TestTags.AR_GUIDANCE).assertTextContains("Play Services for AR", substring = true)
@@ -86,6 +88,7 @@ class ArScreenTest {
         rule.onNodeWithTag(TestTags.AR_GUIDANCE_ACTION).performClick()
 
         TestGraph.ar.nextAdvice = ArAdvice.NOT_AUTHORIZED
+        rule.onNodeWithTag(TestTags.MAP_MORE).performClick()
         rule.onNodeWithTag(TestTags.MAP_AR).performClick()
         rule.waitForTag(TestTags.AR_GUIDANCE)
         rule.onNodeWithTag(TestTags.AR_GUIDANCE).assertTextContains("xhere-512103", substring = true)
@@ -115,6 +118,7 @@ class ArScreenTest {
         rule.openMap()
         rule.waitUntil(timeoutMillis = 5_000) { TestGraph.location.collectionCount >= 1 }
         TestGraph.location.emit(LatLng(42.093017, -79.23920))
+        rule.onNodeWithTag(TestTags.MAP_MORE).performClick()
         rule.waitForTag(TestTags.MAP_AR)
         rule.onNodeWithTag(TestTags.MAP_AR).performClick()
         rule.waitForTag(TestTags.AR_PRIVACY)

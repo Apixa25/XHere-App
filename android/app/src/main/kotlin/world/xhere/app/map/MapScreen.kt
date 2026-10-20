@@ -7,8 +7,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -111,7 +109,6 @@ internal val WalkRouteSemantics = SemanticsPropertyKey<String>("WalkRoute")
 /** `yes` when Geospatial and VPS cover the latest fix. The AR button is shown either way. */
 internal val ArReadySemantics = SemanticsPropertyKey<String>("ArReady")
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun MapScreen(
     onDrop: () -> Unit = {},
@@ -240,7 +237,8 @@ fun MapScreen(
                 onLongPressGroup = viewModel::showSubcategories,
                 onSave = viewModel::showSavePreset,
             )
-            if (campaignCard != null && state.alerts.isNotEmpty()) {
+            val alerts = if (state.liveConditionsLayer) state.alerts else emptyList()
+            if (campaignCard != null && alerts.isNotEmpty()) {
                 val item = Experiences.campaign(campaignCard)
                 DismissibleCard(
                     enabled = true,
@@ -249,7 +247,7 @@ fun MapScreen(
                 ) {
                     MapStatusStack(
                         campaign = campaignCard,
-                        alerts = state.alerts,
+                        alerts = alerts,
                         onDismissAlert = viewModel::dismissAlert,
                         onDismissCampaign = { viewModel.dismissExperience(item) },
                         modifier = Modifier.weight(1f),
@@ -274,8 +272,8 @@ fun MapScreen(
                         )
                     }
                 }
-                if (state.alerts.isNotEmpty()) {
-                    WeatherAlertBanner(alerts = state.alerts, onDismiss = viewModel::dismissAlert)
+                if (alerts.isNotEmpty()) {
+                    WeatherAlertBanner(alerts = alerts, onDismiss = viewModel::dismissAlert)
                 }
             }
         }
@@ -339,6 +337,7 @@ fun MapScreen(
                     onClose = viewModel::dismissTeaser,
                     onOpen = { onOpenDrop(teaser.shortId) },
                     onOpenAuthor = { teaser.authorHandle?.let(onOpenAuthor) },
+                    services = services,
                 )
             }
             if (hintCount > 0 && state.experienceLocal.hintEnabled) {
@@ -358,87 +357,23 @@ fun MapScreen(
                     )
                 }
             }
-            FlowRow(
+            Column(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
+                horizontalAlignment = Alignment.End,
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 Surface(
-                    onClick = { viewModel.openTimeMachine() },
+                    onClick = viewModel::openMore,
                     shape = MaterialTheme.shapes.large,
-                    color = MaterialTheme.colorScheme.secondaryContainer,
-                    modifier = Modifier
-                        .defaultMinSize(minHeight = 48.dp)
-                        .testTag(TestTags.MAP_TIME),
-                ) {
-                    Text(
-                        text = stringResource(R.string.time_machine),
-                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
-                        color = MaterialTheme.colorScheme.onSecondaryContainer,
-                        style = MaterialTheme.typography.labelLarge,
-                    )
-                }
-                Surface(
-                    onClick = {
-                        val allowed = ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) ==
-                            PackageManager.PERMISSION_GRANTED
-                        if (allowed) {
-                            voiceModel.listen()
-                        } else {
-                            // The system prompt is still shown. The sheet explains how to open Settings
-                            // when the person has already said no, or the prompt cannot appear.
-                            voiceModel.onPermission(false)
-                            microphone.launch(Manifest.permission.RECORD_AUDIO)
-                        }
-                    },
-                    shape = CircleShape,
-                    color = MaterialTheme.colorScheme.tertiary,
-                    shadowElevation = 4.dp,
-                    modifier = Modifier
-                        .defaultMinSize(minWidth = 56.dp, minHeight = 56.dp)
-                        .testTag(TestTags.VOICE_MIC),
-                ) {
-                    Text(
-                        text = "🎤",
-                        modifier = Modifier.padding(16.dp),
-                        style = MaterialTheme.typography.titleMedium,
-                    )
-                }
-                Surface(
-                    onClick = viewModel::toggleTownHall,
-                    shape = MaterialTheme.shapes.large,
-                    color = if (state.townHallLayer) {
-                        MaterialTheme.colorScheme.secondaryContainer
-                    } else {
-                        MaterialTheme.colorScheme.surface
-                    },
+                    color = MaterialTheme.colorScheme.surface,
                     shadowElevation = 2.dp,
                     modifier = Modifier
                         .defaultMinSize(minHeight = 48.dp)
-                        .testTag(TestTags.MAP_TOWN_HALL),
+                        .testTag(TestTags.MAP_MORE),
                 ) {
                     Text(
-                        text = stringResource(R.string.map_town_hall),
-                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
-                        style = MaterialTheme.typography.labelLarge,
-                    )
-                }
-                Surface(
-                    onClick = viewModel::toggleAccessibility,
-                    shape = MaterialTheme.shapes.large,
-                    color = if (state.accessibilityLayer) {
-                        MaterialTheme.colorScheme.tertiaryContainer
-                    } else {
-                        MaterialTheme.colorScheme.surface
-                    },
-                    shadowElevation = 2.dp,
-                    modifier = Modifier
-                        .defaultMinSize(minHeight = 48.dp)
-                        .testTag(TestTags.MAP_ACCESS),
-                ) {
-                    Text(
-                        text = stringResource(R.string.access_layer),
-                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+                        text = stringResource(R.string.map_more),
+                        modifier = Modifier.padding(horizontal = 18.dp, vertical = 12.dp),
                         style = MaterialTheme.typography.labelLarge,
                     )
                 }
@@ -464,40 +399,6 @@ fun MapScreen(
                             .padding(end = 8.dp)
                             .semantics { contentDescription = loadingLabel },
                         strokeWidth = 2.dp,
-                    )
-                }
-                Surface(
-                    onClick = onLookAround,
-                    shape = MaterialTheme.shapes.large,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier
-                        .defaultMinSize(minHeight = 48.dp)
-                        .semantics { contentDescription = lookAroundLabel }
-                        .testTag(TestTags.MAP_AR),
-                ) {
-                    Text(
-                        text = stringResource(R.string.map_ar),
-                        modifier = Modifier.padding(horizontal = 18.dp, vertical = 12.dp),
-                        color = MaterialTheme.colorScheme.onPrimary,
-                        style = MaterialTheme.typography.labelLarge,
-                    )
-                }
-                Surface(
-                    onClick = {
-                        val missing = VoicePermissions.missingScan(context)
-                        if (missing.isEmpty()) things.openAround() else hearPermission.launch(missing)
-                    },
-                    shape = MaterialTheme.shapes.large,
-                    color = MaterialTheme.colorScheme.tertiaryContainer,
-                    modifier = Modifier
-                        .defaultMinSize(minHeight = 48.dp)
-                        .testTag(TestTags.THINGS_AROUND),
-                ) {
-                    Text(
-                        text = stringResource(R.string.things_around),
-                        modifier = Modifier.padding(horizontal = 18.dp, vertical = 12.dp),
-                        color = MaterialTheme.colorScheme.onTertiaryContainer,
-                        style = MaterialTheme.typography.labelLarge,
                     )
                 }
                 Surface(
@@ -538,7 +439,7 @@ fun MapScreen(
                     )
                 }
             }
-            MapAttribution()
+            MapAttribution(publicCredit(state))
         }
         ExperienceUndoBar(
             pending = state.experienceLocal.pendingUndo,
@@ -565,13 +466,14 @@ fun MapScreen(
                 onOpen = { card -> onOpenDrop(card.shortId) },
                 onDismiss = viewModel::closeNearMe,
                 taxonomy = state.taxonomy,
+                services = services,
             )
         }
         state.here?.let { sheet ->
             HereCardSheet(
                 sheet = sheet,
                 taxonomy = state.taxonomy,
-                alerts = state.alerts,
+                alerts = if (state.liveConditionsLayer) state.alerts else emptyList(),
                 onDropHere = { onDropHere(sheet.spot, sheet.place?.name) },
                 onTimeMachine = { viewModel.openTimeMachine(sheet.spot) },
                 onAccess = {
@@ -695,6 +597,61 @@ fun MapScreen(
                 services = services,
             )
         }
+        if (state.moreOpen) {
+            MapMoreSheet(
+                accessibilityOn = state.accessibilityLayer,
+                townHallOn = state.townHallLayer,
+                onTime = {
+                    viewModel.dismissMore()
+                    viewModel.openTimeMachine()
+                },
+                onVoice = {
+                    viewModel.dismissMore()
+                    val allowed = ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) ==
+                        PackageManager.PERMISSION_GRANTED
+                    if (allowed) {
+                        voiceModel.listen()
+                    } else {
+                        voiceModel.onPermission(false)
+                        microphone.launch(Manifest.permission.RECORD_AUDIO)
+                    }
+                },
+                onTownHall = viewModel::toggleTownHall,
+                onAccess = viewModel::toggleAccessibility,
+                onAr = {
+                    viewModel.dismissMore()
+                    onLookAround()
+                },
+                onThings = {
+                    viewModel.dismissMore()
+                    val missing = VoicePermissions.missingScan(context)
+                    if (missing.isEmpty()) things.openAround() else hearPermission.launch(missing)
+                },
+                onLayers = viewModel::openLayers,
+                onDismiss = viewModel::dismissMore,
+            )
+        }
+        if (state.layersOpen) {
+            MapLayersSheet(
+                layers = mapLayersOf(state),
+                onAccessibility = viewModel::setAccessibility,
+                onCrime = viewModel::setCrime,
+                onSafety = viewModel::setSafety,
+                onLive = viewModel::setLiveConditions,
+                onTownHall = viewModel::setTownHall,
+                onDismiss = viewModel::dismissLayers,
+            )
+        }
+        state.publicPlace?.let { place ->
+            PublicPlaceSheet(
+                place = place,
+                onContribute = {
+                    viewModel.dismissPublicPlace()
+                    onDropHere(place.location, place.title)
+                },
+                onDismiss = viewModel::dismissPublicPlace,
+            )
+        }
         guidance?.let { advice ->
             ArGuidanceDialog(
                 advice = advice,
@@ -759,9 +716,14 @@ private fun noticeText(notice: MapNotice): String = when (notice) {
 }
 
 @Composable
-internal fun MapAttribution() {
+internal fun MapAttribution(extra: String? = null) {
+    val line = if (extra.isNullOrBlank()) {
+        stringResource(R.string.map_attribution)
+    } else {
+        stringResource(R.string.map_attribution) + "\n" + extra
+    }
     Text(
-        text = stringResource(R.string.map_attribution),
+        text = line,
         modifier = Modifier
             .fillMaxWidth()
             .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.88f), MaterialTheme.shapes.small)

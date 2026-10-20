@@ -1,30 +1,24 @@
 package world.xhere.app.profile
 
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.os.Build
 import java.io.ByteArrayOutputStream
 import kotlin.math.roundToInt
+import world.xhere.app.media.ImageOrientation
+import world.xhere.shared.contribution.ContributionMediaPolicy
 import world.xhere.shared.profile.AvatarCrop
 import world.xhere.shared.profile.ProfileFields
 
 /**
  * Gallery and camera pictures become a 512 px square of whatever sat inside
- * the circular mask, then a WebP or JPEG around 200 KB. The avatars bucket
- * still accepts up to 512 KB.
+ * the circular mask, then a WebP or JPEG at about quality 82. The avatars
+ * bucket still accepts up to 512 KB. Orientation is applied and GPS is not
+ * copied, the same rule as a drop photo.
  */
 internal object AvatarCodec {
     data class Encoded(val bytes: ByteArray, val mimeType: String)
 
-    fun decode(bytes: ByteArray): Bitmap? = runCatching {
-        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-        BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
-        if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
-        var sample = 1
-        while (bounds.outWidth / sample > 1600 || bounds.outHeight / sample > 1600) sample *= 2
-        val options = BitmapFactory.Options().apply { inSampleSize = sample }
-        BitmapFactory.decodeByteArray(bytes, 0, bytes.size, options)
-    }.getOrNull()
+    fun decode(bytes: ByteArray): Bitmap? = ImageOrientation.decode(bytes, ContributionMediaPolicy.PHOTO_MAX_EDGE)
 
     /** Center square at [zoom]. The editor passes [crop] once the user has panned. */
     fun circle(source: Bitmap, zoom: Float): Bitmap {
@@ -51,8 +45,9 @@ internal object AvatarCodec {
     }
 
     /**
-     * WebP first, then JPEG, then a smaller square, until the file is about
-     * 200 KB. The bucket still rejects anything over 512 KB.
+     * WebP at quality 80–85, then JPEG in that same band. A noisy square
+     * that is still over 512 KB is reduced, but the quality stays in the band
+     * until the edge itself has to come down.
      */
     fun compress(bitmap: Bitmap): Encoded {
         var working = bitmap
@@ -63,14 +58,14 @@ internal object AvatarCodec {
                 return encoded
             }
             if (working.width <= 48) {
-                val last = encode(working, webp = false, quality = 5)
+                val last = encode(working, webp = false, quality = 80)
                 recycleOwned(owned, bitmap)
                 return Encoded(last, "image/jpeg")
             }
             val edge = (working.width * 3 / 4).coerceAtLeast(48)
             val next = Bitmap.createScaledBitmap(working, edge, edge, true)
             if (next.width >= working.width && next.height >= working.height) {
-                val last = encode(working, webp = false, quality = 5)
+                val last = encode(working, webp = false, quality = 80)
                 recycleOwned(owned, bitmap)
                 if (next !== working && next !== bitmap) next.recycle()
                 return Encoded(last, "image/jpeg")
@@ -86,13 +81,17 @@ internal object AvatarCodec {
     }
 
     private fun encodeUnderLimit(bitmap: Bitmap): Encoded? {
-        for (quality in intArrayOf(80, 60, 45, 30, 20, 10)) {
-            val bytes = encode(bitmap, webp = true, quality = quality)
-            if (bytes.size in 1..ProfileFields.AVATAR_TARGET_BYTES) return Encoded(bytes, "image/webp")
+        for (quality in intArrayOf(85, ContributionMediaPolicy.PHOTO_QUALITY, 80)) {
+            val webp = encode(bitmap, webp = true, quality = quality)
+            if (webp.size in 1..ProfileFields.AVATAR_MAX_BYTES) {
+                if (webp.size <= ProfileFields.AVATAR_TARGET_BYTES || quality == 80) {
+                    return Encoded(webp, "image/webp")
+                }
+            }
         }
-        for (quality in intArrayOf(70, 50, 35, 20, 10)) {
-            val bytes = encode(bitmap, webp = false, quality = quality)
-            if (bytes.size in 1..ProfileFields.AVATAR_TARGET_BYTES) return Encoded(bytes, "image/jpeg")
+        for (quality in intArrayOf(85, ContributionMediaPolicy.PHOTO_QUALITY, 80)) {
+            val jpeg = encode(bitmap, webp = false, quality = quality)
+            if (jpeg.size in 1..ProfileFields.AVATAR_MAX_BYTES) return Encoded(jpeg, "image/jpeg")
         }
         return null
     }

@@ -19,7 +19,7 @@ Deno.test("the upload handler stores the stripped bytes under the user id", asyn
     new Request("http://local/strip-exif", {
       method: "POST",
       headers: { "content-type": "image/jpeg", authorization: "Bearer test" },
-      body: jpegWithExif(),
+      body: copyBytes(jpegWithExif()),
     }),
     {
       userId: async () => "11111111-1111-4111-8111-111111111111",
@@ -45,7 +45,7 @@ Deno.test("a missing user is rejected before anything is stored", async () => {
     new Request("http://local/strip-exif", {
       method: "POST",
       headers: { "content-type": "image/jpeg" },
-      body: jpegWithExif(),
+      body: copyBytes(jpegWithExif()),
     }),
     {
       userId: async () => null,
@@ -56,6 +56,31 @@ Deno.test("a missing user is rejected before anything is stored", async () => {
   );
   assertEquals(response.status, 401);
 });
+
+Deno.test("a photo over 512 KB is refused", async () => {
+  const response = await handleStrip(
+    new Request("http://local/strip-exif", {
+      method: "POST",
+      headers: { "content-type": "image/jpeg", authorization: "Bearer test" },
+      body: new Uint8Array(512 * 1024 + 1).buffer,
+    }),
+    {
+      userId: async () => "11111111-1111-4111-8111-111111111111",
+      store: async () => {
+        throw new Error("should not store");
+      },
+    },
+  );
+  assertEquals(response.status, 400);
+  const body = await response.json();
+  assertEquals(body.error, "invalid_image");
+});
+
+function copyBytes(bytes: Uint8Array): ArrayBuffer {
+  const copy = new ArrayBuffer(bytes.byteLength);
+  new Uint8Array(copy).set(bytes);
+  return copy;
+}
 
 function jpegWithExif(): Uint8Array {
   const payload = new TextEncoder().encode("Exif\0\0GPS");

@@ -51,7 +51,10 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import kotlin.math.roundToInt
 import world.xhere.app.R
+import world.xhere.app.media.SignedListImage
+import world.xhere.app.media.listPhoto
 import world.xhere.app.ui.TestTags
+import world.xhere.shared.data.XHereServices
 import world.xhere.shared.model.Category
 import world.xhere.shared.model.DropCard
 import world.xhere.shared.model.Taxonomy
@@ -62,6 +65,7 @@ internal fun NearMeSheet(
     onOpen: (DropCard) -> Unit,
     onDismiss: () -> Unit,
     taxonomy: Taxonomy? = null,
+    services: XHereServices? = null,
 ) {
     BottomSheet(
         onDismiss = onDismiss,
@@ -99,6 +103,16 @@ internal fun NearMeSheet(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
+                            val photo = card.listPhoto()
+                            if (services != null && photo != null) {
+                                SignedListImage(
+                                    services = services,
+                                    bucket = photo.first,
+                                    path = photo.second,
+                                    description = card.title,
+                                    modifier = Modifier.padding(end = 12.dp),
+                                )
+                            }
                             Column(Modifier.weight(1f)) {
                                 Text(card.title, style = MaterialTheme.typography.titleMedium)
                                 Text(

@@ -159,11 +159,16 @@ class SheetDismissTest {
 }
 
 private fun AndroidComposeTestRule<ActivityScenarioRule<MainActivity>, MainActivity>.openAndDismiss(openTag: String, sheetTag: String) {
-    onNodeWithTag(openTag).performClick()
+    fun open() {
+        onNodeWithTag(TestTags.MAP_MORE).performClick()
+        waitForTag(openTag)
+        onNodeWithTag(openTag).performClick()
+    }
+    open()
     waitForTag(sheetTag)
     pressBack()
     assertGone(sheetTag)
-    onNodeWithTag(openTag).performClick()
+    open()
     waitForTag(sheetTag)
     onNodeWithTag(TestTags.NAV_MAP).performClick()
     assertGone(sheetTag)

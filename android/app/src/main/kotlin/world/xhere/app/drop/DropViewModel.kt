@@ -159,7 +159,12 @@ class DropViewModel(
                 val mime = mimeType.substringBefore(';').trim().lowercase()
                 val capture = if (mime == "image/jpeg") ExifGps.read(bytes) else null
                 val encoded = DropPhotoCodec.compress(bytes, mime)
-                photo = services.media.uploadPhoto(encoded.bytes, encoded.mimeType, capture)
+                photo = services.media.uploadPhoto(
+                    encoded.bytes,
+                    encoded.mimeType,
+                    capture,
+                    encoded.thumbnail.takeIf { it.isNotEmpty() },
+                )
                 preview = encoded.bytes
                 val taxonomy = services.taxonomy.load()
                 filters = taxonomy.filters

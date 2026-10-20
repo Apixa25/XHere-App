@@ -46,6 +46,8 @@ data class DropPhotoUi(
     val bucket: String = "",
     val path: String = "",
     val phase: DropPhotoPhase = DropPhotoPhase.READY,
+    /** About 400 px. Blank means the slot uses [url], which is the full photo. */
+    val previewUrl: String = "",
 )
 
 @Composable
@@ -136,7 +138,7 @@ private fun PhotoSlot(
         }
         else -> {
             SubcomposeAsyncImage(
-                model = photo.url,
+                model = if (fill || photo.previewUrl.isBlank()) photo.url else photo.previewUrl,
                 contentDescription = description,
                 contentScale = ContentScale.Fit,
                 modifier = frame

@@ -156,7 +156,14 @@ class SafetyFlowsTest {
 
     @Test
     fun aSafetyDropShowsTheTipLineFooter() {
-        rule.openDetail("hazard")
+        rule.signIn()
+        rule.onNodeWithTag(TestTags.MAP_MORE).performClick()
+        rule.waitForTag(TestTags.MAP_LAYERS)
+        rule.onNodeWithTag(TestTags.MAP_LAYERS).performClick()
+        rule.waitForTag(TestTags.MAP_LAYER_SAFETY)
+        rule.onNodeWithTag(TestTags.MAP_LAYER_SAFETY).performClick()
+        rule.onNodeWithTag(TestTags.SHEET_CLOSE).performClick()
+        rule.openDetail("hazard", alreadySignedIn = true)
         rule.onNodeWithTag(TestTags.SAFETY_FOOTER).performScrollTo().assertIsDisplayed()
         rule.onNodeWithText("(716) 483-8477", substring = true).assertIsDisplayed()
         rule.onNodeWithTag(TestTags.SAFETY_TIP_CALL).assertIsDisplayed()
@@ -316,8 +323,8 @@ private fun ComposeRule.signIn() {
     waitForTag(TestTags.SCREEN_MAP)
 }
 
-private fun ComposeRule.openDetail(shortId: String) {
-    signIn()
+private fun ComposeRule.openDetail(shortId: String, alreadySignedIn: Boolean = false) {
+    if (!alreadySignedIn) signIn()
     val marker = TestTags.marker(shortId)
     waitForTag(marker)
     // The walk and quest cards sit over the lower pins. A touch click lands on

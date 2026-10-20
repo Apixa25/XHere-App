@@ -39,10 +39,14 @@ import world.xhere.shared.here.Here
 import world.xhere.shared.history.History
 import world.xhere.shared.live.LiveConditions
 import world.xhere.shared.live.QuietConditions
+import world.xhere.shared.map.InterestingFirst
 import world.xhere.shared.model.MapFeature
 import world.xhere.shared.model.PlaceLabel
 import world.xhere.shared.model.QuestProgress
 import world.xhere.shared.model.Walk
+import world.xhere.shared.places.NearbyPublicPlaces
+import world.xhere.shared.places.PublicPlace
+import world.xhere.shared.places.QuietPublicPlaces
 
 /** Reverse-geocodes one spot. Production uses the Nominatim cache. Tests return a fixed name. */
 fun interface SpotNames {
@@ -67,14 +71,10 @@ class MapViewModel(
     private val experiences: ExperienceMemory = MemoryExperienceStore(),
     private val anchor: MapAnchor = MapAnchor(),
     private val sheets: SheetSignals = SheetSignals(),
+    private val mapLayers: MapLayerMemory = MemoryMapLayers(),
+    private val publicPlaces: NearbyPublicPlaces = QuietPublicPlaces,
 ) : ViewModel() {
-    private val _state = MutableStateFlow(
-        MapUiState(
-            presets = presetStore.all(),
-            selection = presetStore.rememberedSelection(),
-            dismissedAlertIds = presetStore.dismissedAlerts(),
-        ),
-    )
+    private val _state = MutableStateFlow(initialState())
     val state: StateFlow<MapUiState> = _state.asStateFlow()
 
     private val locationKick = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
@@ -92,8 +92,27 @@ class MapViewModel(
     private var arCheckedAt: LatLng? = null
     /** True after the first quest list arrives, so a later completion can celebrate. */
     private var questsLoaded = false
+    private var publicJob: Job? = null
+    private var lastRaw: List<MapFeature> = emptyList()
 
     init {
+        viewModelScope.launch {
+            mapLayers.layers.collect { saved ->
+                val before = _state.value
+                if (
+                    before.accessibilityLayer == saved.accessibility &&
+                    before.crimeLayer == saved.crime &&
+                    before.safetyLayer == saved.safety &&
+                    before.liveConditionsLayer == saved.liveConditions &&
+                    before.townHallLayer == saved.townHall
+                ) {
+                    return@collect
+                }
+                _state.update { it.withLayers(saved) }
+                val frame = lastFrame ?: return@collect
+                fetch(frame)
+            }
+        }
         viewModelScope.launch {
             sheets.dismissals.collect { dismissOpenSheets() }
         }
@@ -151,23 +170,13 @@ class MapViewModel(
     fun selectAll() = applySelection(FilterSelection())
 
     fun selectGroup(slug: String) {
-        if (slug == Civic.GROUP) {
-            _state.update { it.copy(townHallLayer = true) }
+        if (slug == Civic.GROUP && !_state.value.townHallLayer) {
+            saveLayers { it.copy(townHall = true) }
         }
         applySelection(FilterSelection(slugs = listOf(slug), activeGroup = slug))
     }
 
-    fun toggleTownHall() {
-        val enable = !_state.value.townHallLayer
-        _state.update { it.copy(townHallLayer = enable, civicPins = if (enable) it.civicPins else emptyList()) }
-        val frame = lastFrame ?: return
-        if (!enable) return
-        viewModelScope.launch {
-            val pins = civicPins(frame)
-            if (lastFrame != frame) return@launch
-            _state.update { if (it.townHallLayer) it.copy(civicPins = pins) else it }
-        }
-    }
+    fun toggleTownHall() = saveLayers { it.copy(townHall = !it.townHall) }
 
     fun followHere() {
         val sheet = _state.value.here ?: return
@@ -239,6 +248,12 @@ class MapViewModel(
     }
 
     fun onFeature(feature: MapFeature) {
+        if (feature.kind == PublicPlace.KIND) {
+            val place = _state.value.publicPlaces.firstOrNull { it.id == feature.shortId } ?: return
+            teaserJob?.cancel()
+            _state.update { it.copy(publicPlace = place, teaser = null, teaserLoading = false, moreOpen = false) }
+            return
+        }
         val shortId = feature.shortId
         if (feature.isCluster || shortId == null) {
             val zoom = ((lastFrame?.zoom ?: JamestownDemo.CLUSTER_ZOOM) + 2)
@@ -261,13 +276,37 @@ class MapViewModel(
         _state.update { it.copy(here = null, accessSurvey = false) }
     }
 
-    /** Wheelchair layer. Category chips stay as they are. */
-    fun toggleAccessibility() {
-        val enable = !_state.value.accessibilityLayer
-        _state.update { it.copy(accessibilityLayer = enable, accessPins = if (enable) it.accessPins else emptyList()) }
-        val frame = lastFrame ?: return
-        cameraJob?.cancel()
-        cameraJob = viewModelScope.launch { fetch(frame) }
+    /** Wheelchair layer. The same switch as Profile settings. The choice is saved. */
+    fun toggleAccessibility() = saveLayers { it.copy(accessibility = !it.accessibility) }
+
+    fun openMore() {
+        _state.update { it.copy(moreOpen = true, layersOpen = false) }
+    }
+
+    fun dismissMore() {
+        _state.update { it.copy(moreOpen = false) }
+    }
+
+    fun openLayers() {
+        _state.update { it.copy(moreOpen = false, layersOpen = true) }
+    }
+
+    fun dismissLayers() {
+        _state.update { it.copy(layersOpen = false) }
+    }
+
+    fun setAccessibility(enabled: Boolean) = saveLayers { it.copy(accessibility = enabled) }
+
+    fun setCrime(enabled: Boolean) = saveLayers { it.copy(crime = enabled) }
+
+    fun setSafety(enabled: Boolean) = saveLayers { it.copy(safety = enabled) }
+
+    fun setLiveConditions(enabled: Boolean) = saveLayers { it.copy(liveConditions = enabled) }
+
+    fun setTownHall(enabled: Boolean) = saveLayers { it.copy(townHall = enabled) }
+
+    fun dismissPublicPlace() {
+        _state.update { it.copy(publicPlace = null) }
     }
 
     fun openAccessSurvey() {
@@ -539,10 +578,9 @@ class MapViewModel(
 
     /** Opens one experience from Explore: move the camera, start a walk, or open Time Machine. */
     fun focus(action: ExperienceAction) {
+        _state.update { it.copy(focusedExperienceId = action.id) }
         if (action.id.startsWith("civic:")) {
-            _state.update { it.copy(townHallLayer = true, focusedExperienceId = action.id) }
-        } else {
-            _state.update { it.copy(focusedExperienceId = action.id) }
+            saveLayers { it.copy(townHall = true) }
         }
         val point = action.anchor
         if (point != null && Geo.isValid(point)) moveCamera(point, 16.0, fromUser = true)
@@ -602,6 +640,9 @@ class MapViewModel(
         dismissTimeMachine()
         dismissTeaser()
         dismissCelebration()
+        dismissMore()
+        dismissLayers()
+        dismissPublicPlace()
     }
 
     fun dismissAlert(id: String) {
@@ -746,6 +787,9 @@ class MapViewModel(
             val hidden = mapPins.hidden.value
             val features = services.drops.dropsInView(frame.box, slugs, frame.zoom)
                 .filter { feature -> feature.shortId !in hidden }
+            lastRaw = features
+            val shown = InterestingFirst.arrange(features, lens(), frame.zoom)
+            val fill = shouldFillPublic(shown)
             val walks = runCatching { services.walks.walksFor(centerOf(frame)) }.getOrDefault(emptyList())
             val campaigns = runCatching { services.campaigns.campaignsFor(frame.box) }.getOrDefault(emptyList())
             val pins = if (_state.value.accessibilityLayer) accessPins(frame) else emptyList()
@@ -755,15 +799,18 @@ class MapViewModel(
             _state.update {
                 it.copy(
                     loading = false,
-                    features = features,
+                    features = shown,
                     walk = mergeWalk(it.walk, walks.firstOrNull()),
                     campaigns = campaigns,
                     notice = null,
                     accessPins = if (it.accessibilityLayer) pins else emptyList(),
                     civicPins = if (it.townHallLayer) civic else emptyList(),
                     livePlaces = live,
+                    publicPlaces = if (fill) it.publicPlaces else emptyList(),
+                    publicPlace = if (fill) it.publicPlace else null,
                 )
             }
+            if (fill) launchPublic(frame) else publicJob?.cancel()
         } catch (e: CancellationException) {
             throw e
         } catch (_: Exception) {
@@ -771,7 +818,67 @@ class MapViewModel(
             // Keep the pins already on screen. A failed refresh should not blank the map.
             _state.update { it.copy(loading = false, notice = MapNotice.LOAD_FAILED) }
         }
-        if (lastFrame == frame) refreshAlerts(frame)
+        if (lastFrame == frame && _state.value.liveConditionsLayer) refreshAlerts(frame)
+    }
+
+    private fun lens(): InterestingFirst.Lens {
+        val current = _state.value
+        return InterestingFirst.Lens(
+            selection = current.selection.slugs,
+            accessibility = current.accessibilityLayer,
+            crime = current.crimeLayer,
+            safety = current.safetyLayer,
+        )
+    }
+
+    private fun shouldFillPublic(shown: List<MapFeature>): Boolean =
+        InterestingFirst.shouldFill(_state.value.selection.slugs) && InterestingFirst.isSparse(shown)
+
+    private fun launchPublic(frame: CameraFrame) {
+        publicJob?.cancel()
+        publicJob = viewModelScope.launch {
+            val found = try {
+                publicPlaces.around(frame.box)
+            } catch (error: CancellationException) {
+                throw error
+            } catch (_: Exception) {
+                emptyList()
+            }
+            if (lastFrame != frame || !isActive) return@launch
+            _state.update { current ->
+                val drops = InterestingFirst.arrange(lastRaw, lensOf(current), frame.zoom)
+                if (!InterestingFirst.shouldFill(current.selection.slugs) || !InterestingFirst.isSparse(drops)) {
+                    return@update current.copy(publicPlaces = emptyList(), publicPlace = null, features = drops)
+                }
+                val picked = InterestingFirst.pickPublic(drops, found)
+                val selected = current.publicPlace?.takeIf { place -> picked.any { it.id == place.id } }
+                current.copy(
+                    publicPlaces = picked,
+                    publicPlace = selected,
+                    features = drops + picked.map { it.asFeature() },
+                )
+            }
+        }
+    }
+
+    private fun lensOf(current: MapUiState): InterestingFirst.Lens = InterestingFirst.Lens(
+        selection = current.selection.slugs,
+        accessibility = current.accessibilityLayer,
+        crime = current.crimeLayer,
+        safety = current.safetyLayer,
+    )
+
+    private fun saveLayers(block: (MapLayers) -> MapLayers) {
+        mapLayers.save(block(mapLayers.layers.value))
+    }
+
+    private fun initialState(): MapUiState {
+        val saved = mapLayers.layers.value
+        return MapUiState(
+            presets = presetStore.all(),
+            selection = presetStore.rememberedSelection(),
+            dismissedAlertIds = presetStore.dismissedAlerts(),
+        ).withLayers(saved)
     }
 
     private suspend fun livePlaces(frame: CameraFrame): List<world.xhere.shared.contribution.LivePlace> = try {

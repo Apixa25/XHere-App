@@ -73,10 +73,19 @@ class ContributionRulesTest {
     @Test
     fun videoFramesStayEvenAndInside720p() {
         assertEquals(1280 to 720, ContributionMediaPolicy.videoFrame(1920, 1080))
+        assertEquals(720 to 1280, ContributionMediaPolicy.videoFrame(1080, 1920))
         assertEquals(640 to 360, ContributionMediaPolicy.videoFrame(640, 360))
-        assertEquals(30.0, ContributionMediaPolicy.trimSeconds(90.0))
-        assertTrue(ContributionMediaPolicy.PHOTO_MAX_EDGE == 1600)
-        assertTrue(ContributionMediaPolicy.PHOTO_MAX_BYTES <= 500 * 1024)
-        assertTrue(ContributionMediaPolicy.VIDEO_MAX_BYTES == 8 * 1024 * 1024)
+        assertEquals(60.0, ContributionMediaPolicy.trimSeconds(90.0))
+        assertEquals(12.0, ContributionMediaPolicy.trimSeconds(12.0))
+        assertTrue(ContributionMediaPolicy.PHOTO_MAX_EDGE == 2048)
+        assertTrue(ContributionMediaPolicy.THUMB_EDGE == 400)
+        assertTrue(ContributionMediaPolicy.PHOTO_QUALITY in 80..85)
+        assertTrue(ContributionMediaPolicy.PHOTO_MAX_BYTES == 500 * 1024)
+        assertTrue(ContributionMediaPolicy.VIDEO_MAX_EDGE == 1280)
+        assertTrue(ContributionMediaPolicy.VIDEO_MAX_FPS == 30)
+        assertTrue(ContributionMediaPolicy.VIDEO_BITRATE in 2_000_000..2_500_000)
+        assertTrue(ContributionMediaPolicy.AUDIO_BITRATE == 128_000)
+        assertTrue(ContributionMediaPolicy.VIDEO_MAX_SECONDS == 60.0)
+        assertTrue(ContributionMediaPolicy.VIDEO_MAX_BYTES == 22 * 1024 * 1024)
     }
 }

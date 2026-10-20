@@ -13,6 +13,7 @@ import androidx.activity.result.contract.ActivityResultContract
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.height
+import androidx.compose.material3.LinearProgressIndicator
 import coil3.compose.AsyncImage
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -43,6 +44,7 @@ import java.io.ByteArrayOutputStream
 import java.io.File
 import kotlin.uuid.Uuid
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import world.xhere.app.R
 import world.xhere.app.drop.DropPhotoCodec
@@ -50,6 +52,7 @@ import world.xhere.app.safety.ReportForm
 import world.xhere.app.ui.TestTags
 import world.xhere.shared.contribution.ContributionCard
 import world.xhere.shared.contribution.ContributionFile
+import world.xhere.shared.contribution.ContributionMediaPolicy
 import world.xhere.shared.contribution.ContributionRules
 import world.xhere.shared.contribution.ContributionSort
 import world.xhere.shared.contribution.NewContribution
@@ -74,6 +77,8 @@ fun CommunitySection(
     val scope = rememberCoroutineScope()
     var ui by remember(targetKind, targetId) { mutableStateOf(CommunityUi()) }
     var drafts by remember(targetKind, targetId) { mutableStateOf<List<DraftMedia>>(emptyList()) }
+    var videoJob by remember(targetKind, targetId) { mutableStateOf<Job?>(null) }
+    var videoUi by remember(targetKind, targetId) { mutableStateOf<VideoUi?>(null) }
 
     suspend fun reload(sort: ContributionSort = ui.sort, offset: Int = 0, append: Boolean = false) {
         val place = runCatching { services.contributions.place(targetKind, targetId) }.getOrNull()
@@ -110,6 +115,37 @@ fun CommunitySection(
         ui = ui.copy(adding = true, kind = kind, error = draftError(context, next))
     }
 
+    fun beginVideo(uri: Uri) {
+        videoJob?.cancel()
+        videoJob = scope.launch {
+            videoUi = VideoUi(uri, progress = 0f, failed = false)
+            try {
+                val prepared = ContributionVideo.transcode(context, uri) { fraction ->
+                    videoUi = VideoUi(uri, fraction, failed = false)
+                }
+                attach(
+                    DraftMedia(
+                        file = ContributionFile(
+                            bytes = prepared.bytes,
+                            mimeType = prepared.mimeType,
+                            width = prepared.width,
+                            height = prepared.height,
+                            durationS = prepared.durationS,
+                            thumbnail = prepared.thumbnail,
+                        ),
+                        thumbnail = prepared.thumbnail,
+                    ),
+                )
+                videoUi = null
+            } catch (e: CancellationException) {
+                videoUi = null
+                throw e
+            } catch (_: Throwable) {
+                videoUi = VideoUi(uri, videoUi?.progress ?: 0f, failed = true)
+            }
+        }
+    }
+
     LaunchedEffect(targetKind, targetId) {
         ui = ui.copy(loading = true)
         try {
@@ -127,7 +163,7 @@ fun CommunitySection(
     }
     val videoGallery = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
         if (uri == null) return@rememberLauncherForActivityResult
-        attach(readVideo(context, uri))
+        beginVideo(uri)
     }
     val cameraPhoto = rememberLauncherForActivityResult(ActivityResultContracts.TakePicturePreview()) { bitmap ->
         if (bitmap == null) return@rememberLauncherForActivityResult
@@ -136,7 +172,7 @@ fun CommunitySection(
     val cameraVideo = rememberLauncherForActivityResult(CaptureShortVideo()) { ok ->
         if (!ok) return@rememberLauncherForActivityResult
         val uri = cameraUri(context) ?: return@rememberLauncherForActivityResult
-        attach(readVideo(context, uri))
+        beginVideo(uri)
     }
 
     Column(
@@ -195,7 +231,9 @@ fun CommunitySection(
         ui.cards.forEach { card ->
             ContributionRow(
                 card = card,
-                url = card.media.firstOrNull()?.let { ui.urls[it.thumbPath ?: it.storagePath] },
+                url = card.media.firstOrNull()?.let { media ->
+                    media.thumbPath?.let { ui.urls[it] } ?: ui.urls[media.storagePath]
+                },
                 opened = card.id in ui.openCollapsed,
                 reporting = ui.reporting == card.id,
                 onVote = { value ->
@@ -276,10 +314,45 @@ fun CommunitySection(
                         val uri = cameraUri(context) ?: return@TextButton
                         cameraVideo.launch(uri)
                     },
+                    enabled = videoUi == null || videoUi?.failed == true,
                 ) { Text(stringResource(R.string.community_video)) }
                 TextButton(
                     onClick = { videoGallery.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.VideoOnly)) },
+                    enabled = videoUi == null || videoUi?.failed == true,
                 ) { Text(stringResource(R.string.community_video_gallery)) }
+            }
+            val clip = videoUi
+            if (clip != null) {
+                Text(
+                    if (clip.failed) {
+                        stringResource(R.string.community_video_failed)
+                    } else {
+                        stringResource(R.string.community_video_progress, (clip.progress * 100).toInt())
+                    },
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.testTag(TestTags.COMMUNITY_VIDEO_PROGRESS),
+                )
+                if (!clip.failed) {
+                    LinearProgressIndicator(
+                        progress = { clip.progress.coerceIn(0f, 1f) },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    if (clip.failed) {
+                        TextButton(
+                            onClick = { beginVideo(clip.uri) },
+                            modifier = Modifier.testTag(TestTags.COMMUNITY_VIDEO_RETRY),
+                        ) { Text(stringResource(R.string.community_video_retry)) }
+                    }
+                    TextButton(
+                        onClick = {
+                            videoJob?.cancel()
+                            videoUi = null
+                        },
+                        modifier = Modifier.testTag(TestTags.COMMUNITY_VIDEO_CANCEL),
+                    ) { Text(stringResource(R.string.community_video_cancel)) }
+                }
             }
             androidx.compose.material3.OutlinedTextField(
                 value = ui.text,
@@ -505,9 +578,15 @@ private data class DraftMedia(
     val failed: Boolean = false,
 )
 
+private data class VideoUi(
+    val uri: Uri,
+    val progress: Float,
+    val failed: Boolean,
+)
+
 private suspend fun signed(services: XHereServices, cards: List<ContributionCard>): Map<String, String> {
     val paths = cards.flatMap { card ->
-        card.media.flatMap { media -> listOfNotNull(media.thumbPath ?: media.storagePath) }
+        card.media.flatMap { media -> listOfNotNull(media.thumbPath, media.storagePath) }
     }.distinct()
     return paths.mapNotNull { path ->
         val url = runCatching { services.media.photoUrl("contribution-media", path) }.getOrNull()
@@ -528,39 +607,30 @@ private fun readPhoto(context: Context, uri: Uri): DraftMedia = runCatching {
         ContributionFile(
             bytes = encoded.bytes,
             mimeType = encoded.mimeType,
-            width = bounds.outWidth.takeIf { it > 0 },
-            height = bounds.outHeight.takeIf { it > 0 },
+            width = encoded.width.takeIf { it > 0 } ?: bounds.outWidth.takeIf { it > 0 },
+            height = encoded.height.takeIf { it > 0 } ?: bounds.outHeight.takeIf { it > 0 },
+            thumbnail = encoded.thumbnail.takeIf { it.isNotEmpty() },
         ),
+        thumbnail = encoded.thumbnail.takeIf { it.isNotEmpty() },
     )
 }.getOrElse { DraftMedia(emptyFile(), failed = true) }
 
 private fun photoFromBitmap(bitmap: Bitmap): DraftMedia {
     val out = ByteArrayOutputStream()
     bitmap.compress(Bitmap.CompressFormat.JPEG, 90, out)
+    if (!bitmap.isRecycled) bitmap.recycle()
     val encoded = DropPhotoCodec.compress(out.toByteArray(), "image/jpeg")
     return DraftMedia(
         ContributionFile(
             bytes = encoded.bytes,
             mimeType = encoded.mimeType,
-            width = bitmap.width,
-            height = bitmap.height,
+            width = encoded.width.takeIf { it > 0 },
+            height = encoded.height.takeIf { it > 0 },
+            thumbnail = encoded.thumbnail.takeIf { it.isNotEmpty() },
         ),
+        thumbnail = encoded.thumbnail.takeIf { it.isNotEmpty() },
     )
 }
-
-private fun readVideo(context: Context, uri: Uri): DraftMedia = runCatching {
-    val prepared = ContributionVideo.prepare(context, uri)
-    DraftMedia(
-        file = ContributionFile(
-            bytes = prepared.bytes,
-            mimeType = prepared.mimeType,
-            width = prepared.width,
-            height = prepared.height,
-            durationS = prepared.durationS,
-        ),
-        thumbnail = prepared.thumbnail,
-    )
-}.getOrElse { DraftMedia(emptyFile(), failed = true) }
 
 private fun emptyFile() = ContributionFile(ByteArray(0), "image/jpeg")
 
@@ -574,7 +644,7 @@ private class CaptureShortVideo : ActivityResultContract<Uri, Boolean>() {
     override fun createIntent(context: Context, input: Uri): Intent =
         Intent(MediaStore.ACTION_VIDEO_CAPTURE)
             .putExtra(MediaStore.EXTRA_OUTPUT, input)
-            .putExtra(MediaStore.EXTRA_DURATION_LIMIT, 30)
+            .putExtra(MediaStore.EXTRA_DURATION_LIMIT, ContributionMediaPolicy.VIDEO_MAX_SECONDS.toInt())
             .putExtra(MediaStore.EXTRA_VIDEO_QUALITY, 0)
             .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
 

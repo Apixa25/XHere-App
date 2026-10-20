@@ -3,13 +3,17 @@ package world.xhere.app.drop
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Color
+import androidx.exifinterface.media.ExifInterface
 import java.io.ByteArrayOutputStream
+import java.io.File
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import world.xhere.shared.contribution.ContributionMediaPolicy
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
@@ -34,7 +38,43 @@ class DropPhotoCodecTest {
         val decoded = BitmapFactory.decodeByteArray(encoded.bytes, 0, encoded.bytes.size)
         assertNotNull(decoded)
         assertTrue(maxOf(decoded.width, decoded.height) <= DropPhotoCodec.MAX_EDGE)
+        assertTrue(encoded.thumbnail.isNotEmpty())
+        assertTrue(encoded.thumbnail.size <= ContributionMediaPolicy.THUMB_MAX_BYTES)
+        val thumb = BitmapFactory.decodeByteArray(encoded.thumbnail, 0, encoded.thumbnail.size)
+        assertNotNull(thumb)
+        assertTrue(maxOf(thumb.width, thumb.height) <= DropPhotoCodec.THUMB_EDGE)
+        thumb.recycle()
         decoded.recycle()
+    }
+
+    @Test
+    fun orientationIsAppliedAndGpsIsLeftBehind() {
+        val source = Bitmap.createBitmap(80, 40, Bitmap.Config.ARGB_8888)
+        source.eraseColor(Color.BLUE)
+        val file = File.createTempFile("xhere-exif", ".jpg")
+        file.outputStream().use { source.compress(Bitmap.CompressFormat.JPEG, 90, it) }
+        source.recycle()
+        ExifInterface(file).apply {
+            setAttribute(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_ROTATE_90.toString())
+            setAttribute(ExifInterface.TAG_GPS_LATITUDE, "40/1,0/1,0/1")
+            setAttribute(ExifInterface.TAG_GPS_LATITUDE_REF, "N")
+            setAttribute(ExifInterface.TAG_GPS_LONGITUDE, "73/1,0/1,0/1")
+            setAttribute(ExifInterface.TAG_GPS_LONGITUDE_REF, "W")
+            saveAttributes()
+        }
+        val encoded = DropPhotoCodec.compress(file.readBytes(), "image/jpeg")
+        val decoded = BitmapFactory.decodeByteArray(encoded.bytes, 0, encoded.bytes.size)
+        assertNotNull(decoded)
+        assertTrue(decoded.height > decoded.width)
+        val out = File.createTempFile("xhere-out", ".jpg")
+        if (encoded.mimeType == "image/jpeg") {
+            out.writeBytes(encoded.bytes)
+            val gps = FloatArray(2)
+            assertFalse(ExifInterface(out).getLatLong(gps))
+        }
+        decoded.recycle()
+        file.delete()
+        out.delete()
     }
 
     @Test
