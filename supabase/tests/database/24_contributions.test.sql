@@ -248,6 +248,7 @@ select throws_ok(
     current_setting('t.photo')
   ),
   '23505',
+  'duplicate key value violates unique constraint "contribution_votes_pkey"',
   'one vote row per person'
 );
 
