@@ -111,17 +111,38 @@ create policy drop_media_select_visible on storage.objects
 comment on policy drop_media_select_visible on storage.objects is
   'Signed-in read of a public active drop photo. Sealed, hidden, and deleted media stay owner-only.';
 
--- A short-lived grant must not outlive a hide, a delete, or a sealed capsule.
+-- media_grants is revoked from authenticated. A policy that reads that table
+-- as the caller makes every Storage SELECT fail with permission denied, and
+-- the sign endpoint turns that into the same 400. The grant check therefore
+-- runs as the function owner. A grant still cannot outlive a hide, a delete,
+-- or a sealed capsule: the visibility helper has to agree.
+create function private.caller_has_media_grant(p_name text)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select exists (
+    select 1
+    from public.media_grants g
+    where g.user_id = (select auth.uid())
+      and g.storage_path = p_name
+      and g.expires_at > now()
+  );
+$$;
+
+comment on function private.caller_has_media_grant(text) is
+  'True when the signed-in caller holds an unexpired media grant for this object path.';
+
+revoke all on function private.caller_has_media_grant(text) from public, anon;
+grant execute on function private.caller_has_media_grant(text) to authenticated;
+
 drop policy if exists drop_media_select_granted on storage.objects;
 create policy drop_media_select_granted on storage.objects
   for select to authenticated
   using (
     bucket_id = 'drop-media'
-    and exists (
-      select 1 from public.media_grants g
-      where g.user_id = (select auth.uid())
-        and g.storage_path = name
-        and g.expires_at > now()
-    )
+    and (select private.caller_has_media_grant(name))
     and (select private.can_read_drop_media(bucket_id, name))
   );

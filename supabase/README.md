@@ -363,6 +363,8 @@ Profile row edits stay on `profiles_update_own`: `id = auth.uid()` and the accou
 
 `private.can_read_drop_media(bucket, path)` is security definer, so it can see `drop_media` (that table's own SELECT policy is owner-only). It reads `auth.uid()` once. An active or confirmed drop that is not deleted, not expired, and not a sealed capsule is readable by any signed-in user, except someone who hid it or is blocked from the author. Hidden, deleted, pending, and sealed photos are the owner only. A sealed capsule keeps the file out of `drop_media` until it opens; `drop_media_select_own` (folder = the user id) and `drop_media_select_owner_id` are what let the owner sign that file and nobody else.
 
+`public.media_grants` is revoked from `authenticated`. `drop_media_select_granted` therefore calls `private.caller_has_media_grant`, also security definer. A policy that selected `media_grants` as the caller would make every Storage SELECT fail with permission denied, and signing would stay a 400.
+
 Not applied from this repo's agents, and not applied by CI. No new Edge Function. `strip-exif` is unchanged. From a machine already linked, after the history repair in [Before `supabase db push`](#before-supabase-db-push) if that repair has not been done yet:
 
 ```bash
