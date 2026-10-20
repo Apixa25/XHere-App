@@ -24,6 +24,7 @@ import world.xhere.shared.data.XHereApiException
 import world.xhere.shared.data.XHereServices
 import world.xhere.shared.data.fake.InMemoryXHere
 import world.xhere.shared.demo.JamestownDemo
+import world.xhere.shared.profile.AvatarCrop
 
 /**
  * A failed photo must not throw away the name, handle, and home town.
@@ -128,6 +129,51 @@ class EditProfileSaveTest {
         assertTrue(steven.store.mediaBytes.containsKey(profile.avatarPath))
         assertNull(viewModel.state.value.error)
         assertTrue(viewModel.state.value.saved)
+    }
+
+    @Test
+    fun draggingThePhotoMovesTheSavedSquareOntoThatSide() {
+        val steven = InMemoryXHere(JamestownDemo.store(), JamestownDemo.viewer.copy(displayName = "Preview", handle = "preview"))
+        val viewModel = EditProfileViewModel(steven)
+        scheduler.advanceUntilIdle()
+        viewModel.startCrop(split())
+        assertEquals(AvatarCrop.MIN_ZOOM, viewModel.state.value.zoom, 0.001f)
+        val centered = viewModel.framedBitmap()!!
+        assertEquals(Color.RED, centered.getPixel(64, 256))
+        assertEquals(Color.BLUE, centered.getPixel(448, 256))
+
+        viewModel.onCropGesture(
+            viewSize = 200f,
+            panX = -10_000f,
+            panY = 5_000f,
+            zoomChange = 0.1f,
+            focalX = 0.5f,
+            focalY = 0.5f,
+        )
+        assertEquals(AvatarCrop.MIN_ZOOM, viewModel.state.value.zoom, 0.001f)
+        assertEquals(Color.BLUE, viewModel.framedBitmap()!!.getPixel(256, 256))
+
+        viewModel.onZoom(4f)
+        assertEquals(AvatarCrop.MAX_ZOOM, viewModel.state.value.zoom, 0.001f)
+        val tight = viewModel.state.value
+        assertTrue(tight.cropLeft >= 0f)
+        assertTrue(tight.cropTop >= 0f)
+
+        viewModel.resetCrop()
+        assertEquals(AvatarCrop.MIN_ZOOM, viewModel.state.value.zoom, 0.001f)
+        val reset = viewModel.framedBitmap()!!
+        assertEquals(Color.RED, reset.getPixel(64, 256))
+        assertEquals(Color.BLUE, reset.getPixel(448, 256))
+    }
+
+    private fun split(): Bitmap {
+        val bitmap = Bitmap.createBitmap(80, 40, Bitmap.Config.ARGB_8888)
+        val pixels = IntArray(80 * 40)
+        for (y in 0 until 40) {
+            for (x in 0 until 80) pixels[y * 80 + x] = if (x < 40) Color.RED else Color.BLUE
+        }
+        bitmap.setPixels(pixels, 0, 80, 0, 0, 80, 40)
+        return bitmap
     }
 
     private fun solid(): Bitmap {
