@@ -138,6 +138,8 @@
     <string name="drop_snap_alt">Alt text for the photo</string>
     <string name="drop_photo">Photo</string>
     <string name="detail_photo">Photo</string>
+    <string name="detail_photo_loading">Loading photo</string>
+    <string name="detail_photo_retry">Photo couldn\'t load, tap to retry</string>
     <string name="detail_inscription_label">Inscription</string>
     <string name="detail_hmdb">View on HMdb</string>
 

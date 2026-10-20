@@ -243,6 +243,8 @@ internal object TestTags {
     const val DROP_SNAP_ALT = "drop_snap_alt"
     const val DROP_PHOTO = "drop_photo"
     const val DETAIL_PHOTO = "detail_photo"
+    const val DETAIL_PHOTO_LOADING = "detail_photo_loading"
+    const val DETAIL_PHOTO_RETRY = "detail_photo_retry"
     const val DETAIL_INSCRIPTION = "detail_inscription"
     const val DETAIL_HMDB = "detail_hmdb"
     const val DROP_REDUCED = "drop_reduced"
