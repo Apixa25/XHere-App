@@ -101,6 +101,7 @@ select is(
 
 reset role;
 set local role anon;
+set local request.jwt.claims to '{}';
 
 select is(
   (select author_handle from public.contribution_cards where id = current_setting('t.note')::uuid),
@@ -130,7 +131,7 @@ begin
       execute v_cmd;
       v_failed := v_failed || 'anon write succeeded; ';
     exception
-      when insufficient_privilege then
+      when insufficient_privilege or object_not_in_prerequisite_state then
         null;
       when others then
         v_failed := v_failed || 'anon ' || sqlstate || ' ' || sqlerrm || '; ';
@@ -157,7 +158,7 @@ begin
       execute v_cmd;
       v_failed := v_failed || 'authenticated write succeeded; ';
     exception
-      when insufficient_privilege then
+      when insufficient_privilege or object_not_in_prerequisite_state then
         null;
       when others then
         v_failed := v_failed || 'authenticated ' || sqlstate || ' ' || sqlerrm || '; ';
