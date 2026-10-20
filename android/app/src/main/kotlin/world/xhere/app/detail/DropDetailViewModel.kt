@@ -140,6 +140,8 @@ data class DetailUiState(
     val ownerReplies: List<String> = emptyList(),
     val canReply: Boolean = false,
     val canDispute: Boolean = false,
+    /** The drop this sheet is about. Community posts attach to this id. */
+    val placeId: kotlin.uuid.Uuid? = null,
 )
 
 /**
@@ -654,6 +656,7 @@ class DropDetailViewModel(
                 },
                 canReply = official?.canReply == true,
                 canDispute = official != null && official?.canReply != true,
+                placeId = dropId,
             )
         }
         openEditorIfReady()

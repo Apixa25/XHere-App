@@ -750,6 +750,7 @@ class MapViewModel(
             val campaigns = runCatching { services.campaigns.campaignsFor(frame.box) }.getOrDefault(emptyList())
             val pins = if (_state.value.accessibilityLayer) accessPins(frame) else emptyList()
             val civic = if (_state.value.townHallLayer) civicPins(frame) else emptyList()
+            val live = livePlaces(frame)
             if (lastFrame != frame) return
             _state.update {
                 it.copy(
@@ -760,6 +761,7 @@ class MapViewModel(
                     notice = null,
                     accessPins = if (it.accessibilityLayer) pins else emptyList(),
                     civicPins = if (it.townHallLayer) civic else emptyList(),
+                    livePlaces = live,
                 )
             }
         } catch (e: CancellationException) {
@@ -770,6 +772,14 @@ class MapViewModel(
             _state.update { it.copy(loading = false, notice = MapNotice.LOAD_FAILED) }
         }
         if (lastFrame == frame) refreshAlerts(frame)
+    }
+
+    private suspend fun livePlaces(frame: CameraFrame): List<world.xhere.shared.contribution.LivePlace> = try {
+        services.contributions.liveInView(frame.box)
+    } catch (e: CancellationException) {
+        throw e
+    } catch (_: Exception) {
+        emptyList()
     }
 
     private suspend fun civicPins(frame: CameraFrame): List<CivicItem> = try {

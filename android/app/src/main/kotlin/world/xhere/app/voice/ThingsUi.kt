@@ -174,6 +174,7 @@ fun ThingStoryCard(
     onSendReport: (world.xhere.shared.model.ReportReason, String?) -> Unit,
     onDismissReport: () -> Unit,
     onDismiss: () -> Unit,
+    services: world.xhere.shared.data.XHereServices? = null,
 ) {
     BottomSheet(onDismiss = onDismiss, tag = TestTags.THINGS_CARD) {
         Column(
@@ -224,6 +225,13 @@ fun ThingStoryCard(
                 TextButton(onClick = onReport, modifier = Modifier.testTag(TestTags.THINGS_REPORT)) {
                     Text(stringResource(R.string.things_report))
                 }
+            }
+            services?.let { api ->
+                world.xhere.app.contribution.CommunitySection(
+                    targetKind = world.xhere.shared.contribution.ContributionTarget.THING,
+                    targetId = thing.thing.id,
+                    services = api,
+                )
             }
             if (reporting) {
                 ReportForm(

@@ -276,6 +276,8 @@ data class MapUiState(
     /** Town Hall pins. Off until the person turns the layer on or picks that chip. */
     val townHallLayer: Boolean = false,
     val civicPins: List<world.xhere.shared.civic.CivicItem> = emptyList(),
+    /** Places with a photo or video from the last day. Drawn as a quiet halo. */
+    val livePlaces: List<world.xhere.shared.contribution.LivePlace> = emptyList(),
 )
 
 /** Straight line through the stops, plus a guide from the person to the next one. */

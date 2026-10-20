@@ -20,6 +20,7 @@ import io.ktor.client.HttpClient
 import io.ktor.client.engine.HttpClientEngine
 import io.ktor.client.request.header
 import io.ktor.client.request.post
+import io.ktor.client.request.put
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
@@ -75,7 +76,17 @@ import world.xhere.shared.data.TaxonomyCache
 import world.xhere.shared.data.TaxonomyRepository
 import world.xhere.shared.data.ThingRepository
 import world.xhere.shared.data.WalkRepository
+import world.xhere.shared.contribution.ContributionCard
+import world.xhere.shared.contribution.ContributionMediaPolicy
+import world.xhere.shared.contribution.ContributionPlace
+import world.xhere.shared.contribution.ContributionSort
+import world.xhere.shared.contribution.CreatedContribution
+import world.xhere.shared.contribution.LivePlace
+import world.xhere.shared.contribution.NewContribution
+import world.xhere.shared.data.ContributionRepository
 import world.xhere.shared.data.XHereApiException
+import world.xhere.shared.geo.BoundingBox
+import world.xhere.shared.media.ExifStrip
 import world.xhere.shared.data.XHereServices
 import world.xhere.shared.data.remote.CampaignsForMapParams
 import world.xhere.shared.data.remote.ClippingsAtParams
@@ -104,6 +115,7 @@ import world.xhere.shared.data.remote.QueueParams
 import world.xhere.shared.data.remote.DropTeaserParams
 import world.xhere.shared.data.remote.DropsInViewParams
 import world.xhere.shared.data.remote.DropsNearbyParams
+import world.xhere.shared.data.remote.ModerateContributionParams
 import world.xhere.shared.data.remote.ModerateDropParams
 import world.xhere.shared.data.remote.BindBeaconParams
 import world.xhere.shared.data.remote.CreateThingParams
@@ -117,13 +129,18 @@ import world.xhere.shared.data.remote.toUpdateParams
 import world.xhere.shared.data.remote.ResolveReportParams
 import world.xhere.shared.data.remote.SuspendUserParams
 import world.xhere.shared.data.remote.UserIdParams
+import world.xhere.shared.data.remote.ContributionIdParams
+import world.xhere.shared.data.remote.ContributionMediaWire
+import world.xhere.shared.data.remote.ContributionPlaceParams
+import world.xhere.shared.data.remote.ContributionVoteParams
+import world.xhere.shared.data.remote.ContributionsForParams
+import world.xhere.shared.data.remote.CreateContributionParams
+import world.xhere.shared.data.remote.LivePlacesParams
 import world.xhere.shared.data.remote.taxonomyOf
 import world.xhere.shared.data.remote.toParams
-import world.xhere.shared.geo.BoundingBox
 import world.xhere.shared.json.UuidSerializer
 import world.xhere.shared.integrity.LocationIntegrityFlag
 import world.xhere.shared.integrity.LocationSignal
-import io.ktor.client.request.put
 import world.xhere.shared.access.AccessSummary
 import world.xhere.shared.data.AccessRepository
 import world.xhere.shared.data.remote.AnnouncementParams
@@ -259,6 +276,7 @@ class SupabaseXHereClient(
     override val moderation: ModerationRepository = ModerationRepo()
     override val desk: PlaceDeskRepository = PlaceDeskRepo()
     override val civic: CivicRepository = CivicRepo()
+    override val contributions: ContributionRepository = ContributionRepo()
 
     private inner class AuthRepo : AuthRepository {
         override suspend fun currentSession(): SessionInfo? = call {
@@ -683,6 +701,13 @@ class SupabaseXHereClient(
     private inner class ModerationRepo : ModerationRepository {
         override suspend fun moderateDrop(dropId: Uuid, action: ModerateDropAction, reason: String?): DropStatus = call {
             supabase.postgrest.rpc("moderate_drop", ModerateDropParams(dropId, action.wire, reason).rpcJson()).decodeAs<DropStatus>()
+        }
+
+        override suspend fun moderateContribution(id: Uuid, action: ModerateDropAction, reason: String?): String = call {
+            supabase.postgrest.rpc(
+                "moderate_contribution",
+                ModerateContributionParams(id, action.wire, reason).rpcJson(),
+            ).decodeAs<String>()
         }
 
         override suspend fun resolveReport(reportId: Uuid, status: ReportStatus, note: String?) = call {
@@ -1160,7 +1185,186 @@ class SupabaseXHereClient(
             }
         }
     }
+
+    private inner class ContributionRepo : ContributionRepository {
+        override suspend fun place(targetKind: String, targetId: Uuid): ContributionPlace = call {
+            val rows = supabase.postgrest.rpc(
+                "contribution_place",
+                ContributionPlaceParams(targetKind, targetId).rpcJson(),
+            ).decodeList<ContributionPlace>()
+            rows.firstOrNull() ?: throw XHereApiException("place_not_found", sqlState = XHereApiException.SQL_NOT_FOUND)
+        }
+
+        override suspend fun list(
+            targetKind: String,
+            targetId: Uuid,
+            sort: ContributionSort,
+        ): List<ContributionCard> = call {
+            supabase.postgrest.rpc(
+                "contributions_for",
+                ContributionsForParams(targetKind, targetId, sort.wire).rpcJson(),
+            ).decodeList<ContributionCard>()
+        }
+
+        override suspend fun add(request: NewContribution): CreatedContribution = call {
+            val prepared = prepare(request)
+            val created = decode<CreatedContribution>(
+                supabase.postgrest.rpc(
+                    "create_contribution",
+                    CreateContributionParams(
+                        targetKind = request.targetKind,
+                        targetId = request.targetId,
+                        kind = request.kind,
+                        body = request.body,
+                        displayAnonymous = request.anonymous,
+                        media = prepared?.wire.orEmpty(),
+                    ).rpcJson(),
+                ).data,
+            )
+            try {
+                uploadReserved(created, prepared)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: XHereApiException) {
+                runCatching { delete(created.id) }
+                throw e
+            } catch (e: Throwable) {
+                runCatching { delete(created.id) }
+                throw XHereApiException("upload_failed", detail = "contribution upload failed", cause = e)
+            }
+            created
+        }
+
+        override suspend fun vote(id: Uuid, value: Int) {
+            call {
+                supabase.postgrest.rpc("cast_contribution_vote", ContributionVoteParams(id, value).rpcJson())
+                Unit
+            }
+        }
+
+        override suspend fun delete(id: Uuid) {
+            call {
+                supabase.postgrest.rpc("delete_my_contribution", ContributionIdParams(id).rpcJson())
+                Unit
+            }
+        }
+
+        override suspend fun liveInView(box: BoundingBox): List<LivePlace> = call {
+            if (!Geo.isValidBoundingBox(box)) return@call emptyList()
+            supabase.postgrest.rpc(
+                "live_places_in_view",
+                LivePlacesParams(box.minLongitude, box.minLatitude, box.maxLongitude, box.maxLatitude).rpcJson(),
+            ).decodeList<LivePlace>()
+        }
+
+        private fun prepare(request: NewContribution): PreparedContribution? {
+            val file = request.file ?: return null
+            val mime = file.mimeType.substringBefore(';').trim().lowercase()
+            val bytes = if (mime.startsWith("image/")) ExifStrip.strip(file.bytes, mime) else file.bytes
+            if (request.kind == "photo") {
+                if (bytes.isEmpty() || bytes.size > ContributionMediaPolicy.PHOTO_MAX_BYTES) {
+                    throw XHereApiException(
+                        "invalid_contribution",
+                        sqlState = XHereApiException.SQL_VALIDATION,
+                        detail = "photos are at most 500 KB",
+                    )
+                }
+            }
+            if (request.kind == "video") {
+                val duration = file.durationS
+                val thumb = request.thumbnail
+                if (
+                    duration == null || duration <= 0.0 || duration > ContributionMediaPolicy.VIDEO_MAX_SECONDS ||
+                    bytes.isEmpty() || bytes.size > ContributionMediaPolicy.VIDEO_MAX_BYTES ||
+                    file.width == null || file.height == null ||
+                    maxOf(file.width, file.height) > ContributionMediaPolicy.VIDEO_MAX_EDGE ||
+                    thumb == null || thumb.isEmpty() || thumb.size > ContributionMediaPolicy.PHOTO_MAX_BYTES
+                ) {
+                    throw XHereApiException(
+                        "invalid_contribution",
+                        sqlState = XHereApiException.SQL_VALIDATION,
+                        detail = "videos are at most 30 seconds, 720p, and 8 MB",
+                    )
+                }
+            }
+            return PreparedContribution(
+                bytes = bytes,
+                mime = mime,
+                thumb = request.thumbnail,
+                wire = listOf(
+                    ContributionMediaWire(
+                        mimeType = mime,
+                        byteSize = bytes.size,
+                        width = file.width,
+                        height = file.height,
+                        durationS = file.durationS,
+                        altText = file.altText,
+                        thumbByteSize = if (request.kind == "video") request.thumbnail?.size else null,
+                    ),
+                ),
+            )
+        }
+
+        private suspend fun uploadReserved(created: CreatedContribution, prepared: PreparedContribution?) {
+            val slot = created.media.firstOrNull() ?: return
+            val file = prepared ?: return
+            putContributionObject(slot.storagePath, file.bytes, file.mime)
+            val thumbPath = slot.thumbPath
+            val thumb = file.thumb
+            if (thumbPath != null && thumb != null) {
+                putContributionObject(thumbPath, thumb, "image/jpeg")
+            }
+        }
+
+        private suspend fun putContributionObject(path: String, bytes: ByteArray, mime: String) {
+            val userId = bearerUserId()
+            if (!contributionPath(path) || path.contains(userId)) {
+                throw XHereApiException("invalid_media", sqlState = XHereApiException.SQL_VALIDATION, detail = "storage path")
+            }
+            val base = config.url.trimEnd('/')
+            val token = bearer() ?: ""
+            val posted = edge.post("$base/functions/v1/store-contribution-media") {
+                header(HttpHeaders.Authorization, "Bearer $token")
+                header("apikey", config.anonKey)
+                header("x-storage-path", path)
+                contentType(ContentType.parse(mime))
+                setBody(bytes)
+            }
+            if (posted.status.value == 404) {
+                val direct = edge.post("$base/storage/v1/object/contribution-media/$path") {
+                    header(HttpHeaders.Authorization, "Bearer $token")
+                    header("apikey", config.anonKey)
+                    header("x-upsert", "false")
+                    contentType(ContentType.parse(mime))
+                    setBody(bytes)
+                }
+                if (!direct.status.isSuccess()) {
+                    throw XHereApiException("upload_failed", detail = "contribution upload failed")
+                }
+                return
+            }
+            if (!posted.status.isSuccess()) {
+                throw XHereApiException("upload_failed", detail = "contribution upload failed")
+            }
+        }
+    }
 }
+
+private val CONTRIBUTION_FILE = Regex(
+    "^c/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\\.(jpg|png|webp|mp4|webm)$",
+)
+private val CONTRIBUTION_THUMB = Regex(
+    "^c/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\\.thumb\\.jpg$",
+)
+
+private fun contributionPath(path: String): Boolean = CONTRIBUTION_FILE.matches(path) || CONTRIBUTION_THUMB.matches(path)
+
+private data class PreparedContribution(
+    val bytes: ByteArray,
+    val mime: String,
+    val thumb: ByteArray?,
+    val wire: List<ContributionMediaWire>,
+)
 
 private const val CATEGORY_COLUMNS =
     "id,group_id,slug,label,description,icon,color,attributes_schema,min_tier_to_post,moderation_mode," +

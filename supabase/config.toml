@@ -125,6 +125,14 @@ public = false
 file_size_limit = "10MiB"
 allowed_mime_types = ["image/jpeg", "image/png", "image/webp"]
 
+# Community photos and short videos. The bucket stays private. The path is
+# c/<contribution id>/<media id>.<ext>, never a user id. store-contribution-media
+# uploads with the caller's JWT. Signing needs the SELECT policy in the migration.
+[storage.buckets.contribution-media]
+public = false
+file_size_limit = "8MiB"
+allowed_mime_types = ["image/jpeg", "image/png", "image/webp", "video/mp4", "video/webm"]
+
 # Allow connections via S3 compatible clients
 [storage.s3_protocol]
 enabled = true
@@ -377,6 +385,11 @@ allow_dynamic_registration = false
 verify_jwt = true
 
 [functions.strip-exif]
+verify_jwt = true
+
+# Community photo and video upload. The signed-in JWT opens the door.
+# The function forwards that JWT to Storage. It does not use the service role.
+[functions.store-contribution-media]
 verify_jwt = true
 
 # Public read API (research recommendation #8). No user JWT. The function

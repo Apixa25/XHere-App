@@ -517,6 +517,72 @@ internal data class CreateCapsuleParams(
 )
 
 @Serializable
+internal data class ContributionMediaWire(
+    @SerialName("mime_type") val mimeType: String,
+    @SerialName("byte_size") val byteSize: Int,
+    val width: Int? = null,
+    val height: Int? = null,
+    @SerialName("duration_s") val durationS: Double? = null,
+    @SerialName("alt_text") val altText: String? = null,
+    @SerialName("thumb_byte_size") val thumbByteSize: Int? = null,
+)
+
+@Serializable
+internal data class CreateContributionParams(
+    @SerialName("p_target_kind") val targetKind: String,
+    @Serializable(with = UuidSerializer::class)
+    @SerialName("p_target_id") val targetId: Uuid,
+    @SerialName("p_kind") val kind: String,
+    @SerialName("p_body") val body: String? = null,
+    @SerialName("p_display_anonymous") val displayAnonymous: Boolean = false,
+    @SerialName("p_media") val media: List<ContributionMediaWire> = emptyList(),
+)
+
+@Serializable
+internal data class ContributionPlaceParams(
+    @SerialName("p_target_kind") val targetKind: String,
+    @Serializable(with = UuidSerializer::class)
+    @SerialName("p_target_id") val targetId: Uuid,
+)
+
+@Serializable
+internal data class ContributionsForParams(
+    @SerialName("p_target_kind") val targetKind: String,
+    @Serializable(with = UuidSerializer::class)
+    @SerialName("p_target_id") val targetId: Uuid,
+    @SerialName("p_sort") val sort: String,
+)
+
+@Serializable
+internal data class ContributionIdParams(
+    @Serializable(with = UuidSerializer::class)
+    @SerialName("p_id") val id: Uuid,
+)
+
+@Serializable
+internal data class ContributionVoteParams(
+    @Serializable(with = UuidSerializer::class)
+    @SerialName("p_id") val id: Uuid,
+    @SerialName("p_value") val value: Int,
+)
+
+@Serializable
+internal data class LivePlacesParams(
+    @SerialName("p_min_lng") val minLng: Double,
+    @SerialName("p_min_lat") val minLat: Double,
+    @SerialName("p_max_lng") val maxLng: Double,
+    @SerialName("p_max_lat") val maxLat: Double,
+)
+
+@Serializable
+internal data class ModerateContributionParams(
+    @Serializable(with = UuidSerializer::class)
+    @SerialName("p_id") val id: Uuid,
+    @SerialName("p_action") val action: String,
+    @SerialName("p_reason") val reason: String? = null,
+)
+
+@Serializable
 internal data class OpenCapsulesParams(
     @SerialName("p_lat") val lat: Double,
     @SerialName("p_lng") val lng: Double,

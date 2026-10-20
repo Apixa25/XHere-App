@@ -141,6 +141,34 @@ class QuickDropTest {
     }
 
     @Test
+    fun an_anonymous_note_keeps_the_request_and_a_sale_stays_named() {
+        rule.openDrop()
+        rule.onNodeWithTag(TestTags.DROP_TEXT).performTextInput("a quiet general note about the elm")
+        rule.onNodeWithTag(TestTags.DROP_TEXT_CONTINUE).performClick()
+        rule.waitForTag(TestTags.DROP_ANONYMOUS)
+        rule.onNodeWithTag(TestTags.DROP_ANONYMOUS).performScrollTo().performClick()
+        rule.onNodeWithTag(TestTags.suggestion("note")).performScrollTo().performClick()
+        rule.waitForTag(TestTags.DROP_SUCCESS)
+        val note = TestGraph.services.store.drops.values.single {
+            it.authorId == TestGraph.profile.id && it.title.contains("elm")
+        }
+        assertTrue(note.displayAnonymous)
+        rule.onNodeWithTag(TestTags.DROP_ANOTHER).performScrollTo().performClick()
+        rule.waitForTag(TestTags.DROP_TEXT)
+        rule.onNodeWithTag(TestTags.DROP_TEXT).performTextInput("books on the porch this morning")
+        rule.onNodeWithTag(TestTags.DROP_TEXT_CONTINUE).performClick()
+        rule.waitForTag(TestTags.DROP_ANONYMOUS)
+        rule.onNodeWithTag(TestTags.DROP_ANONYMOUS).performScrollTo().performClick()
+        rule.onNodeWithTag(TestTags.DROP_MORE).performScrollTo().performClick()
+        rule.onNodeWithTag(TestTags.category("yard_sale")).performScrollTo().performClick()
+        rule.waitForTag(TestTags.DROP_SUCCESS)
+        val sale = TestGraph.services.store.drops.values.single {
+            it.authorId == TestGraph.profile.id && it.category.slug == "yard_sale"
+        }
+        assertTrue(!sale.displayAnonymous)
+    }
+
+    @Test
     fun the_fourth_drop_in_an_hour_says_to_wait() {
         runBlocking {
             repeat(3) { index ->

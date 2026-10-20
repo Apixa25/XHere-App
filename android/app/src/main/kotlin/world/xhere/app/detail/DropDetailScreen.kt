@@ -67,11 +67,14 @@ import world.xhere.app.access.AccessSurveySheet
 import world.xhere.app.reputation.TierChip
 import world.xhere.app.location.ForegroundLocation
 import world.xhere.app.map.formatMeters
+import world.xhere.app.contribution.CommunitySection
 import world.xhere.app.safety.BlockDialog
 import world.xhere.app.safety.ReportForm
 import world.xhere.app.safety.SafetyFooter
 import world.xhere.app.ui.TestTags
 import world.xhere.app.ui.hapticClick
+import world.xhere.shared.contribution.ContributionTarget
+import world.xhere.shared.data.XHereServices
 import world.xhere.shared.access.AccessSurvey
 import world.xhere.shared.access.SurveyDraft
 import world.xhere.shared.geo.Geo
@@ -89,6 +92,7 @@ fun DropDetailScreen(
     startEditing: Boolean = false,
     viewModel: DropDetailViewModel = koinViewModel { parametersOf(shortId) },
     sharer: DropSharer = koinInject(),
+    services: XHereServices = koinInject(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     var surveying by remember { mutableStateOf(false) }
@@ -229,6 +233,13 @@ fun DropDetailScreen(
                     onDispute = viewModel::disputeClaim,
                     onRetryPhoto = viewModel::retryPhoto,
                 )
+                state.placeId?.let { placeId ->
+                    CommunitySection(
+                        targetKind = ContributionTarget.DROP,
+                        targetId = placeId,
+                        services = services,
+                    )
+                }
                 if (surveying) {
                     AccessSurveySheet(
                         draft = accessDraft,

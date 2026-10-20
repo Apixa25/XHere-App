@@ -15,6 +15,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.flow.first
 import world.xhere.app.location.DeviceLocation
 import world.xhere.shared.integrity.LocationSignal
+import world.xhere.shared.contribution.ContributionRules
 import world.xhere.shared.data.XHereApiException
 import world.xhere.shared.data.XHereServices
 import world.xhere.shared.demo.JamestownDemo
@@ -252,6 +253,11 @@ class DropViewModel(
         _state.update { it.copy(guidelinesChecked = checked, error = null) }
     }
 
+    /** A request. Categories such as yard sales ignore it and stay named. */
+    fun onAnonymous(checked: Boolean) {
+        _state.update { it.copy(postAnonymous = checked, error = null) }
+    }
+
     /** Null is the category's usual lifetime. Right now always keeps a preset. */
     fun onDuration(id: String?) {
         if (_state.value.selectedSlug == "right_now" && id == null) return
@@ -278,7 +284,12 @@ class DropViewModel(
                         tags = emptyList(),
                         revealRadiusM = null,
                         expiresAt = expiresFor(slug, snapshot.ttl),
-                        displayAnonymous = false,
+                        displayAnonymous = ContributionRules.anonymousAccepted(
+                            requested = snapshot.postAnonymous,
+                            allowAnonymousDisplay = snapshot.categories
+                                .firstOrNull { it.slug == slug }
+                                ?.allowAnonymousDisplay != false,
+                        ),
                         media = listOfNotNull(photo?.copy(altText = altFor(snapshot))),
                         acknowledgeGuidelines = snapshot.guidelinesChecked,
                         signal = here.signal,
@@ -463,6 +474,8 @@ data class DropUiState(
     val fields: List<world.xhere.shared.form.AttributeField> = emptyList(),
     val values: Map<String, String> = emptyMap(),
     val guidelinesChecked: Boolean = false,
+    /** Asked for. A category with allow_anonymous_display false still posts with a name. */
+    val postAnonymous: Boolean = false,
     val showAll: Boolean = false,
     val sensitive: Boolean = false,
     val postingNotice: String? = null,

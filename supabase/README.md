@@ -6,7 +6,7 @@ Postgres / PostGIS schema, Row-Level Security, RPCs, Edge Functions, and pgTAP t
 - `migrations/`: SQL migrations (**M1**), applied in filename order.
 - `seed.sql`: **local demo data** (4 demo users and 15 drops in Jamestown, New York). `supabase db reset` loads it, then `seed/open-data/jamestown-ny.sql` (the public-record places), then `seed/walks/jamestown-ny.sql` (the pilot walk), then `seed/live/us-ny-jamestown.sql` (which free weather provider covers that box), then `seed/campaigns/jamestown-ny.sql` (the pilot founding cap and Map Jamestown campaign). `supabase db push` does not load those files. The demo seed was applied by hand to the pilot project; see [Demo seed on the pilot](#demo-seed-on-the-pilot). The open-data file, the walk, the live seed, and the campaign are applied with the steps in [Open-data seed (hosted)](#open-data-seed-hosted).
 - `tests/database/`: pgTAP tests (**M1**), run by `supabase test db`.
-- `functions/`: Supabase Edge Functions. **M5** adds `suggest-category` and `strip-exif`. `public-api` is the read-only "what's here?" HTTP API (`verify_jwt = false`). CI tests it and does not deploy it.
+- `functions/`: Supabase Edge Functions. **M5** adds `suggest-category` and `strip-exif`. `store-contribution-media` stores community photos and short videos (`verify_jwt = true`). `public-api` is the read-only "what's here?" HTTP API (`verify_jwt = false`). CI tests these and does not deploy them.
 
 ## Hosted project
 
@@ -380,3 +380,24 @@ supabase db push
 | `drop_media_select_owner_id` | SELECT | `authenticated`, `owner_id` = `auth.uid()` |
 | `drop_media_select_own` | SELECT | `authenticated`, folder = `auth.uid()` (created here only if it is missing) |
 | `drop_media_select_granted` | SELECT | `authenticated`, an unexpired grant that still passes the same visibility check |
+
+## Community contributions (hosted)
+
+People can add a photo, a short video, or a line of text to a drop, a historical marker, an open-data place, a voice object, or a civic item. The two migrations are `20261022010000_contributions.sql` and `20261022010100_contribution_reports.sql`. The Edge Function to deploy is `store-contribution-media` (`verify_jwt = true`). `strip-exif` is unchanged and still serves drop photos.
+
+Not applied from this repo's agents, and not applied by CI. Do not run these commands until you mean to update the hosted project. From a machine already linked, after the history repair in [Before `supabase db push`](#before-supabase-db-push) if that repair has not been done yet:
+
+```bash
+supabase link --project-ref jpeuldzegtbqfezijhuy
+supabase db push
+supabase functions deploy store-contribution-media --project-ref jpeuldzegtbqfezijhuy
+```
+
+`db push` applies `20261022010000_contributions.sql`, `20261022010100_contribution_reports.sql`, and any earlier migration that is not on the project yet. Do not paste the files into the dashboard SQL editor.
+
+The bucket `contribution-media` is private, 8 MB, jpeg/png/webp/mp4/webm. Storage signing is a SELECT. `contribution_media_select_visible` is the policy that makes `createSignedUrl` work. It calls `private.can_read_contribution_media`, which is security definer, because `contribution_media` is not granted to the caller. `contribution_media_insert_reserved` allows an upload only onto a path `create_contribution` reserved for that author in the last two hours. The object path is `c/<contribution id>/<media id>.<ext>`. A trigger clears `storage.objects.owner` and `owner_id` so the list API does not show who uploaded it. `contributions.author_id` is not granted to `authenticated`. The public list returns a handle only when the post is not anonymous, and `is_mine` instead of an author id.
+
+| Policy | Command | Who |
+|---|---|---|
+| `contribution_media_select_visible` | SELECT | `authenticated`, a contribution the caller is allowed to see |
+| `contribution_media_insert_reserved` | INSERT | `authenticated`, a path reserved for this author |
