@@ -229,6 +229,7 @@ internal object TestTags {
     const val DROP_TEXT_CONTINUE = "drop_text_continue"
     const val DROP_MORE = "drop_more"
     const val DROP_POST = "drop_post"
+    const val DROP_ANONYMOUS = "drop_anonymous"
     const val DROP_GUIDELINES = "drop_guidelines"
     const val DROP_NOTICE = "drop_notice"
     const val DROP_ERROR = "drop_error"
@@ -281,6 +282,18 @@ internal object TestTags {
 
     const val AUTH_AGREEMENT = "auth_agreement"
     const val DROP_AGREEMENT = "drop_agreement"
+
+    const val COMMUNITY = "community"
+    const val COMMUNITY_ADD = "community_add"
+    const val COMMUNITY_NEWEST = "community_newest"
+    const val COMMUNITY_TOP = "community_top"
+    const val COMMUNITY_TEXT = "community_text"
+    const val COMMUNITY_ANON = "community_anon"
+    const val COMMUNITY_SEND = "community_send"
+    const val COMMUNITY_CANCEL = "community_cancel"
+    const val COMMUNITY_LIVE = "community_live"
+
+    fun communityCard(id: kotlin.uuid.Uuid): String = "community_$id"
 
     const val DETAIL_REPORT = "detail_report"
     const val DETAIL_HIDE = "detail_hide"

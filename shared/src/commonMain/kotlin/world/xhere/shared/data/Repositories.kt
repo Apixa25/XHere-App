@@ -6,6 +6,12 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.serialization.json.JsonObject
 import world.xhere.shared.access.AccessAnswer
 import world.xhere.shared.access.AccessSummary
+import world.xhere.shared.contribution.ContributionCard
+import world.xhere.shared.contribution.ContributionPlace
+import world.xhere.shared.contribution.ContributionSort
+import world.xhere.shared.contribution.CreatedContribution
+import world.xhere.shared.contribution.LivePlace
+import world.xhere.shared.contribution.NewContribution
 import world.xhere.shared.geo.BoundingBox
 import world.xhere.shared.geo.LatLng
 import world.xhere.shared.integrity.LocationIntegrityFlag
@@ -242,6 +248,9 @@ interface AccountRepository {
 
 interface ModerationRepository {
     suspend fun moderateDrop(dropId: Uuid, action: ModerateDropAction, reason: String? = null): DropStatus
+
+    /** Approve, remove, or restore a community contribution. Throws `not_moderator`. */
+    suspend fun moderateContribution(id: Uuid, action: ModerateDropAction, reason: String? = null): String
 
     suspend fun resolveReport(reportId: Uuid, status: ReportStatus, note: String? = null)
 
@@ -515,6 +524,31 @@ interface CivicRepository {
     suspend fun markRead(id: Uuid)
 }
 
+/**
+ * Photos, short videos, and notes on any place.
+ * Cards never include an author id. Anonymous posts have a null handle.
+ */
+interface ContributionRepository {
+    suspend fun place(targetKind: String, targetId: Uuid): ContributionPlace
+
+    suspend fun list(
+        targetKind: String,
+        targetId: Uuid,
+        sort: ContributionSort = ContributionSort.NEWEST,
+    ): List<ContributionCard>
+
+    /** Reserves the row and, when [NewContribution.file] is set, stores the bytes. */
+    suspend fun add(request: NewContribution): CreatedContribution
+
+    /** 1 or -1 sets the vote. 0 removes it. The author cannot vote. */
+    suspend fun vote(id: Uuid, value: Int)
+
+    suspend fun delete(id: Uuid)
+
+    /** Places with a photo or video from the last 24 hours. No author. */
+    suspend fun liveInView(box: BoundingBox): List<LivePlace>
+}
+
 /** The surface the app injects. Both the Supabase client and the in-memory fake implement it. */
 interface XHereServices {
     val auth: AuthRepository
@@ -538,6 +572,7 @@ interface XHereServices {
     val moderation: ModerationRepository
     val desk: PlaceDeskRepository
     val civic: CivicRepository
+    val contributions: ContributionRepository
 }
 
 /** Placeholder role check used by screens that should hide moderator tools. The RPC still enforces it. */

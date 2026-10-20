@@ -214,17 +214,17 @@ private fun NativeMap(
             val route = state.walk?.let { world.xhere.shared.walks.WalkGuide.route(it) }.orEmpty()
             val guide = guideLine(state)
             holder.history = historyLayer(state)
-            val scene = sceneKey(state.features, state.myLocation, state.taxonomy, route, guide, holder.history, holder.access, holder.civic)
+            val scene = sceneKey(state.features, state.myLocation, state.taxonomy, route, guide, holder.history, holder.access, holder.civic, state.livePlaces)
             if (loaded != null && holder.styleUrl == styleUrl) {
                 if (scene != holder.scene) {
                     holder.scene = scene
-                    render(loaded, state.features, state.myLocation, state.taxonomy, route, guide, holder.history, holder.access, holder.civic)
+                    render(loaded, state.features, state.myLocation, state.taxonomy, route, guide, holder.history, holder.access, holder.civic, state.livePlaces)
                 }
             } else if (holder.styleUrl != null && holder.styleUrl != styleUrl) {
                 map.setStyle(styleUrl) { style ->
                     holder.style = style
                     holder.styleUrl = styleUrl
-                    render(style, state.features, state.myLocation, state.taxonomy, route, guide, holder.history, holder.access, holder.civic)
+                    render(style, state.features, state.myLocation, state.taxonomy, route, guide, holder.history, holder.access, holder.civic, state.livePlaces)
                     holder.scene = scene
                 }
             }
@@ -250,6 +250,7 @@ private fun sceneKey(
     history: HistoryMapLayer?,
     access: List<AccessSummary> = emptyList(),
     civic: List<CivicItem> = emptyList(),
+    live: List<world.xhere.shared.contribution.LivePlace> = emptyList(),
 ): Int {
     var hash = 1
     hash = 31 * hash + features.hashCode()
@@ -260,6 +261,7 @@ private fun sceneKey(
     hash = 31 * hash + (history?.hashCode() ?: 0)
     hash = 31 * hash + access.hashCode()
     hash = 31 * hash + civic.hashCode()
+    hash = 31 * hash + live.hashCode()
     return hash
 }
 
@@ -273,8 +275,10 @@ private fun render(
     history: HistoryMapLayer?,
     access: List<AccessSummary> = emptyList(),
     civic: List<CivicItem> = emptyList(),
+    live: List<world.xhere.shared.contribution.LivePlace> = emptyList(),
 ) {
     drawHistory(style, history)
+    drawLive(style, live)
     drawAccess(style, access)
     drawCivic(style, civic)
     drawLine(style, ROUTE_SOURCE, ROUTE_LAYER, route, Color.parseColor("#1B6B4A"), width = 4.5f, dashed = false)
@@ -441,7 +445,34 @@ private const val ACCESS_SOURCE = "xhere-access"
 private const val ACCESS_LAYER = "xhere-access-symbols"
 private const val CIVIC_SOURCE = "xhere-civic"
 private const val CIVIC_LAYER = "xhere-civic-symbols"
+private const val LIVE_SOURCE = "xhere-live"
+private const val LIVE_LAYER = "xhere-live-halo"
 private const val EMPTY = """{"type":"FeatureCollection","features":[]}"""
+
+/** A quiet halo under places that received a photo or video in the last day. */
+private fun drawLive(style: Style, places: List<world.xhere.shared.contribution.LivePlace>) {
+    val body = places.joinToString(",") { place ->
+        """{"type":"Feature","properties":{},"geometry":{"type":"Point","coordinates":[${place.lng},${place.lat}]}}"""
+    }
+    val json = """{"type":"FeatureCollection","features":[$body]}"""
+    val existing = style.getSource(LIVE_SOURCE) as? GeoJsonSource
+    if (existing == null) {
+        style.addSource(GeoJsonSource(LIVE_SOURCE, json))
+        val layer = CircleLayer(LIVE_LAYER, LIVE_SOURCE).withProperties(
+            PropertyFactory.circleRadius(16f),
+            PropertyFactory.circleColor(Color.parseColor("#33C47B0A")),
+            PropertyFactory.circleStrokeWidth(1.5f),
+            PropertyFactory.circleStrokeColor(Color.parseColor("#66C47B0A")),
+        )
+        if (style.getLayer(DROP_LAYER) != null) {
+            style.addLayerBelow(layer, DROP_LAYER)
+        } else {
+            style.addLayer(layer)
+        }
+    } else {
+        existing.setGeoJson(json)
+    }
+}
 
 private fun drawAccess(style: Style, pins: List<AccessSummary>) {
     pins.map { it.status }.distinct().forEach { status ->

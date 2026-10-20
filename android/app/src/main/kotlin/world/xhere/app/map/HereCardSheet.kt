@@ -26,7 +26,10 @@ import androidx.compose.ui.semantics.testTag
 import androidx.compose.ui.unit.dp
 import world.xhere.app.R
 import world.xhere.app.access.AccessStatusChip
+import world.xhere.app.contribution.CommunitySection
 import world.xhere.app.reputation.TierChip
+import world.xhere.shared.contribution.ContributionTarget
+import world.xhere.shared.data.XHereServices
 import world.xhere.app.ui.TestTags
 import world.xhere.shared.capsule.Capsules
 import world.xhere.shared.civic.Civic
@@ -61,6 +64,7 @@ internal fun HereCardSheet(
     onOral: () -> Unit = {},
     onFollow: () -> Unit = {},
     onDismiss: () -> Unit,
+    services: XHereServices? = null,
 ) {
     val groups = Here.groups(sheet.drops)
     BottomSheet(
@@ -191,7 +195,7 @@ internal fun HereCardSheet(
                         style = MaterialTheme.typography.bodyLarge,
                     )
                     if (sheet.clippings.isNotEmpty()) ThisDayHere(sheet.clippings)
-                    ComingUp(sheet.civic, onFollow)
+                    ComingUp(sheet.civic, onFollow, services)
                     PlaceActions(onClaim, onMemory, onOral)
                 }
                 else -> {
@@ -211,11 +215,11 @@ internal fun HereCardSheet(
                                 style = MaterialTheme.typography.titleMedium,
                             )
                             group.drops.forEach { card ->
-                                HereRow(card)
+                                HereRow(card, services)
                             }
                         }
                         if (sheet.clippings.isNotEmpty()) ThisDayHere(sheet.clippings)
-                        ComingUp(sheet.civic, onFollow)
+                        ComingUp(sheet.civic, onFollow, services)
                         PlaceActions(onClaim, onMemory, onOral)
                     }
                 }
@@ -225,7 +229,7 @@ internal fun HereCardSheet(
 }
 
 @Composable
-private fun ComingUp(items: List<CivicItem>, onFollow: () -> Unit) {
+private fun ComingUp(items: List<CivicItem>, onFollow: () -> Unit, services: XHereServices? = null) {
     if (items.isEmpty()) return
     Column(
         modifier = Modifier
@@ -262,6 +266,13 @@ private fun ComingUp(items: List<CivicItem>, onFollow: () -> Unit) {
             ) {
                 Text(stringResource(R.string.detail_view_source))
             }
+            if (services != null) {
+                CommunitySection(
+                    targetKind = ContributionTarget.CIVIC,
+                    targetId = item.id,
+                    services = services,
+                )
+            }
         }
         val address = items.firstOrNull { !it.addressText.isNullOrBlank() }?.addressText
         if (!address.isNullOrBlank()) {
@@ -276,7 +287,7 @@ private fun ComingUp(items: List<CivicItem>, onFollow: () -> Unit) {
 }
 
 @Composable
-private fun HereRow(card: DropCard) {
+private fun HereRow(card: DropCard, services: XHereServices? = null) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -360,6 +371,13 @@ private fun HereRow(card: DropCard) {
                 text = PlaceClaims.BADGE,
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.primary,
+            )
+        }
+        if (services != null) {
+            CommunitySection(
+                targetKind = ContributionTarget.DROP,
+                targetId = card.id,
+                services = services,
             )
         }
     }

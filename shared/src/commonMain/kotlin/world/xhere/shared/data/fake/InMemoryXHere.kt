@@ -38,6 +38,7 @@ import world.xhere.shared.data.SuggestionRepository
 import world.xhere.shared.data.TaxonomyRepository
 import world.xhere.shared.data.ThingRepository
 import world.xhere.shared.data.WalkRepository
+import world.xhere.shared.data.ContributionRepository
 import world.xhere.shared.data.XHereApiException
 import world.xhere.shared.data.LiveRepository
 import world.xhere.shared.capsule.Capsules
@@ -185,6 +186,11 @@ class InMemoryXHere(
 
     override val desk: PlaceDeskRepository get() = placeDesk
     override val civic: CivicRepository = CivicRepo()
+    override val contributions: ContributionRepository = MemoryContributions(
+        store = store,
+        viewer = { this.viewer },
+        clock = clock,
+    )
 
     /** Who is signed in. Tests may swap it, for example to act as a moderator. */
     var viewer: Profile? = viewer
@@ -1153,6 +1159,10 @@ class InMemoryXHere(
             if (targetType == ReportTarget.DROP) {
                 val drop = store.drops[targetId] ?: throw XHereApiException("drop_not_found", sqlState = XHereApiException.SQL_NOT_FOUND)
                 if (drop.authorId == profile.id) throw XHereApiException("cannot_report_self", sqlState = XHereApiException.SQL_VALIDATION)
+            } else if (targetType == ReportTarget.CONTRIBUTION) {
+                val row = store.contributions.firstOrNull { it.id == targetId }
+                    ?: throw XHereApiException("contribution_not_found", sqlState = XHereApiException.SQL_NOT_FOUND)
+                if (row.authorId == profile.id) throw XHereApiException("cannot_report_self", sqlState = XHereApiException.SQL_VALIDATION)
             } else if (targetId == profile.id) {
                 throw XHereApiException("cannot_report_self", sqlState = XHereApiException.SQL_VALIDATION)
             }
@@ -1170,6 +1180,12 @@ class InMemoryXHere(
                         store.log(null, "drop", drop.id, ModerationActionType.AUTO_HIDE, "report threshold reached", clock())
                     }
                 }
+            }
+            if (targetType == ReportTarget.CONTRIBUTION) {
+                val open = store.reports.values.count {
+                    it.targetType == ReportTarget.CONTRIBUTION && it.targetId == targetId && it.status == ReportStatus.OPEN
+                }
+                store.holdContributionForReports(targetId, open)
             }
             return id
         }
@@ -1595,6 +1611,41 @@ class InMemoryXHere(
             return drop.status
         }
 
+        override suspend fun moderateContribution(id: Uuid, action: ModerateDropAction, reason: String?): String {
+            val profile = requireViewer()
+            if (!profile.isModerator) throw XHereApiException("not_moderator", sqlState = XHereApiException.SQL_PERMISSION)
+            val row = store.contributions.firstOrNull { it.id == id }
+                ?: throw XHereApiException("contribution_not_found", sqlState = XHereApiException.SQL_NOT_FOUND)
+            if (row.authorId == profile.id) throw XHereApiException("cannot_moderate_own_drop", sqlState = XHereApiException.SQL_PERMISSION)
+            val next = when (action) {
+                ModerateDropAction.APPROVE -> {
+                    if (row.status != "pending_review" && row.status != "hidden") {
+                        throw XHereApiException("invalid_transition", sqlState = XHereApiException.SQL_VALIDATION)
+                    }
+                    "active"
+                }
+                ModerateDropAction.RESTORE -> {
+                    if (row.status != "removed" && row.status != "hidden") {
+                        throw XHereApiException("invalid_transition", sqlState = XHereApiException.SQL_VALIDATION)
+                    }
+                    "active"
+                }
+                ModerateDropAction.REMOVE -> "removed"
+            }
+            row.status = next
+            val reportStatus = if (action == ModerateDropAction.REMOVE) ReportStatus.ACTIONED else ReportStatus.DISMISSED
+            store.reports.values.filter {
+                it.targetType == ReportTarget.CONTRIBUTION && it.targetId == id && it.status == ReportStatus.OPEN
+            }.forEach { store.reports[it.id] = it.copy(status = reportStatus) }
+            val logged = when (action) {
+                ModerateDropAction.APPROVE -> ModerationActionType.APPROVE
+                ModerateDropAction.RESTORE -> ModerationActionType.RESTORE
+                ModerateDropAction.REMOVE -> ModerationActionType.REMOVE
+            }
+            store.log(profile.id, "contribution", id, logged, reason, clock())
+            return next
+        }
+
         override suspend fun resolveReport(reportId: Uuid, status: ReportStatus, note: String?) {
             val profile = requireViewer()
             if (!profile.isModerator) throw XHereApiException("not_moderator", sqlState = XHereApiException.SQL_PERMISSION)
@@ -1664,7 +1715,31 @@ class InMemoryXHere(
                         queuedAt = sorted.first().createdAt,
                     )
                 }
-            return (drops + people)
+            val notes = store.contributions.filter { row ->
+                val reports = open.filter { it.targetType == ReportTarget.CONTRIBUTION && it.targetId == row.id }
+                row.status in setOf("active", "pending_review", "hidden") &&
+                    (row.status == "pending_review" || row.status == "hidden" || reports.isNotEmpty()) &&
+                    row.authorId != profile.id
+            }.map { row ->
+                val reports = open.filter { it.targetType == ReportTarget.CONTRIBUTION && it.targetId == row.id }.sortedBy { it.createdAt }
+                ModerationQueueItem(
+                    kind = QueueItemKind.CONTRIBUTION,
+                    targetId = row.id,
+                    title = row.body ?: row.kind,
+                    body = row.body,
+                    categorySlug = row.targetKind,
+                    status = if (row.status == "pending_review") DropStatus.PENDING_REVIEW else DropStatus.ACTIVE,
+                    subjectId = row.authorId,
+                    subjectHandle = row.authorHandle,
+                    subjectSuspendedUntil = store.suspendedUntil[row.authorId],
+                    openReports = reports.map { it.reporterId }.distinct().size,
+                    reasons = reports.map { it.reason }.distinct(),
+                    latestDetails = reports.lastOrNull { it.details != null }?.details,
+                    reportIds = reports.map { it.id },
+                    queuedAt = reports.firstOrNull()?.createdAt ?: row.createdAt,
+                )
+            }
+            return (drops + people + notes)
                 .sortedWith(compareByDescending<ModerationQueueItem> { it.sensitive }.thenByDescending { it.isPending }.thenBy { it.queuedAt })
                 .take(limit.coerceIn(1, 200))
         }
@@ -1800,6 +1875,9 @@ class MemoryStore(
     val impactNotices: MutableList<ImpactNotice> = mutableListOf()
     /** Published agendas, hearings, permits, and notices. Not drops. */
     val civicItems: MutableList<CivicItem> = mutableListOf()
+    val contributions: MutableList<StoredContribution> = mutableListOf()
+    val contributionVotes: MutableList<StoredContributionVote> = mutableListOf()
+    val contributionBytes: MutableMap<String, ByteArray> = linkedMapOf()
     val civicFollows: MutableList<CivicFollow> = mutableListOf()
     val civicNotices: MutableList<StoredCivicNotice> = mutableListOf()
     /** Region programs (founding cap and campaign). Empty until a config is installed. */

@@ -70,6 +70,7 @@ enum class MediaKind {
 enum class ReportTarget {
     @SerialName("drop") DROP,
     @SerialName("profile") PROFILE,
+    @SerialName("contribution") CONTRIBUTION,
 }
 
 @Serializable

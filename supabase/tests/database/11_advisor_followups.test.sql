@@ -23,8 +23,8 @@ select is(
    from pg_catalog.pg_policies
    where schemaname = 'public'
      and (coalesce(qual, '') like '%auth.uid()%' or coalesce(with_check, '') like '%auth.uid()%')),
-  27,
-  'the auth.uid() policies are still there, including location flags, reputation, things, and accessibility; drops_delete_own is using (false)'
+  32,
+  'the auth.uid() policies are still there, including location flags, reputation, things, accessibility, and community contributions; drops_delete_own is using (false)'
 );
 
 -- Lint 0006. SELECT is only the public-read policy. Writes are split.

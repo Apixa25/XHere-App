@@ -73,6 +73,7 @@ data class HiddenDrop(
 enum class QueueItemKind {
     @SerialName("drop") DROP,
     @SerialName("profile") PROFILE,
+    @SerialName("contribution") CONTRIBUTION,
 }
 
 /**

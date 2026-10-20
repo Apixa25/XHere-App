@@ -24,6 +24,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -153,6 +154,19 @@ fun DropScreen(
             }
         }
         if (state.phase == DropPhase.CHOOSE || state.phase == DropPhase.FORM) {
+            val namedOnly = state.categories.firstOrNull { it.slug == state.selectedSlug }?.allowAnonymousDisplay == false
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Switch(
+                    checked = state.postAnonymous && !namedOnly,
+                    onCheckedChange = viewModel::onAnonymous,
+                    enabled = !namedOnly,
+                    modifier = Modifier.testTag(TestTags.DROP_ANONYMOUS),
+                )
+                Text(
+                    text = stringResource(if (namedOnly) R.string.drop_anonymous_off else R.string.drop_anonymous),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            }
             Text(stringResource(R.string.drop_ttl_label), style = MaterialTheme.typography.titleMedium)
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (state.selectedSlug != "right_now") {

@@ -19,6 +19,7 @@ const FORBIDDEN_KEYS = new Set([
   "media",
   "tags",
   "author_id",
+  // Community contributions are not part of this API. An author id stays forbidden.
   "geog",
   "email",
   "display_name",

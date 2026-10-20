@@ -136,7 +136,7 @@ private fun QueueCard(
                     color = MaterialTheme.colorScheme.primary,
                 )
             }
-            if (item.kind == QueueItemKind.DROP) {
+            if (item.kind == QueueItemKind.DROP || item.kind == QueueItemKind.CONTRIBUTION) {
                 Text(item.title.orEmpty(), style = MaterialTheme.typography.titleMedium)
                 item.body?.takeIf { it.isNotBlank() }?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
                 item.subjectHandle?.let {

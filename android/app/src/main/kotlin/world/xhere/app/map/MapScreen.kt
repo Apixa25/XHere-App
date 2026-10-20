@@ -129,6 +129,7 @@ fun MapScreen(
     links: IncomingLinks = koinInject(),
     focus: ExperienceFocus = koinInject(),
     sheets: SheetSignals = koinInject(),
+    services: world.xhere.shared.data.XHereServices = koinInject(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val voiceState by things.state.collectAsStateWithLifecycle()
@@ -585,6 +586,7 @@ fun MapScreen(
                 onOral = { deskRequest = DeskRequest.Memory(sheet.spot, oral = true) },
                 onFollow = viewModel::followHere,
                 onDismiss = viewModel::dismissHere,
+                services = services,
             )
         }
         deskRequest?.let { request ->
@@ -690,6 +692,7 @@ fun MapScreen(
                 onSendReport = things::report,
                 onDismissReport = things::dismissReport,
                 onDismiss = things::dismissCard,
+                services = services,
             )
         }
         guidance?.let { advice ->

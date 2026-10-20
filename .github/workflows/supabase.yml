@@ -42,6 +42,7 @@ jobs:
           deno test --allow-net supabase/functions
           deno check supabase/functions/suggest-category/index.ts
           deno check supabase/functions/strip-exif/index.ts
+          deno check supabase/functions/store-contribution-media/index.ts
           deno check supabase/functions/public-api/index.ts
           deno check supabase/functions/history/index.ts
 

@@ -64,7 +64,7 @@ class ModerationViewModel(
 
     /** What a moderator can do with [item] right now. */
     fun actionsFor(item: ModerationQueueItem): List<ModAction> = buildList {
-        if (item.kind == QueueItemKind.DROP) {
+        if (item.kind == QueueItemKind.DROP || item.kind == QueueItemKind.CONTRIBUTION) {
             if (item.isPending) add(ModAction.APPROVE)
             if (item.status == DropStatus.DISPUTED) add(ModAction.RESTORE)
             add(ModAction.REMOVE)
@@ -143,9 +143,9 @@ class ModerationViewModel(
             _state.update { it.copy(busy = true, message = null) }
             try {
                 when (action) {
-                    ModAction.APPROVE -> services.moderation.moderateDrop(item.targetId, ModerateDropAction.APPROVE)
-                    ModAction.REMOVE -> services.moderation.moderateDrop(item.targetId, ModerateDropAction.REMOVE)
-                    ModAction.RESTORE -> services.moderation.moderateDrop(item.targetId, ModerateDropAction.RESTORE)
+                    ModAction.APPROVE -> moderate(item, ModerateDropAction.APPROVE)
+                    ModAction.REMOVE -> moderate(item, ModerateDropAction.REMOVE)
+                    ModAction.RESTORE -> moderate(item, ModerateDropAction.RESTORE)
                     ModAction.DISMISS -> item.reportIds.forEach { services.moderation.resolveReport(it, ReportStatus.DISMISSED) }
                     ModAction.ACTION -> item.reportIds.forEach { services.moderation.resolveReport(it, ReportStatus.ACTIONED) }
                     ModAction.SUSPEND -> item.subjectId?.let {
@@ -161,6 +161,14 @@ class ModerationViewModel(
                 reload()
                 _state.update { it.copy(busy = false, message = ModMessage.FAILED) }
             }
+        }
+    }
+
+    private suspend fun moderate(item: ModerationQueueItem, action: ModerateDropAction) {
+        if (item.kind == QueueItemKind.CONTRIBUTION) {
+            services.moderation.moderateContribution(item.targetId, action)
+        } else {
+            services.moderation.moderateDrop(item.targetId, action)
         }
     }
 

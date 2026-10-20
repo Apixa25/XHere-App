@@ -50,6 +50,8 @@ data class TierLimits(
     @SerialName("confirmations_per_hour") val confirmationsPerHour: Int,
     @SerialName("reports_per_day") val reportsPerDay: Int,
     @SerialName("max_media_per_drop") val maxMediaPerDrop: Int,
+    /** Missing on older payloads. The server still enforces the tier cap. */
+    @SerialName("contributions_per_day") val contributionsPerDay: Int = 20,
 )
 
 @Serializable

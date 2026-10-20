@@ -395,9 +395,9 @@ object JamestownDemo {
                 expiresAtAttribute = "ends_at",
                 confirmations = 2,
             ),
-            category(27, sales, "yard_sale", "Yard sale", "🏠", 1000, 1, confirmations = 2),
-            category(36, sales, "for_sale", "For sale", "💵", 1000, 2, confirmations = 2),
-            category(37, sales, "free_stuff", "Free stuff", "🎁", 1000, 3, confirmations = 2),
+            category(27, sales, "yard_sale", "Yard sale", "🏠", 1000, 1, confirmations = 2, anonymous = false),
+            category(36, sales, "for_sale", "For sale", "💵", 1000, 2, confirmations = 2, anonymous = false),
+            category(37, sales, "free_stuff", "Free stuff", "🎁", 1000, 3, confirmations = 2, anonymous = false),
             category(
                 28, safety, "hazard", "Hazard", "⚠️", 2000, 1,
                 attributes = HAZARD_SCHEMA,
@@ -556,6 +556,7 @@ object JamestownDemo {
         reports: Int = 3,
         permanentWhenConfirmed: Boolean = false,
         confirmExtendsTtl: Duration? = null,
+        anonymous: Boolean = true,
     ) = Category(
         id = id(n),
         groupId = group.id,
@@ -582,6 +583,7 @@ object JamestownDemo {
         reportsToHide = reports,
         permanentWhenConfirmed = permanentWhenConfirmed,
         confirmExtendsTtl = confirmExtendsTtl,
+        allowAnonymousDisplay = anonymous,
         sort = sort,
     )
 
