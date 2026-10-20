@@ -2,14 +2,16 @@ package world.xhere.app.profile
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.graphics.Color
 import android.os.Build
 import java.io.ByteArrayOutputStream
+import kotlin.math.roundToInt
+import world.xhere.shared.profile.AvatarCrop
 import world.xhere.shared.profile.ProfileFields
 
 /**
- * Gallery and camera pictures become a 512 px circle, then a WebP or JPEG
- * small enough for the avatars bucket (512 KB).
+ * Gallery and camera pictures become a 512 px square of whatever sat inside
+ * the circular mask, then a WebP or JPEG around 200 KB. The avatars bucket
+ * still accepts up to 512 KB.
  */
 internal object AvatarCodec {
     data class Encoded(val bytes: ByteArray, val mimeType: String)
@@ -24,40 +26,33 @@ internal object AvatarCodec {
         BitmapFactory.decodeByteArray(bytes, 0, bytes.size, options)
     }.getOrNull()
 
-    /** Center square, zoomed in, drawn inside a circle. Corners are transparent. */
+    /** Center square at [zoom]. The editor passes [crop] once the user has panned. */
     fun circle(source: Bitmap, zoom: Float): Bitmap {
-        val zoomed = zoom.coerceIn(1f, 4f)
-        val side = (minOf(source.width, source.height) / zoomed).toInt().coerceAtLeast(1)
-        val left = ((source.width - side) / 2).coerceAtLeast(0)
-        val top = ((source.height - side) / 2).coerceAtLeast(0)
-        val square = Bitmap.createBitmap(source, left, top, side.coerceAtMost(source.width - left), side.coerceAtMost(source.height - top))
-        val scaled = if (square.width == ProfileFields.AVATAR_EDGE_PX && square.height == ProfileFields.AVATAR_EDGE_PX) {
-            square
-        } else {
-            Bitmap.createScaledBitmap(square, ProfileFields.AVATAR_EDGE_PX, ProfileFields.AVATAR_EDGE_PX, true)
-        }
+        return crop(source, AvatarCrop.centered(source.width, source.height, zoom))
+    }
+
+    /** The square inside the circle, scaled to [ProfileFields.AVATAR_EDGE_PX]. */
+    fun crop(source: Bitmap, rect: AvatarCrop.SourceRect): Bitmap {
         val edge = ProfileFields.AVATAR_EDGE_PX
-        val out = Bitmap.createBitmap(edge, edge, Bitmap.Config.ARGB_8888)
-        val pixels = IntArray(edge * edge)
-        scaled.getPixels(pixels, 0, edge, 0, 0, edge, edge)
-        val radius = edge / 2f
-        val radiusSq = radius * radius
-        for (y in 0 until edge) {
-            val dy = y + 0.5f - radius
-            for (x in 0 until edge) {
-                val dx = x + 0.5f - radius
-                if (dx * dx + dy * dy > radiusSq) pixels[y * edge + x] = Color.TRANSPARENT
-            }
+        if (source.width <= 0 || source.height <= 0 || rect.side <= 0f) {
+            return Bitmap.createBitmap(edge, edge, Bitmap.Config.ARGB_8888)
         }
-        out.setPixels(pixels, 0, edge, 0, 0, edge, edge)
-        if (scaled !== square) scaled.recycle()
-        if (square !== source) square.recycle()
-        return out
+        val left = rect.left.roundToInt().coerceIn(0, source.width - 1)
+        val top = rect.top.roundToInt().coerceIn(0, source.height - 1)
+        val side = rect.side.roundToInt()
+            .coerceAtLeast(1)
+            .coerceAtMost(source.width - left)
+            .coerceAtMost(source.height - top)
+        val square = Bitmap.createBitmap(source, left, top, side, side)
+        if (square.width == edge && square.height == edge) return square
+        val scaled = Bitmap.createScaledBitmap(square, edge, edge, true)
+        if (scaled !== square && square !== source) square.recycle()
+        return scaled
     }
 
     /**
-     * WebP first, then JPEG, then a smaller square, until the bytes fit the
-     * avatars bucket. The bucket rejects anything over 512 KB.
+     * WebP first, then JPEG, then a smaller square, until the file is about
+     * 200 KB. The bucket still rejects anything over 512 KB.
      */
     fun compress(bitmap: Bitmap): Encoded {
         var working = bitmap
@@ -93,11 +88,11 @@ internal object AvatarCodec {
     private fun encodeUnderLimit(bitmap: Bitmap): Encoded? {
         for (quality in intArrayOf(80, 60, 45, 30, 20, 10)) {
             val bytes = encode(bitmap, webp = true, quality = quality)
-            if (bytes.size in 1..ProfileFields.AVATAR_MAX_BYTES) return Encoded(bytes, "image/webp")
+            if (bytes.size in 1..ProfileFields.AVATAR_TARGET_BYTES) return Encoded(bytes, "image/webp")
         }
         for (quality in intArrayOf(70, 50, 35, 20, 10)) {
             val bytes = encode(bitmap, webp = false, quality = quality)
-            if (bytes.size in 1..ProfileFields.AVATAR_MAX_BYTES) return Encoded(bytes, "image/jpeg")
+            if (bytes.size in 1..ProfileFields.AVATAR_TARGET_BYTES) return Encoded(bytes, "image/jpeg")
         }
         return null
     }

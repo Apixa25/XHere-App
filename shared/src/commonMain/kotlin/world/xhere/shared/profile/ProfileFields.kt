@@ -15,7 +15,10 @@ object ProfileFields {
     const val HOME_MAX: Int = 80
     const val WEBSITE_MAX: Int = 200
     const val AVATAR_EDGE_PX: Int = 512
+    /** Bucket limit. The phone aims lower, at [AVATAR_TARGET_BYTES]. */
     const val AVATAR_MAX_BYTES: Int = 512 * 1024
+    /** Compressed WebP or JPEG the editor tries to stay under. */
+    const val AVATAR_TARGET_BYTES: Int = 200 * 1024
     const val AVATAR_BUCKET: String = "avatars"
 
     private val handlePattern = Regex("^[a-z0-9_]{3,24}$")

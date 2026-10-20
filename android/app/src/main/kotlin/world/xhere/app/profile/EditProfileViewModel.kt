@@ -14,6 +14,7 @@ import kotlinx.coroutines.launch
 import world.xhere.shared.data.ProfileDraft
 import world.xhere.shared.data.XHereApiException
 import world.xhere.shared.data.XHereServices
+import world.xhere.shared.profile.AvatarCrop
 import world.xhere.shared.profile.ProfileFields
 
 enum class HandleStatus { IDLE, INVALID, CHECKING, AVAILABLE, TAKEN }
@@ -29,7 +30,9 @@ data class EditProfileUi(
     val website: String = "",
     val avatarUrl: String? = null,
     val cropping: Boolean = false,
-    val zoom: Float = 1f,
+    val zoom: Float = AvatarCrop.MIN_ZOOM,
+    val cropLeft: Float = 0f,
+    val cropTop: Float = 0f,
     val frame: Int = 0,
     val handleStatus: HandleStatus = HandleStatus.IDLE,
     val saving: Boolean = false,
@@ -105,12 +108,69 @@ class EditProfileViewModel(
     }
 
     fun onZoom(value: Float) {
-        _state.update { it.copy(zoom = value.coerceIn(1f, 4f), frame = it.frame + 1) }
+        val source = cropSource ?: return
+        val current = _state.value
+        val (zoom, rect) = AvatarCrop.zoomAboutCenter(
+            source.width,
+            source.height,
+            current.zoom,
+            value,
+            current.cropLeft,
+            current.cropTop,
+        )
+        _state.update { it.copy(zoom = zoom, cropLeft = rect.left, cropTop = rect.top) }
+    }
+
+    /**
+     * Pinch and drag inside the crop window. [panX] and [panY] are view pixels.
+     * [focalX] and [focalY] are fractions of that window.
+     */
+    fun onCropGesture(
+        viewSize: Float,
+        panX: Float,
+        panY: Float,
+        zoomChange: Float,
+        focalX: Float,
+        focalY: Float,
+    ) {
+        val source = cropSource ?: return
+        val current = _state.value
+        val (zoom, rect) = AvatarCrop.gesture(
+            srcW = source.width,
+            srcH = source.height,
+            viewSize = viewSize,
+            zoom = current.zoom,
+            left = current.cropLeft,
+            top = current.cropTop,
+            panX = panX,
+            panY = panY,
+            zoomChange = zoomChange,
+            focalX = focalX,
+            focalY = focalY,
+        )
+        _state.update { it.copy(zoom = zoom, cropLeft = rect.left, cropTop = rect.top) }
+    }
+
+    /** Double-tap. Back to cover-fit, centered. */
+    fun resetCrop() {
+        val source = cropSource ?: return
+        val rect = AvatarCrop.centered(source.width, source.height)
+        _state.update { it.copy(zoom = AvatarCrop.MIN_ZOOM, cropLeft = rect.left, cropTop = rect.top) }
     }
 
     fun startCrop(bitmap: Bitmap) {
         cropSource = bitmap
-        _state.update { it.copy(cropping = true, zoom = 1f, frame = it.frame + 1, error = null) }
+        val rect = AvatarCrop.centered(bitmap.width, bitmap.height)
+        _state.update {
+            it.copy(
+                cropping = true,
+                zoom = AvatarCrop.MIN_ZOOM,
+                cropLeft = rect.left,
+                cropTop = rect.top,
+                frame = it.frame + 1,
+                error = null,
+            )
+        }
     }
 
     fun startCrop(bytes: ByteArray) {
@@ -123,12 +183,14 @@ class EditProfileViewModel(
 
     fun cancelCrop() {
         cropSource = null
-        _state.update { it.copy(cropping = false) }
+        _state.update { it.copy(cropping = false, zoom = AvatarCrop.MIN_ZOOM, cropLeft = 0f, cropTop = 0f) }
     }
 
     fun confirmCrop() {
         val source = cropSource ?: return
-        val framed = AvatarCodec.circle(source, _state.value.zoom)
+        val current = _state.value
+        val rect = AvatarCrop.clamp(source.width, source.height, current.zoom, current.cropLeft, current.cropTop)
+        val framed = AvatarCodec.crop(source, rect)
         val encoded = AvatarCodec.compress(framed)
         if (encoded.bytes.size > ProfileFields.AVATAR_MAX_BYTES) {
             _state.update { it.copy(error = EditProfileError.AVATAR, cropping = false) }
@@ -144,8 +206,12 @@ class EditProfileViewModel(
 
     fun framedBitmap(): Bitmap? {
         val source = cropSource ?: return null
-        return AvatarCodec.circle(source, _state.value.zoom)
+        val current = _state.value
+        val rect = AvatarCrop.clamp(source.width, source.height, current.zoom, current.cropLeft, current.cropTop)
+        return AvatarCodec.crop(source, rect)
     }
+
+    fun cropBitmap(): Bitmap? = cropSource
 
     fun approvedBitmap(): Bitmap? = approved
 

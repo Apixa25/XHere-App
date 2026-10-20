@@ -309,6 +309,7 @@ internal object TestTags {
     const val PROFILE_AVATAR_GALLERY = "profile_avatar_gallery"
     const val PROFILE_AVATAR_CAMERA = "profile_avatar_camera"
     const val PROFILE_AVATAR_REMOVE = "profile_avatar_remove"
+    const val PROFILE_AVATAR_SHEET = "profile_avatar_sheet"
     const val PROFILE_AVATAR_CROP = "profile_avatar_crop"
     const val PROFILE_AVATAR_ZOOM = "profile_avatar_zoom"
     const val PROFILE_AVATAR_USE = "profile_avatar_use"

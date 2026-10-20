@@ -220,6 +220,7 @@
     <string name="profile_avatar_camera">Take photo</string>
     <string name="profile_avatar_remove">Remove photo</string>
     <string name="profile_avatar_crop">Crop to a circle</string>
+    <string name="profile_avatar_move">Drag to move the photo. Pinch or use the slider to zoom. Double-tap to reset.</string>
     <string name="profile_avatar_use">Use photo</string>
     <string name="profile_handle_invalid">Use 3 to 24 letters, numbers, or underscores.</string>
     <string name="profile_handle_checking">Checking that handle…</string>
