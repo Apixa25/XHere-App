@@ -757,7 +757,7 @@ class SupabaseXHereClient(
     }
 
     private inner class MediaRepo : MediaRepository {
-        override suspend fun uploadPhoto(bytes: ByteArray, mimeType: String): MediaUpload {
+        override suspend fun uploadPhoto(bytes: ByteArray, mimeType: String, capture: LatLng?): MediaUpload {
             val mime = mimeType.substringBefore(';').trim().lowercase()
             try {
                 val response = edge.post(config.url.trimEnd('/') + "/functions/v1/strip-exif") {
@@ -774,14 +774,14 @@ class SupabaseXHereClient(
                     throw XHereApiException(code, detail = "photo upload failed")
                 }
                 val stored = XHereJson.decodeFromString(StoredPhotoWire.serializer(), payload)
-                val capture = if (mime == "image/jpeg") ExifGps.read(bytes) else null
+                val located = capture ?: if (mime == "image/jpeg") ExifGps.read(bytes) else null
                 return MediaUpload(
                     storagePath = stored.storagePath,
                     mediaKind = MediaKind.IMAGE,
                     mimeType = stored.mimeType,
                     byteSize = stored.byteSize,
-                    captureLat = capture?.latitude,
-                    captureLng = capture?.longitude,
+                    captureLat = located?.latitude,
+                    captureLng = located?.longitude,
                 )
             } catch (e: CancellationException) {
                 throw e

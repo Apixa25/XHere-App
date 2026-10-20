@@ -356,3 +356,25 @@ Storage policies created in that migration:
 | `avatars_delete_own` | DELETE | `authenticated`, folder = `auth.uid()` |
 
 Profile row edits stay on `profiles_update_own`: `id = auth.uid()` and the account is not deleted. `bio` and `website` are added to the column grant. `tier`, `role`, `points`, and `is_demo` stay server-managed.
+
+## Drop photo reads (hosted)
+
+`20261021203000_drop_media_visibility.sql` is why a drop photo can be signed. Storage's sign endpoint is a SELECT. With no matching policy on `storage.objects` for `drop-media`, that call returns 400 `not_found` and the detail screen has nothing to show. The bucket stays private.
+
+`private.can_read_drop_media(bucket, path)` is security definer, so it can see `drop_media` (that table's own SELECT policy is owner-only). It reads `auth.uid()` once. An active or confirmed drop that is not deleted, not expired, and not a sealed capsule is readable by any signed-in user, except someone who hid it or is blocked from the author. Hidden, deleted, pending, and sealed photos are the owner only. A sealed capsule keeps the file out of `drop_media` until it opens; `drop_media_select_own` (folder = the user id) and `drop_media_select_owner_id` are what let the owner sign that file and nobody else.
+
+Not applied from this repo's agents, and not applied by CI. No new Edge Function. `strip-exif` is unchanged. From a machine already linked, after the history repair in [Before `supabase db push`](#before-supabase-db-push) if that repair has not been done yet:
+
+```bash
+supabase link --project-ref jpeuldzegtbqfezijhuy
+supabase db push
+```
+
+`db push` applies `20261021203000_drop_media_visibility.sql` and any earlier migration that is not on the project yet. Do not paste the file into the dashboard SQL editor. It does not change Auth.
+
+| Policy | Command | Who |
+|---|---|---|
+| `drop_media_select_visible` | SELECT | `authenticated`, public active drop, or the owner |
+| `drop_media_select_owner_id` | SELECT | `authenticated`, `owner_id` = `auth.uid()` |
+| `drop_media_select_own` | SELECT | `authenticated`, folder = `auth.uid()` (created here only if it is missing) |
+| `drop_media_select_granted` | SELECT | `authenticated`, an unexpired grant that still passes the same visibility check |

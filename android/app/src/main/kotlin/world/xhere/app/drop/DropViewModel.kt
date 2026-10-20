@@ -36,6 +36,7 @@ import world.xhere.shared.safety.SafetyResources
 import world.xhere.shared.suggest.CategorySuggestion
 import world.xhere.shared.suggest.SnapDraft
 import world.xhere.shared.suggest.SnapSource
+import world.xhere.shared.media.ExifGps
 import world.xhere.shared.suggest.SuggestionQuery
 
 /**
@@ -154,8 +155,11 @@ class DropViewModel(
         viewModelScope.launch {
             _state.update { it.copy(busy = true, error = null) }
             try {
-                photo = services.media.uploadPhoto(bytes, mimeType)
-                preview = bytes
+                val mime = mimeType.substringBefore(';').trim().lowercase()
+                val capture = if (mime == "image/jpeg") ExifGps.read(bytes) else null
+                val encoded = DropPhotoCodec.compress(bytes, mime)
+                photo = services.media.uploadPhoto(encoded.bytes, encoded.mimeType, capture)
+                preview = encoded.bytes
                 val taxonomy = services.taxonomy.load()
                 filters = taxonomy.filters
                 runCatching { services.profiles.currentProfile().tier }.onSuccess { tier = it }

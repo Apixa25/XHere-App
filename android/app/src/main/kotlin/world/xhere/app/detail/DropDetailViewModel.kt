@@ -499,6 +499,35 @@ class DropDetailViewModel(
         }
     }
 
+    fun retryPhoto(index: Int) {
+        val current = _state.value.photos.getOrNull(index) ?: return
+        if (current.path.isBlank()) return
+        viewModelScope.launch {
+            _state.update { state ->
+                state.copy(
+                    photos = state.photos.mapIndexed { i, photo ->
+                        if (i == index) photo.copy(url = "", phase = DropPhotoPhase.LOADING) else photo
+                    },
+                )
+            }
+            val url = runCatching { services.media.photoUrl(current.bucket, current.path) }.getOrDefault("")
+            _state.update { state ->
+                state.copy(
+                    photos = state.photos.mapIndexed { i, photo ->
+                        if (i == index && photo.path == current.path) {
+                            photo.copy(
+                                url = url,
+                                phase = if (url.isBlank()) DropPhotoPhase.FAILED else DropPhotoPhase.READY,
+                            )
+                        } else {
+                            photo
+                        }
+                    },
+                )
+            }
+        }
+    }
+
     private fun publish() {
         val current = card ?: return
         val publicRecord = current.source == DropSource.OPEN_DATA
@@ -522,6 +551,15 @@ class DropDetailViewModel(
         }
         val key = images.joinToString("\n") { "${it.storageBucket}/${it.storagePath}\t${it.altText.orEmpty()}" }
         val keepPhotos = key.isNotEmpty() && key == photoKey
+        val pending = images.map { media ->
+            DropPhotoUi(
+                url = "",
+                alt = media.altText?.trim().orEmpty(),
+                bucket = media.storageBucket,
+                path = media.storagePath,
+                phase = DropPhotoPhase.LOADING,
+            )
+        }
         if (!keepPhotos) {
             photoKey = key
             photoJob?.cancel()
@@ -529,7 +567,13 @@ class DropDetailViewModel(
                 photoJob = viewModelScope.launch {
                     val resolved = images.map { media ->
                         val url = runCatching { services.media.photoUrl(media.storageBucket, media.storagePath) }.getOrDefault("")
-                        DropPhotoUi(url = url, alt = media.altText?.trim().orEmpty())
+                        DropPhotoUi(
+                            url = url,
+                            alt = media.altText?.trim().orEmpty(),
+                            bucket = media.storageBucket,
+                            path = media.storagePath,
+                            phase = if (url.isBlank()) DropPhotoPhase.FAILED else DropPhotoPhase.READY,
+                        )
                     }
                     if (photoKey == key) _state.update { it.copy(photos = resolved) }
                 }
@@ -578,7 +622,7 @@ class DropDetailViewModel(
                 gone = previous.gone,
                 canUndoHide = previous.canUndoHide,
                 locationWithheld = current.locationWithheld && !publicRecord && !current.isMine && !current.capsuleLocked,
-                photos = if (keepPhotos) previous.photos else emptyList(),
+                photos = if (keepPhotos) previous.photos else pending,
                 editing = previous.editing,
                 editTitle = previous.editTitle,
                 editBody = previous.editBody,

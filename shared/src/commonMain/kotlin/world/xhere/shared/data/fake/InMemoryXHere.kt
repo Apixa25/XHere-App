@@ -926,7 +926,7 @@ class InMemoryXHere(
     }
 
     private inner class MediaRepo : MediaRepository {
-        override suspend fun uploadPhoto(bytes: ByteArray, mimeType: String): MediaUpload {
+        override suspend fun uploadPhoto(bytes: ByteArray, mimeType: String, capture: LatLng?): MediaUpload {
             val profile = requireViewer()
             val mime = mimeType.substringBefore(';').trim().lowercase()
             if (mime != "image/jpeg" && mime != "image/png" && mime != "image/webp") {
@@ -935,7 +935,7 @@ class InMemoryXHere(
             if (bytes.isEmpty() || bytes.size > MAX_PHOTO_BYTES) {
                 throw XHereApiException("invalid_image", sqlState = XHereApiException.SQL_VALIDATION, detail = "photo must be 1 byte..10 MB")
             }
-            val capture = if (mime == "image/jpeg") ExifGps.read(bytes) else null
+            val located = capture ?: if (mime == "image/jpeg") ExifGps.read(bytes) else null
             val stripped = ExifStrip.strip(bytes, mime)
             val extension = when (mime) {
                 "image/png" -> "png"
@@ -949,8 +949,8 @@ class InMemoryXHere(
                 mediaKind = MediaKind.IMAGE,
                 mimeType = mime,
                 byteSize = stripped.size.toLong(),
-                captureLat = capture?.latitude,
-                captureLng = capture?.longitude,
+                captureLat = located?.latitude,
+                captureLng = located?.longitude,
             )
         }
 

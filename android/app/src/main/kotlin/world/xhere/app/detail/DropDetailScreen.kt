@@ -227,6 +227,7 @@ fun DropDetailScreen(
                     },
                     onReply = viewModel::sendReply,
                     onDispute = viewModel::disputeClaim,
+                    onRetryPhoto = viewModel::retryPhoto,
                 )
                 if (surveying) {
                     AccessSurveySheet(
@@ -369,6 +370,7 @@ private fun DetailBody(
     onAccess: () -> Unit,
     onReply: (String) -> Unit = {},
     onDispute: () -> Unit = {},
+    onRetryPhoto: (Int) -> Unit = {},
 ) {
     var reply by remember { mutableStateOf("") }
     state.officialBadge?.let { badge ->
@@ -525,7 +527,7 @@ private fun DetailBody(
         )
     }
     if (state.showBody && state.photos.isNotEmpty()) {
-        DropPhotos(state.photos)
+        DropPhotos(state.photos, onRetryPhoto)
     }
     if (state.publicRecord && !state.attribution.isNullOrBlank()) {
         Text(
