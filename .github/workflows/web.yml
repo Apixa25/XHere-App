@@ -41,7 +41,7 @@ jobs:
         run: npm run verify
 
       - name: Set up Chrome
-        uses: browser-actions/setup-chrome@v1
+        uses: browser-actions/setup-chrome@v2
 
       - name: Lighthouse
         run: npm run lighthouse
