@@ -45,14 +45,12 @@ select ok(
   'only the edge function role can use the geo proxy SQL'
 );
 
-select like(
-  public.geo_upstream_endpoint('nominatim'),
-  'https://%',
+select ok(
+  public.geo_upstream_endpoint('nominatim') like 'https://%',
   'the seeded Nominatim host is https'
 );
-select like(
-  public.geo_upstream_endpoint('overpass'),
-  'https://%',
+select ok(
+  public.geo_upstream_endpoint('overpass') like 'https://%',
   'the seeded Overpass host is https'
 );
 

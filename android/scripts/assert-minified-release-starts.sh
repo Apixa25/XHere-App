@@ -19,7 +19,24 @@ if ! unzip -l "$APK" | grep -E 'lib/.*/libmaplibre' >/dev/null; then
   exit 1
 fi
 
-adb install -r -d "$APK"
+# aosp_atd sometimes drops the package service with a broken pipe right after boot.
+installed=0
+for attempt in 1 2 3; do
+  set +e
+  INSTALL="$(adb install -r -d "$APK" 2>&1)"
+  CODE=$?
+  set -e
+  printf '%s\n' "$INSTALL"
+  if [[ "$CODE" -eq 0 ]]; then
+    installed=1
+    break
+  fi
+  echo "Install did not finish (attempt $attempt)"
+  sleep 5
+done
+if [[ "$installed" -ne 1 ]]; then
+  exit 1
+fi
 adb logcat -c || true
 
 # aosp_atd sometimes returns "Status: timeout" from `am start -W` even when
