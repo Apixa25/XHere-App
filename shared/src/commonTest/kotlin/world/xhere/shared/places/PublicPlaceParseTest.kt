@@ -127,28 +127,39 @@ class PublicPlaceParseTest {
     @Test
     fun theClientSendsAUserAgentCachesAndSkipsWikidataWhenOsmHits() = runTest {
         var calls = 0
+        var osmCalls = 0
         val engine = MockEngine { request ->
             calls += 1
             assertEquals(PublicSources.USER_AGENT, request.headers[HttpHeaders.UserAgent])
             val url = request.url.toString()
+            assertFalse(url.contains("overpass"), url)
+            assertFalse(url.contains("nominatim"), url)
             val body = when {
                 url.startsWith(PublicSources.WIKIPEDIA) ->
                     """{"query":{"pages":[{"pageid":1,"title":"Bridge","extract":"A bridge.","coordinates":[{"lat":51.5,"lon":-0.12}]}]}}"""
                 url.startsWith(PublicSources.COMMONS) -> """{"query":{"pages":[]}}"""
-                url.startsWith(PublicSources.OVERPASS) ->
-                    """{"elements":[{"type":"node","id":3,"lat":51.51,"lon":-0.11,"tags":{"historic":"memorial","name":"Stone"}}]}"""
                 else -> error("unexpected $url")
             }
             respond(body, HttpStatusCode.OK, headersOf(HttpHeaders.ContentType, "application/json"))
         }
-        val client = PublicPlaceClient(engine, minIntervalMs = 0, clock = frozen())
+        val client = PublicPlaceClient(
+            engine,
+            minIntervalMs = 0,
+            clock = frozen(),
+            historicOsm = {
+                osmCalls += 1
+                """{"elements":[{"type":"node","id":3,"lat":51.51,"lon":-0.11,"tags":{"historic":"memorial","name":"Stone"}}]}"""
+            },
+        )
         val box = BoundingBox(-0.2, 51.4, -0.1, 51.6)
         val first = client.around(box)
         assertEquals(setOf("enwiki:1", "osm:node/3"), first.map { it.id }.toSet())
-        assertEquals(3, calls)
+        assertEquals(2, calls)
+        assertEquals(1, osmCalls)
         val second = client.around(box)
         assertEquals(first.map { it.id }.toSet(), second.map { it.id }.toSet())
-        assertEquals(3, calls)
+        assertEquals(2, calls)
+        assertEquals(1, osmCalls)
         assertNull(first.first { it.id == "enwiki:1" }.imageUrl)
     }
 

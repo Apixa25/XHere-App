@@ -87,8 +87,12 @@ class WalksAndQuestsTest {
     @Test
     fun starterQuestCountsVisitsConfirmsAndAFirstDrop() = runTest {
         val store = world.xhere.shared.data.fake.MemoryStore(Fixtures.taxonomy)
-        val author = InMemoryXHere(store, Fixtures.profile(1))
-        val me = InMemoryXHere(store, Fixtures.profile(2))
+        // The note request is built from Fixtures.now (18 Oct 2026) plus a 7-day TTL.
+        // The in-memory server has to use that same instant, or a later wall clock
+        // rejects the drop as expires_in_past.
+        val clock = { Fixtures.now }
+        val author = InMemoryXHere(store, Fixtures.profile(1), clock = clock)
+        val me = InMemoryXHere(store, Fixtures.profile(2), clock = clock)
         val quest = me.walks.quests().single()
         assertEquals(StarterQuest.ID, quest.id)
         assertEquals(listOf(0, 0, 0), quest.steps.map { it.progress })

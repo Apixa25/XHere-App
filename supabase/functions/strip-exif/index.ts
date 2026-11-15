@@ -3,6 +3,7 @@
 // policy (folder must match auth.uid()) is what authorizes the write.
 // No service-role key is read here.
 
+import { storageWriteHeaders } from "../_shared/media_cache.ts";
 import { handleStrip } from "./handler.ts";
 
 Deno.serve((req) => handleStrip(req, {
@@ -40,12 +41,7 @@ async function upload(req: Request, userId: string, bytes: Uint8Array, mime: str
   const storagePath = `${userId}/${crypto.randomUUID()}.${extension}`;
   const response = await fetch(`${base}/storage/v1/object/drop-media/${storagePath}`, {
     method: "POST",
-    headers: {
-      apikey: key,
-      Authorization: authorization,
-      "content-type": mime,
-      "cache-control": "max-age=31536000",
-    },
+    headers: storageWriteHeaders(mime, key, authorization),
     body: bytes,
   });
   if (!response.ok) throw new Error(`storage_${response.status}`);

@@ -75,7 +75,6 @@ object PublicSources {
     const val USER_AGENT = "XHere/0.1 (https://xhere.world; public-places)"
     const val WIKIPEDIA = "https://en.wikipedia.org/w/api.php"
     const val COMMONS = "https://commons.wikimedia.org/w/api.php"
-    const val OVERPASS = "https://overpass-api.de/api/interpreter"
     const val WIKIDATA = "https://query.wikidata.org/sparql"
     const val WIKI_CREDIT = "Wikipedia contributors"
     const val WIKI_LICENSE = "CC BY-SA 4.0"

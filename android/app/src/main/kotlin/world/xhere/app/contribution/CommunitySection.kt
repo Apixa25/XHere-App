@@ -14,7 +14,8 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.height
 import androidx.compose.material3.LinearProgressIndicator
-import coil3.compose.AsyncImage
+import world.xhere.app.media.CachedRemoteImage
+import world.xhere.app.media.TapToPlayVideo
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -35,6 +36,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -55,6 +57,8 @@ import world.xhere.shared.contribution.ContributionFile
 import world.xhere.shared.contribution.ContributionMediaPolicy
 import world.xhere.shared.contribution.ContributionRules
 import world.xhere.shared.contribution.ContributionSort
+import world.xhere.shared.media.MediaCache
+import world.xhere.shared.media.MediaSurfaces
 import world.xhere.shared.contribution.NewContribution
 import world.xhere.shared.data.XHereApiException
 import world.xhere.shared.data.XHereServices
@@ -230,9 +234,15 @@ fun CommunitySection(
         }
         ui.cards.forEach { card ->
             ContributionRow(
+                services = services,
                 card = card,
                 url = card.media.firstOrNull()?.let { media ->
-                    media.thumbPath?.let { ui.urls[it] } ?: ui.urls[media.storagePath]
+                    val preview = media.thumbPath?.let { ui.urls[it] }
+                    if (MediaSurfaces.isVideo(media.mimeType, media.storagePath)) {
+                        preview
+                    } else {
+                        preview ?: ui.urls[media.storagePath]
+                    }
                 },
                 opened = card.id in ui.openCollapsed,
                 reporting = ui.reporting == card.id,
@@ -439,6 +449,7 @@ fun CommunitySection(
 
 @Composable
 private fun ContributionRow(
+    services: XHereServices,
     card: ContributionCard,
     url: String?,
     opened: Boolean,
@@ -505,13 +516,31 @@ private fun ContributionRow(
                     text = if (card.kind == "video") stringResource(R.string.community_video_label) else stringResource(R.string.detail_photo),
                     style = MaterialTheme.typography.bodyMedium,
                 )
-                if (!url.isNullOrBlank()) {
-                    AsyncImage(
-                        model = url,
+                val media = card.media.firstOrNull()
+                val video = media != null && MediaSurfaces.isVideo(media.mimeType, media.storagePath)
+                if (video) {
+                    TapToPlayVideo(
+                        services = services,
+                        bucket = media.storageBucket,
+                        path = media.storagePath,
+                        description = card.body ?: stringResource(R.string.community_video_label),
+                        posterUrl = url,
+                    )
+                } else if (!url.isNullOrBlank()) {
+                    val item = media
+                    val keyPath = item?.thumbPath ?: item?.storagePath
+                    CachedRemoteImage(
+                        url = url,
+                        cacheKey = if (item == null || keyPath.isNullOrBlank()) {
+                            MediaCache.keyForUrl(url)
+                        } else {
+                            MediaCache.key(item.storageBucket, keyPath)
+                        },
                         contentDescription = card.body ?: stringResource(R.string.detail_photo),
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(160.dp),
+                        contentScale = ContentScale.Fit,
                     )
                 }
             }
@@ -585,9 +614,7 @@ private data class VideoUi(
 )
 
 private suspend fun signed(services: XHereServices, cards: List<ContributionCard>): Map<String, String> {
-    val paths = cards.flatMap { card ->
-        card.media.flatMap { media -> listOfNotNull(media.thumbPath, media.storagePath) }
-    }.distinct()
+    val paths = cards.flatMap { card -> MediaSurfaces.listPaths(card.media) }.distinct()
     return paths.mapNotNull { path ->
         val url = runCatching { services.media.photoUrl("contribution-media", path) }.getOrNull()
         if (url.isNullOrBlank()) null else path to url

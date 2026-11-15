@@ -22,5 +22,8 @@ class MediaPathsTest {
         assertNull(MediaPaths.thumbSibling("user/clip.mp4"))
         assertNull(MediaPaths.thumbSibling("user/clip.m4a"))
         assertNull(MediaPaths.thumbSibling("no-extension"))
+        assertEquals("user/clip.thumb.jpg", MediaPaths.posterSibling("user/clip.mp4"))
+        assertEquals("user/clip.thumb.jpg", MediaPaths.posterSibling("user/clip.webm"))
+        assertNull(MediaPaths.posterSibling("user/clip.m4a"))
     }
 }

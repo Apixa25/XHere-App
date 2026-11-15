@@ -73,8 +73,9 @@ import world.xhere.shared.data.XHereServices
 import world.xhere.shared.data.fake.InMemoryXHere
 import world.xhere.shared.data.supabase.SupabaseXHereClient
 import world.xhere.shared.demo.JamestownDemo
+import world.xhere.shared.here.GeoProxy
+import world.xhere.shared.here.GeoProxyClient
 import world.xhere.shared.here.HerePlaces
-import world.xhere.shared.here.NominatimClient
 
 /**
  * Koin, not Hilt. The shared core is plain Kotlin interfaces, so the graph
@@ -104,8 +105,25 @@ val appModule = module {
     single<DataExporter> { AndroidDataExporter(androidContext()) }
     single { FilterPresetStore(androidContext()) }
     single<world.xhere.app.map.MapLayerMemory> { world.xhere.app.map.MapLayerPrefs(androidContext()) }
+    single {
+        val config = get<ClientConfig>()
+        val services = get<XHereServices>()
+        GeoProxyClient(
+            endpoint = GeoProxy.endpoint(config.supabase.url),
+            anonKey = config.supabase.anonKey,
+            bearer = { services.accessToken() },
+        )
+    }
     single<world.xhere.shared.places.NearbyPublicPlaces> {
-        world.xhere.shared.places.PublicPlaceClient()
+        val config = get<ClientConfig>()
+        val proxy = get<GeoProxyClient>()
+        world.xhere.shared.places.PublicPlaceClient(
+            historicOsm = if (config.serverReady) {
+                { box -> proxy.overpass(box) }
+            } else {
+                null
+            },
+        )
     }
     single { MapAnchor() }
     single { SheetSignals() }
@@ -114,7 +132,15 @@ val appModule = module {
     single { PendingDropSpot() }
     single { MapPins() }
     single {
-        HerePlaces(get<XHereServices>().places, NominatimClient()::reverse)
+        val config = get<ClientConfig>()
+        val proxy = get<GeoProxyClient>()
+        HerePlaces(
+            places = get<XHereServices>().places,
+            reverse = { spot ->
+                if (!config.serverReady) error("geo_offline")
+                proxy.reverse(spot) ?: error("geo_empty")
+            },
+        )
     }
     single<SpotNames> { SpotNames { spot -> get<HerePlaces>().describe(spot) } }
     single<MapCanvas> { MapLibreMapCanvas() }

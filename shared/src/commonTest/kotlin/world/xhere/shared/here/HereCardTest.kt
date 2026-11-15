@@ -1,13 +1,9 @@
 package world.xhere.shared.here
 
-import io.ktor.client.engine.mock.MockEngine
-import io.ktor.client.engine.mock.respond
-import io.ktor.http.HttpHeaders
-import io.ktor.http.HttpStatusCode
-import io.ktor.http.headersOf
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.days
@@ -233,11 +229,9 @@ class HereCardTest {
         assertEquals("Bridge", places.describe(LatLng(48.8, 2.3))?.name)
         assertEquals(2, fetches)
 
-        api.store.nominatimOpen = false
         now = 10_000L
-        assertNull(places.describe(LatLng(35.0, 139.0)))
-        assertEquals(2, fetches)
-        api.store.nominatimOpen = true
+        assertEquals("Bridge", places.describe(LatLng(35.0, 139.0))?.name)
+        assertEquals(3, fetches)
 
         var failed = 0
         val flaky = HerePlaces(
@@ -268,23 +262,8 @@ class HereCardTest {
         )
         assertEquals("Only Place", Nominatim.parse("""{"display_name":"Only Place, City"}""")?.name)
 
-        val engine = MockEngine { request ->
-            assertEquals(Here.USER_AGENT, request.headers[HttpHeaders.UserAgent])
-            assertEquals("application/json", request.headers[HttpHeaders.Accept])
-            assertEquals(Here.REFERER, request.headers[HttpHeaders.Referrer])
-            assertTrue(request.url.toString().startsWith(Here.ENDPOINT), request.url.toString())
-            assertEquals("51.5", request.url.parameters["lat"])
-            assertEquals("-0.12", request.url.parameters["lon"])
-            assertEquals("jsonv2", request.url.parameters["format"])
-            respond(
-                content = """{"name":"Bridge","display_name":"Bridge, London"}""",
-                status = HttpStatusCode.OK,
-                headers = headersOf(HttpHeaders.ContentType, "application/json"),
-            )
-        }
-        val label = NominatimClient(engine).reverse(LatLng(51.5, -0.12))
-        assertEquals("Bridge", label.name)
-        assertEquals(Here.ATTRIBUTION, label.attribution)
+        assertFalse(GeoProxy.endpoint("https://example.supabase.co").contains("nominatim"))
+        assertTrue(GeoProxy.endpoint("https://example.supabase.co").endsWith("/functions/v1/geo-proxy"))
     }
 
     private fun noteAt(latitude: Double, longitude: Double, body: String) = CategoryRules.check(

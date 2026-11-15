@@ -73,6 +73,7 @@ deno test --allow-net supabase/functions
 deno check supabase/functions/suggest-category/index.ts
 deno check supabase/functions/strip-exif/index.ts
 deno check supabase/functions/public-api/index.ts
+deno check supabase/functions/geo-proxy/index.ts
 ```
 
 Postgres listens on `127.0.0.1:54322` (user `postgres`, password `postgres`, local only). If `supabase start` fails with a `DbSetupError` because containers can't reach each other (common in nested Docker/VMs), Docker's bridge traffic is probably being dropped by iptables. Running `sudo sysctl -w net.bridge.bridge-nf-call-iptables=0 net.bridge.bridge-nf-call-ip6tables=0` fixes it.
@@ -404,3 +405,17 @@ The bucket `contribution-media` is private, 22 MB, jpeg/png/webp/mp4/webm. `drop
 |---|---|---|
 | `contribution_media_select_visible` | SELECT | `authenticated`, a contribution the caller is allowed to see |
 | `contribution_media_insert_reserved` | INSERT | `authenticated`, a path reserved for this author |
+
+## Geo proxy (hosted)
+
+The phone does not call Nominatim or Overpass. It calls `geo-proxy` (`verify_jwt = true`). The function caches rounded answers in `private.geo_cache`, keeps Nominatim to one upstream request every 1.1 seconds on `private.nominatim_gate`, and keeps Overpass to 90 requests per UTC day. Hosts come from `GEO_NOMINATIM_URL` / `GEO_OVERPASS_URL` or `private.geo_upstream`. The note is [docs/GEO-PROXY.md](../docs/GEO-PROXY.md). The migration is `20261022150000_geo_proxy.sql`. The service-role key stays on the function.
+
+Not applied from this repo's agents, and not applied by CI.
+
+```bash
+supabase link --project-ref jpeuldzegtbqfezijhuy
+supabase db push
+supabase functions deploy geo-proxy --project-ref jpeuldzegtbqfezijhuy
+```
+
+Push the database first, then deploy the function. Do not paste the migration into the dashboard SQL editor. It does not change Auth.

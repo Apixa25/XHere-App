@@ -403,6 +403,12 @@ verify_jwt = false
 [functions.history]
 verify_jwt = true
 
+# Nominatim and Overpass. The signed-in JWT only opens the door.
+# Upstream hosts are env vars or private.geo_upstream, not the app.
+# The function reads the cache with the service role. The app never sees that key.
+[functions.geo-proxy]
+verify_jwt = true
+
 [edge_runtime]
 enabled = true
 # Supported request policies: `oneshot`, `per_worker`.

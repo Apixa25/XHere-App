@@ -45,6 +45,7 @@ jobs:
           deno check supabase/functions/store-contribution-media/index.ts
           deno check supabase/functions/public-api/index.ts
           deno check supabase/functions/history/index.ts
+          deno check supabase/functions/geo-proxy/index.ts
 
   # The importer is stdlib Python. This job does not call the network and
   # does not start Docker. It checks the committed Jamestown snapshot

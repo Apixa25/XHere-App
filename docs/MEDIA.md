@@ -92,7 +92,22 @@ supabase functions deploy store-contribution-media --project-ref jpeuldzegtbqfez
 supabase functions deploy strip-exif --project-ref jpeuldzegtbqfezijhuy
 ```
 
-Push the database first, then deploy both functions. A new 60-second video needs the wider bucket and the new function together. A drop photo needs the 512 KB bucket and the matching `strip-exif` limit together.
+Push the database first, then deploy both functions. A new 60-second video needs the wider bucket and the new function together. A drop photo needs the 512 KB bucket and the matching `strip-exif` limit together. Redeploy both functions when this branch lands so stored objects get `Cache-Control: public, max-age=31536000, immutable`.
+
+## Playback
+
+Videos do not play by themselves. A feed row, a drop sheet, and a map card show the poster frame and a play button. The phone signs and streams the video file only after a tap. Leaving the poster does not download the MP4.
+
+The length cap stays **60 seconds**. Steven decided not to shorten it. The encoder, the camera limit, the database check, and `store-contribution-media` are unchanged on that point.
+
+## Caching and egress
+
+A signed URL lasts about 20 minutes and the token changes every time the app asks for one. Coil was keying the cache on that full URL, so a picture already on disk was downloaded again.
+
+- Every Coil request now sets `memoryCacheKey` and `diskCacheKey` from the storage object path (`bucket/path`). The token is not part of the key.
+- Lists, map cards, community rows, and the drop sheet use the `.thumb.jpg` sibling. The full photo is requested for the full-screen view.
+- The phone keeps a signed URL for a path and reuses it until two minutes before it expires.
+- Uploads send `Cache-Control: public, max-age=31536000, immutable`. The object path never changes, so a year is safe. `store-contribution-media` and `strip-exif` send the same header. Avatars, voice clips, drop thumbnails, and the direct contribution fallback do too.
 
 ## What this does not change
 

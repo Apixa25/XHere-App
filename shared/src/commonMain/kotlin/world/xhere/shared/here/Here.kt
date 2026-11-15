@@ -12,7 +12,8 @@ import world.xhere.shared.reputation.Reputation
  *
  * A tap is a place, not a city. [RADIUS_M] is a short walk. User-drop bodies
  * still follow the reveal radius from the viewer's own location. Place names
- * are OpenStreetMap, cached per [cell] so the app does not repeat Nominatim.
+ * are OpenStreetMap, cached per [cell] so the app does not repeat a lookup.
+ * The phone asks `geo-proxy`. It does not call Nominatim itself.
  *
  * [cell] matches Postgres `round(value::numeric, 3)` (half away from zero).
  * [formatSpot] is locale-independent, five decimal places.
@@ -25,19 +26,18 @@ object Here {
     const val MAX_LIMIT: Int = 80
 
     /**
-     * Nominatim's published maximum is 1 request per second. This leaves a gap.
-     * The database also pauses the same signed-in user for 10 seconds after a
-     * successful claim, so one account cannot hold the project slot. A false
-     * claim means skip the lookup.
+     * This phone waits at least this long between reverse lookups.
+     * Nominatim's published maximum is 1 request per second for the whole
+     * application. The Edge Function enforces that global slot. This constant
+     * is only the gap on one device.
      */
     const val NOMINATIM_MIN_INTERVAL_MS: Long = 1_100
 
     const val ATTRIBUTION: String = "© OpenStreetMap contributors"
     const val LICENSE: String = "ODbL-1.0"
     const val PROVIDER: String = "nominatim"
-    const val USER_AGENT: String = "XHere/0.1 (https://xhere.world; here-card)"
+    const val USER_AGENT: String = "XHere/0.1 (https://xhere.world; public-places)"
     const val REFERER: String = "https://xhere.world"
-    const val ENDPOINT: String = "https://nominatim.openstreetmap.org/reverse"
 
     fun cell(value: Double): Double {
         val negative = value < 0

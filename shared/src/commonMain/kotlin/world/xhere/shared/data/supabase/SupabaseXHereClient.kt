@@ -88,6 +88,8 @@ import world.xhere.shared.data.ContributionRepository
 import world.xhere.shared.data.XHereApiException
 import world.xhere.shared.geo.BoundingBox
 import world.xhere.shared.media.ExifStrip
+import world.xhere.shared.media.MediaCache
+import world.xhere.shared.media.SignedUrlCache
 import world.xhere.shared.data.XHereServices
 import world.xhere.shared.data.remote.CampaignsForMapParams
 import world.xhere.shared.data.remote.ClippingsAtParams
@@ -247,6 +249,7 @@ class SupabaseXHereClient(
     private val edge = HttpClient(platformHttpEngine()) {
         expectSuccess = false
     }
+    private val signedUrls = SignedUrlCache()
     val supabase: SupabaseClient = createSupabaseClient(
         supabaseUrl = config.url,
         supabaseKey = config.anonKey,
@@ -280,6 +283,8 @@ class SupabaseXHereClient(
     override val desk: PlaceDeskRepository = PlaceDeskRepo()
     override val civic: CivicRepository = CivicRepo()
     override val contributions: ContributionRepository = ContributionRepo()
+
+    override suspend fun accessToken(): String? = bearer()
 
     private inner class AuthRepo : AuthRepository {
         override suspend fun currentSession(): SessionInfo? = call {
@@ -837,6 +842,7 @@ class SupabaseXHereClient(
                 supabase.storage.from("drop-media").upload(path, bytes) {
                     upsert = false
                     contentType = ContentType.Image.JPEG
+                    httpOverride { header(HttpHeaders.CacheControl, MediaCache.CACHE_CONTROL) }
                 }
             } catch (e: CancellationException) {
                 throw e
@@ -857,6 +863,7 @@ class SupabaseXHereClient(
                     header(HttpHeaders.Authorization, "Bearer ${bearer() ?: ""}")
                     header("apikey", config.anonKey)
                     header("x-upsert", "false")
+                    header(HttpHeaders.CacheControl, MediaCache.CACHE_CONTROL)
                     contentType(ContentType.parse(mime))
                     setBody(bytes)
                 }
@@ -881,7 +888,10 @@ class SupabaseXHereClient(
         }
 
         override suspend fun photoUrl(bucket: String, path: String): String = call {
-            supabase.storage.from(bucket).createSignedUrl(path, 20.minutes)
+            signedUrls.get(bucket, path)?.let { return@call it }
+            val url = supabase.storage.from(bucket).createSignedUrl(path, MediaCache.SIGNED_URL_MINUTES.minutes)
+            signedUrls.put(bucket, path, url)
+            url
         }
 
         override suspend fun uploadAvatar(bytes: ByteArray, mimeType: String): String {
@@ -906,6 +916,7 @@ class SupabaseXHereClient(
                 supabase.storage.from(ProfileFields.AVATAR_BUCKET).upload(path, bytes) {
                     upsert = true
                     contentType = type
+                    httpOverride { header(HttpHeaders.CacheControl, MediaCache.CACHE_CONTROL) }
                 }
                 return path
             } catch (e: CancellationException) {
@@ -1404,6 +1415,7 @@ class SupabaseXHereClient(
                     header(HttpHeaders.Authorization, "Bearer $token")
                     header("apikey", config.anonKey)
                     header("x-upsert", "false")
+                    header(HttpHeaders.CacheControl, MediaCache.CACHE_CONTROL)
                     contentType(ContentType.parse(mime))
                     setBody(bytes)
                 }
