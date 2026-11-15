@@ -1,5 +1,6 @@
 package world.xhere.shared.demo
 
+import kotlin.time.Clock
 import kotlin.time.Duration.Companion.days
 import kotlin.time.Instant
 import kotlin.uuid.Uuid
@@ -50,7 +51,7 @@ object JamestownCampaign {
         return if (fresh > planned) fresh else planned
     }
 
-    fun install(store: MemoryStore, now: Instant = Instant.parse("2026-10-19T00:00:00Z")) {
+    fun install(store: MemoryStore, now: Instant = Clock.System.now()) {
         if (store.programs.any { it.regionId == REGION_ID }) return
         val start = startsAt(now)
         val end = endsAt(now)

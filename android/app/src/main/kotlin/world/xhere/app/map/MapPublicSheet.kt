@@ -22,7 +22,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import coil3.compose.AsyncImage
+import world.xhere.app.media.CachedRemoteImage
+import world.xhere.shared.media.MediaCache
 import world.xhere.app.R
 import world.xhere.app.ui.TestTags
 import world.xhere.shared.places.PublicPlace
@@ -55,8 +56,9 @@ internal fun PublicPlaceSheet(
             )
             Text(place.title, style = MaterialTheme.typography.titleLarge, modifier = Modifier.testTag(TestTags.PUBLIC_PLACE_TITLE))
             place.imageUrl?.let { url ->
-                AsyncImage(
-                    model = url,
+                CachedRemoteImage(
+                    url = url,
+                    cacheKey = MediaCache.keyForUrl(url),
                     contentDescription = place.title,
                     modifier = Modifier
                         .fillMaxWidth()

@@ -24,8 +24,9 @@ import world.xhere.shared.map.InterestingFirst
  * OpenStreetMap. Wikidata is the fallback when Overpass returns nothing.
  *
  * One request at a time, at least [minIntervalMs] apart, with a User-Agent
- * that names the app. Answers are cached. Nothing here is paid and nothing
- * is keyed to one town.
+ * that names the app. Answers are cached. Historic OpenStreetMap places come
+ * from [historicOsm], which calls `geo-proxy`. This client does not call
+ * Overpass. Nothing here is paid and nothing is keyed to one town.
  */
 class PublicPlaceClient(
     engine: HttpClientEngine = platformHttpEngine(),
@@ -34,6 +35,7 @@ class PublicPlaceClient(
     private val emptyTtlMs: Long = 10 * 60 * 1000,
     private val clock: Clock = Clock.System,
     private val sleep: suspend (Long) -> Unit = { delay(it) },
+    private val historicOsm: (suspend (BoundingBox) -> String?)? = null,
 ) : NearbyPublicPlaces {
     private val http = HttpClient(engine) { expectSuccess = false }
     private val gate = Mutex()
@@ -98,10 +100,10 @@ class PublicPlaceClient(
     }
 
     private suspend fun overpass(box: BoundingBox): List<PublicPlace> {
-        val body = get(PublicSources.OVERPASS) {
-            parameter("data", PublicSources.overpassQuery(box))
-        }
-        return body?.let(OsmHistoric::parse).orEmpty()
+        val load = historicOsm ?: return emptyList()
+        pace()
+        val body = runCatching { load(box) }.getOrNull() ?: return emptyList()
+        return OsmHistoric.parse(body)
     }
 
     private suspend fun wikidata(box: BoundingBox): List<PublicPlace> {

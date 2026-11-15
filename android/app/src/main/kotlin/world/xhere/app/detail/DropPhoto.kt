@@ -20,6 +20,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
@@ -31,13 +32,23 @@ import androidx.compose.ui.window.DialogProperties
 import coil3.compose.SubcomposeAsyncImage
 import coil3.compose.SubcomposeAsyncImageContent
 import world.xhere.app.R
+import world.xhere.app.media.cachedImageRequest
 import world.xhere.app.ui.TestTags
+import world.xhere.shared.media.MediaCache
+import world.xhere.shared.media.MediaPaths
 
 enum class DropPhotoPhase {
     LOADING,
     READY,
     FAILED,
 }
+
+/** A revealed video. The poster loads with the sheet. The file loads on tap. */
+data class DropVideoUi(
+    val bucket: String,
+    val path: String,
+    val alt: String = "",
+)
 
 /** One revealed photo. [alt] is the content description, not a caption. */
 data class DropPhotoUi(
@@ -137,8 +148,18 @@ private fun PhotoSlot(
             }
         }
         else -> {
+            val full = fill || photo.previewUrl.isBlank()
+            val shown = if (full) photo.url else photo.previewUrl
+            val keyPath = if (full) photo.path else (MediaPaths.thumbSibling(photo.path) ?: photo.path)
+            val cacheKey = if (photo.bucket.isNotBlank() && keyPath.isNotBlank()) {
+                MediaCache.key(photo.bucket, keyPath)
+            } else {
+                MediaCache.keyForUrl(shown)
+            }
+            val context = LocalContext.current
+            val request = remember(shown, cacheKey) { cachedImageRequest(context, shown, cacheKey) }
             SubcomposeAsyncImage(
-                model = if (fill || photo.previewUrl.isBlank()) photo.url else photo.previewUrl,
+                model = request,
                 contentDescription = description,
                 contentScale = ContentScale.Fit,
                 modifier = frame

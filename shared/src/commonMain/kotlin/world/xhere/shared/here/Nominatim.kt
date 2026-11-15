@@ -1,35 +1,23 @@
 package world.xhere.shared.here
 
-import io.ktor.client.HttpClient
-import io.ktor.client.engine.HttpClientEngine
-import io.ktor.client.request.get
-import io.ktor.client.request.header
-import io.ktor.client.request.parameter
-import io.ktor.client.statement.bodyAsText
-import io.ktor.http.HttpHeaders
-import io.ktor.http.isSuccess
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
-import world.xhere.shared.geo.LatLng
-import world.xhere.shared.http.platformHttpEngine
 import world.xhere.shared.json.XHereJson
 import world.xhere.shared.model.PlaceLabel
 
 /**
- * Reverse geocoding against the public Nominatim service.
+ * Parses a Nominatim reverse-geocode body.
  *
+ * The phone does not call Nominatim. [GeoProxyClient] asks the `geo-proxy`
+ * Edge Function, which is the only place that talks to the upstream host.
  * Usage policy (https://operations.osmfoundation.org/policies/nominatim/):
- * at most one request per second, a User-Agent that names the application,
- * and visible attribution of © OpenStreetMap contributors. This client does
- * the request only. [HerePlaces] caches the result and keeps the rate.
+ * at most one request per second for the whole app, a User-Agent that names
+ * the application, and visible attribution of © OpenStreetMap contributors.
  * No API key and no paid geocoder.
  */
 object Nominatim {
-    fun reverseUrl(point: LatLng): String =
-        "${Here.ENDPOINT}?format=jsonv2&lat=${point.latitude}&lon=${point.longitude}&zoom=17&addressdetails=1"
-
     /** Null when Nominatim has no name for this coordinate. */
     fun parse(body: String): PlaceLabel? {
         val json = runCatching { XHereJson.parseToJsonElement(body).jsonObject }.getOrNull() ?: return null
@@ -47,29 +35,6 @@ object Nominatim {
             license = Here.LICENSE,
             provider = Here.PROVIDER,
         )
-    }
-}
-
-class NominatimClient(
-    engine: HttpClientEngine = platformHttpEngine(),
-) {
-    private val http = HttpClient(engine) {
-        expectSuccess = false
-    }
-
-    suspend fun reverse(point: LatLng): PlaceLabel {
-        val response = http.get(Here.ENDPOINT) {
-            header(HttpHeaders.UserAgent, Here.USER_AGENT)
-            header(HttpHeaders.Accept, "application/json")
-            header(HttpHeaders.Referrer, Here.REFERER)
-            parameter("format", "jsonv2")
-            parameter("lat", point.latitude)
-            parameter("lon", point.longitude)
-            parameter("zoom", 17)
-            parameter("addressdetails", 1)
-        }
-        if (!response.status.isSuccess()) error("nominatim_${response.status.value}")
-        return Nominatim.parse(response.bodyAsText()) ?: error("nominatim_empty")
     }
 }
 

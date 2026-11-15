@@ -4,6 +4,7 @@
 // forwarded, so the storage insert policy is what authorizes the write.
 // No service-role key is read here.
 
+import { storageWriteHeaders } from "../_shared/media_cache.ts";
 import { handleStore } from "./handler.ts";
 
 Deno.serve((req) => handleStore(req, {
@@ -31,12 +32,7 @@ async function upload(req: Request, path: string, bytes: Uint8Array, mime: strin
   if (!base || !key) throw new Error("supabase_not_configured");
   const response = await fetch(`${base}/storage/v1/object/contribution-media/${path}`, {
     method: "POST",
-    headers: {
-      apikey: key,
-      Authorization: authorization,
-      "content-type": mime,
-      "cache-control": "max-age=31536000",
-    },
+    headers: storageWriteHeaders(mime, key, authorization),
     body: copyBytes(bytes),
   });
   if (!response.ok) throw new Error(`storage_${response.status}`);

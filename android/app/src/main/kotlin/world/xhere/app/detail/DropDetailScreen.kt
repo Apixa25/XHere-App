@@ -68,6 +68,7 @@ import world.xhere.app.reputation.TierChip
 import world.xhere.app.location.ForegroundLocation
 import world.xhere.app.map.formatMeters
 import world.xhere.app.contribution.CommunitySection
+import world.xhere.app.media.TapToPlayVideo
 import world.xhere.app.safety.BlockDialog
 import world.xhere.app.safety.ReportForm
 import world.xhere.app.safety.SafetyFooter
@@ -232,6 +233,7 @@ fun DropDetailScreen(
                     onReply = viewModel::sendReply,
                     onDispute = viewModel::disputeClaim,
                     onRetryPhoto = viewModel::retryPhoto,
+                    services = services,
                 )
                 state.placeId?.let { placeId ->
                     CommunitySection(
@@ -382,6 +384,7 @@ private fun DetailBody(
     onReply: (String) -> Unit = {},
     onDispute: () -> Unit = {},
     onRetryPhoto: (Int) -> Unit = {},
+    services: XHereServices? = null,
 ) {
     var reply by remember { mutableStateOf("") }
     state.officialBadge?.let { badge ->
@@ -539,6 +542,16 @@ private fun DetailBody(
     }
     if (state.showBody && state.photos.isNotEmpty()) {
         DropPhotos(state.photos, onRetryPhoto)
+    }
+    if (state.showBody && services != null) {
+        state.videos.forEach { video ->
+            TapToPlayVideo(
+                services = services,
+                bucket = video.bucket,
+                path = video.path,
+                description = video.alt.ifBlank { stringResource(R.string.video_play) },
+            )
+        }
     }
     if (state.publicRecord && !state.attribution.isNullOrBlank()) {
         Text(

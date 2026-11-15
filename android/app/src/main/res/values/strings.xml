@@ -629,6 +629,8 @@
     <string name="community_video_failed">That video couldn\'t be prepared.</string>
     <string name="community_video_retry">Try again</string>
     <string name="community_video_cancel">Cancel</string>
+    <string name="video_play">Play video</string>
+    <string name="video_failed">That video didn\'t load. Tap to try again.</string>
     <string name="map_more">More</string>
     <string name="map_more_body">The rest of the map tools. Close this to get back to the map.</string>
     <string name="map_voice">Voice</string>

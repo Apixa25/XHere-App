@@ -345,11 +345,13 @@ interface LiveRepository {
 
 /**
  * Cached OpenStreetMap place names. The database stamps attribution.
- * [claimNominatimSlot] is the project gate: one lookup every 1.1 seconds,
- * and the same account cannot take another for 10 seconds. A cache write is
- * limited to one mutating row every 10 seconds and 30 an hour. The in-memory
- * fake does not simulate those clocks. Both paths reject a label that is not
- * a place name.
+ * [claimNominatimSlot] is the project gate used by older builds that still
+ * called Nominatim themselves: one lookup every 1.1 seconds, and the same
+ * account cannot take another for 10 seconds. Current builds leave that gate
+ * to the `geo-proxy` Edge Function and only keep a per-device pause.
+ * A cache write is limited to one mutating row every 10 seconds and 30 an hour.
+ * The in-memory fake does not simulate those clocks. Both paths reject a label
+ * that is not a place name.
  */
 interface PlaceRepository {
     suspend fun cachedLabel(location: LatLng): PlaceLabel?
@@ -586,6 +588,12 @@ interface XHereServices {
     val desk: PlaceDeskRepository
     val civic: CivicRepository
     val contributions: ContributionRepository
+
+    /**
+     * The signed-in access token, for calls the Supabase client does not make
+     * itself (the geo proxy). Null when nobody is signed in. Never the service-role key.
+     */
+    suspend fun accessToken(): String? = null
 }
 
 /** Placeholder role check used by screens that should hide moderator tools. The RPC still enforces it. */

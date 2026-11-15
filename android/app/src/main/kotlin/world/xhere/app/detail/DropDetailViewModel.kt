@@ -114,6 +114,8 @@ data class DetailUiState(
     val locationWithheld: Boolean = false,
     /** Revealed photos. Empty until a signed URL is ready, and empty while the photo is hidden. */
     val photos: List<DropPhotoUi> = emptyList(),
+    /** Revealed videos. The poster is separate. The file is not signed until a tap. */
+    val videos: List<DropVideoUi> = emptyList(),
     val editing: Boolean = false,
     val editTitle: String = "",
     val editBody: String = "",
@@ -559,6 +561,19 @@ class DropDetailViewModel(
         } else {
             emptyList()
         }
+        val videoRows = if (showBody) {
+            current.media.orEmpty()
+                .filter { it.mediaKind == MediaKind.VIDEO && it.storagePath.isNotBlank() }
+                .map { media ->
+                    DropVideoUi(
+                        bucket = media.storageBucket,
+                        path = media.storagePath,
+                        alt = media.altText?.trim().orEmpty(),
+                    )
+                }
+        } else {
+            emptyList()
+        }
         val key = images.joinToString("\n") { "${it.storageBucket}/${it.storagePath}\t${it.altText.orEmpty()}" }
         val keepPhotos = key.isNotEmpty() && key == photoKey
         val pending = images.map { media ->
@@ -634,6 +649,7 @@ class DropDetailViewModel(
                 canUndoHide = previous.canUndoHide,
                 locationWithheld = current.locationWithheld && !publicRecord && !current.isMine && !current.capsuleLocked,
                 photos = if (keepPhotos) previous.photos else pending,
+                videos = videoRows,
                 editing = previous.editing,
                 editTitle = previous.editTitle,
                 editBody = previous.editBody,

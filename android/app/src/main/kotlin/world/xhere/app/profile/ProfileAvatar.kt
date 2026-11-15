@@ -18,7 +18,8 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import coil3.compose.AsyncImage
+import world.xhere.app.media.CachedRemoteImage
+import world.xhere.shared.media.MediaCache
 import world.xhere.app.ui.TestTags
 import world.xhere.shared.data.XHereServices
 import world.xhere.shared.model.LeaderboardEntry
@@ -43,8 +44,9 @@ internal fun ProfileAvatar(
     ) {
         Text(initial, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onPrimaryContainer)
         if (!url.isNullOrBlank()) {
-            AsyncImage(
-                model = url,
+            CachedRemoteImage(
+                url = url,
+                cacheKey = MediaCache.keyForUrl(url),
                 contentDescription = label,
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop,

@@ -308,6 +308,8 @@ internal object TestTags {
     const val COMMUNITY_VIDEO_PROGRESS = "community_video_progress"
     const val COMMUNITY_VIDEO_RETRY = "community_video_retry"
     const val COMMUNITY_VIDEO_CANCEL = "community_video_cancel"
+    const val VIDEO_POSTER = "video_poster"
+    const val VIDEO_PLAYER = "video_player"
     const val COMMUNITY_EDITED = "community_edited"
 
     fun communityCard(id: kotlin.uuid.Uuid): String = "community_$id"
